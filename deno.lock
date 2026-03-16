@@ -5,23 +5,31 @@
     "jsr:@deno/loader@~0.3.10": "0.3.12",
     "jsr:@fresh/build-id@1": "1.0.1",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
+    "jsr:@std/cli@^1.0.28": "1.0.28",
+    "jsr:@std/crypto@^1.0.5": "1.0.5",
     "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fmt@1": "1.0.9",
+    "jsr:@std/fmt@^1.0.9": "1.0.9",
     "jsr:@std/fs@1": "1.0.23",
+    "jsr:@std/fs@^1.0.23": "1.0.23",
     "jsr:@std/html@^1.0.5": "1.0.5",
     "jsr:@std/http@^1.0.25": "1.0.25",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/json@^1.0.2": "1.0.2",
     "jsr:@std/jsonc@^1.0.2": "1.0.2",
     "jsr:@std/media-types@1": "1.1.0",
+    "jsr:@std/media-types@^1.1.0": "1.1.0",
+    "jsr:@std/net@^1.0.6": "1.0.6",
     "jsr:@std/path@1": "1.1.4",
     "jsr:@std/path@^1.1.1": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
     "jsr:@std/semver@^1.0.8": "1.0.8",
+    "jsr:@std/streams@^1.0.17": "1.0.17",
     "jsr:@std/uuid@^1.1.0": "1.1.0",
     "npm:@opentelemetry/api@^1.9.0": "1.9.0",
     "npm:@preact/signals@^2.8.2": "2.8.2_preact@10.29.0",
+    "npm:esbuild-wasm@~0.27.4": "0.27.4",
     "npm:esbuild@0.25": "0.25.12",
     "npm:esbuild@~0.25.5": "0.25.12",
     "npm:preact-render-to-string@6": "6.6.6_preact@10.29.0",
@@ -48,6 +56,12 @@
     "@std/bytes@1.0.6": {
       "integrity": "f6ac6adbd8ccd99314045f5703e23af0a68d7f7e58364b47d2c7f408aeb5820a"
     },
+    "@std/cli@1.0.28": {
+      "integrity": "74ef9b976db59ca6b23a5283469c9072be6276853807a83ec6c7ce412135c70a"
+    },
+    "@std/crypto@1.0.5": {
+      "integrity": "0dcfbb319fe0bba1bd3af904ceb4f948cde1b92979ec1614528380ed308a3b40"
+    },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
     },
@@ -57,6 +71,7 @@
     "@std/fs@1.0.23": {
       "integrity": "3ecbae4ce4fee03b180fa710caff36bb5adb66631c46a6460aaad49515565a37",
       "dependencies": [
+        "jsr:@std/internal",
         "jsr:@std/path@^1.1.4"
       ]
     },
@@ -66,7 +81,15 @@
     "@std/http@1.0.25": {
       "integrity": "577b4252290af1097132812b339fffdd55fb0f4aeb98ff11bdbf67998aa17193",
       "dependencies": [
-        "jsr:@std/encoding@^1.0.10"
+        "jsr:@std/cli",
+        "jsr:@std/encoding@^1.0.10",
+        "jsr:@std/fmt@^1.0.9",
+        "jsr:@std/fs@^1.0.23",
+        "jsr:@std/html",
+        "jsr:@std/media-types@^1.1.0",
+        "jsr:@std/net",
+        "jsr:@std/path@^1.1.4",
+        "jsr:@std/streams"
       ]
     },
     "@std/internal@1.0.12": {
@@ -84,6 +107,9 @@
     "@std/media-types@1.1.0": {
       "integrity": "c9d093f0c05c3512932b330e3cc1fe1d627b301db33a4c2c2185c02471d6eaa4"
     },
+    "@std/net@1.0.6": {
+      "integrity": "110735f93e95bb9feb95790a8b1d1bf69ec0dc74f3f97a00a76ea5efea25500c"
+    },
     "@std/path@1.1.4": {
       "integrity": "1d2d43f39efb1b42f0b1882a25486647cb851481862dc7313390b2bb044314b5",
       "dependencies": [
@@ -93,10 +119,14 @@
     "@std/semver@1.0.8": {
       "integrity": "dc830e8b8b6a380c895d53fbfd1258dc253704ca57bbe1629ac65fd7830179b7"
     },
+    "@std/streams@1.0.17": {
+      "integrity": "7859f3d9deed83cf4b41f19223d4a67661b3d3819e9fc117698f493bf5992140"
+    },
     "@std/uuid@1.1.0": {
       "integrity": "6268db2ccf172849c9be80763354ca305d49ef4af41fe995623d44fcc3f7457c",
       "dependencies": [
-        "jsr:@std/bytes"
+        "jsr:@std/bytes",
+        "jsr:@std/crypto"
       ]
     }
   },
@@ -244,6 +274,10 @@
         "preact"
       ]
     },
+    "esbuild-wasm@0.27.4": {
+      "integrity": "sha512-3xhVMcJ8Odvb1QjlWnjBGSYVYESsi3/oJYwLyVvbHOb2CiV4mFtD6x8Lk6JFnRxwEE3fUeVuJLbIxyVQWa867g==",
+      "bin": true
+    },
     "esbuild@0.25.12": {
       "integrity": "sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg==",
       "optionalDependencies": [
@@ -321,6 +355,7 @@
           "jsr:@std/path@1",
           "jsr:@std/semver@^1.0.8",
           "jsr:@std/uuid@^1.1.0",
+          "npm:esbuild-wasm@~0.27.4",
           "npm:esbuild@0.25",
           "npm:preact@^10.25.0"
         ]

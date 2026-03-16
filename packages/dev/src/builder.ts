@@ -1,17 +1,25 @@
-import { App, type ListenOptions, setBuildCache } from "@harmony/core";
-import { fsAdapter } from "@harmony/core";
+import {
+  App,
+  type ListenOptions,
+  parseDirPath,
+  pathToExportName,
+  setBuildCache,
+  TEST_FILE_PATTERN,
+  UniqueNamer,
+  UPDATE_INTERVAL,
+  fsAdapter,
+} from "@harmony/core";
 import * as path from "@std/path";
 import * as colors from "@std/fmt/colors";
 import { bundleJs, type FreshBundleOptions } from "./esbuild.ts";
 import type { Plugin as EsbuildPlugin } from "esbuild";
-
 import { liveReload } from "./middlewares/live_reload.ts";
 import {
   cssAssetHash,
   FileTransformer,
   type OnTransformOptions,
+  type TransformFn,
 } from "./file_transformer.ts";
-import type { TransformFn } from "./file_transformer.ts";
 import {
   type DevBuildCache,
   DiskBuildCache,
@@ -22,80 +30,58 @@ import { BUILD_ID } from "@fresh/build-id";
 import { updateCheck } from "./update_check.ts";
 import { devErrorOverlay } from "./middlewares/error_overlay/middleware.tsx";
 import { automaticWorkspaceFolders } from "./middlewares/automatic_workspace_folders.ts";
-import { parseDirPath } from "@harmony/core";
-import { pathToExportName, UniqueNamer } from "@harmony/core";
 import { checkDenoCompilerOptions } from "./check.ts";
 import { crawlFsItem } from "./fs_crawl.ts";
-import { TEST_FILE_PATTERN, UPDATE_INTERVAL } from "@harmony/core";
 
 export interface BuildOptions {
   /**
-   * This sets the target environment for the generated code. Newer
-   * language constructs will be transformed to match the specified
-   * support range. See https://esbuild.github.io/api/#target
-   * @default {"es2022"}
+   * This sets the target environment for the generated code.
+   * See https://esbuild.github.io/api/#target
+   * @default ["chrome99", "firefox99", "safari15"]
    */
   target?: string | string[];
   /**
-   * The root directory of the Fresh project.
-   *
-   * Other paths, such as `build.outDir`, `staticDir`, and `fsRoutes()`
-   * are resolved relative to this directory.
+   * The root directory of the Harmony project.
    * @default Deno.cwd()
    */
   root?: string;
   /**
-   * The directory to write generated files to when `dev.ts build` is run.
-   *
-   * This can be an absolute path, a file URL or a relative path.
-   * Relative paths are resolved against the `root` option.
-   * @default "_fresh"
+   * Output directory for production builds.
+   * @default "_harmony"
    */
   outDir?: string;
   /**
-   * The directory to serve static files from.
-   *
-   * This can be an absolute path, a file URL or a relative path.
-   * Relative paths are resolved against the `root` option.
+   * Static files directory.
    * @default "static"
    */
   staticDir?: string;
   /**
-   * The directory which contains islands.
-   *
-   * This can be an absolute path, a file URL or a relative path.
-   * Relative paths are resolved against the `root` option.
+   * Islands directory.
    * @default "islands"
    */
   islandDir?: string;
   /**
-   * The directory which contains routes.
-   *
-   * This can be an absolute path, a file URL or a relative path.
-   * Relative paths are resolved against the `root` option.
+   * Routes directory.
    * @default "routes"
    */
   routeDir?: string;
   /**
-   * The entrypoint for your server.
-   *
-   * This can be an absolute path, a file URL or a relative path.
-   * Relative paths are resolved against the `root` option.
+   * Server entry point.
    * @default "main.ts"
    */
   serverEntry?: string;
   /**
-   * File paths which should be ignored when crawling the file system.
+   * File paths to ignore when crawling.
    */
   ignore?: RegExp[];
   /**
-   * Control if/how production source maps should be handled.
-   * See https://esbuild.github.io/api/#source-maps for more information.
+   * Production source map options.
+   * See https://esbuild.github.io/api/#source-maps
    */
   sourceMap?: FreshBundleOptions["sourceMap"];
   /**
    * Alias map passed directly to esbuild.
-   * Useful for React → Preact/compat shims without Vite.
+   * Primary use case: React → Preact/compat shim.
    * @example
    * {
    *   "react": "npm:preact/compat",
@@ -106,15 +92,11 @@ export interface BuildOptions {
   alias?: Record<string, string>;
   /**
    * Additional esbuild plugins injected before the Deno resolver.
-   * Useful for CSS Modules, SVG imports, etc.
    * @example [cssModulesPlugin()]
    */
   plugins?: EsbuildPlugin[];
 }
 
-/**
- * The final resolved Builder configuration.
- */
 export type ResolvedBuildConfig =
   & Required<Omit<BuildOptions, "sourceMap" | "plugins">>
   & {
@@ -136,13 +118,12 @@ export class Builder<State = any> {
   constructor(options?: BuildOptions) {
     const root = parseDirPath(options?.root ?? ".", Deno.cwd());
     const serverEntry = parseDirPath(options?.serverEntry ?? "main.ts", root);
-    const outDir = parseDirPath(options?.outDir ?? "_fresh", root);
+    const outDir = parseDirPath(options?.outDir ?? "_harmony", root);
     const staticDir = parseDirPath(options?.staticDir ?? "static", root);
     const islandDir = parseDirPath(options?.islandDir ?? "islands", root);
     const routeDir = parseDirPath(options?.routeDir ?? "routes", root);
 
     this.#fsRoutes = { dir: routeDir, files: [], id: "default" };
-
     this.#transformer = new FileTransformer(fsAdapter, root);
 
     this.config = {
@@ -214,14 +195,12 @@ export class Builder<State = any> {
 
     devApp.config.root = this.config.root;
     devApp.config.mode = "development";
-
     setBuildCache(devApp, buildCache, "development");
 
     await Promise.all([
       devApp.listen(options),
       this.#build(buildCache, true),
     ]);
-    return;
   }
 
   async build(
@@ -235,16 +214,8 @@ export class Builder<State = any> {
     await this.#crawlFsItems();
 
     const buildCache = options?.snapshot === "memory"
-      ? new MemoryBuildCache(
-        this.config,
-        this.#fsRoutes,
-        this.#transformer,
-      )
-      : new DiskBuildCache(
-        this.config,
-        this.#fsRoutes,
-        this.#transformer,
-      );
+      ? new MemoryBuildCache(this.config, this.#fsRoutes, this.#transformer)
+      : new DiskBuildCache(this.config, this.#fsRoutes, this.#transformer);
 
     await this.#build(buildCache, this.config.mode === "development");
     await buildCache.prepare();
@@ -255,13 +226,11 @@ export class Builder<State = any> {
   }
 
   async #crawlFsItems() {
-    const { islands, routes } = await crawlFsItem(
-      {
-        islandDir: this.config.islandDir,
-        routeDir: this.config.routeDir,
-        ignore: this.config.ignore,
-      },
-    );
+    const { islands, routes } = await crawlFsItem({
+      islandDir: this.config.islandDir,
+      routeDir: this.config.routeDir,
+      ignore: this.config.ignore,
+    });
 
     for (let i = 0; i < islands.length; i++) {
       this.registerIsland(islands[i]);
@@ -282,7 +251,7 @@ export class Builder<State = any> {
     }
 
     try {
-      await Deno.remove(staticOutDir);
+      await Deno.remove(staticOutDir, { recursive: true });
     } catch {
       // Ignore
     }
@@ -292,7 +261,7 @@ export class Builder<State = any> {
       : "../runtime/client/mod.ts";
 
     const entryPoints: Record<string, string> = {
-      "fresh-runtime": new URL(runtimePath, import.meta.url).href,
+      "harmony-runtime": new URL(runtimePath, import.meta.url).href,
     };
 
     const namer = new UniqueNamer();
@@ -324,28 +293,29 @@ export class Builder<State = any> {
       plugins: this.config.plugins,
     });
 
-    const prefix = `/_fresh/js/${BUILD_ID}/`;
+    const prefix = `/_harmony/js/${BUILD_ID}/`;
 
     for (const name of buildCache.islandModNameToChunk.keys()) {
       const chunkName = output.entryToChunk.get(name);
       if (chunkName === undefined) {
-        throw new Error(`Could not find chunk for island ${name}`);
+        throw new Error(`Could not find chunk for island: ${name}`);
       }
-
-      const pathname = `${prefix}${chunkName}`;
-      buildCache.islandModNameToChunk.get(name)!.browser = pathname;
+      buildCache.islandModNameToChunk.get(name)!.browser =
+        `${prefix}${chunkName}`;
     }
 
     for (let i = 0; i < output.files.length; i++) {
       const file = output.files[i];
-      const pathname = `${prefix}${file.path}`;
-      await buildCache.addProcessedFile(pathname, file.contents, file.hash);
+      await buildCache.addProcessedFile(
+        `${prefix}${file.path}`,
+        file.contents,
+        file.hash,
+      );
     }
 
     await buildCache.flush();
 
     if (!dev) {
-      // deno-lint-ignore no-console
       console.log(`Assets written to: ${colors.cyan(outDir)}`);
     }
 
@@ -359,44 +329,32 @@ export function specToName(spec: string): string {
     if (url.pathname === "/") {
       return pathToExportName(url.hostname);
     }
+    return pathToExportName(spec.slice(spec.lastIndexOf("/") + 1));
+  }
 
-    const idx = spec.lastIndexOf("/");
-    return pathToExportName(spec.slice(idx + 1));
-  } else if (spec.startsWith("jsr:")) {
+  if (spec.startsWith("jsr:")) {
     const match = spec.match(
       /jsr:@([^/]+)\/([^@/]+)(@[\^~]?\d+\.\d+\.\d+([^/]+)?)?(\/.*)?$/,
     )!;
-    if (match[5] === undefined) {
-      return pathToExportName(`${match[1]}_${match[2]}`);
-    }
+    return match[5] !== undefined
+      ? pathToExportName(match[5])
+      : pathToExportName(`${match[1]}_${match[2]}`);
+  }
 
-    return pathToExportName(match[5]);
-  } else if (spec.startsWith("npm:")) {
+  if (spec.startsWith("npm:")) {
     const match = spec.match(
       /npm:(@([^/]+)\/([^@/]+)|[^@/]+)(@[\^~]?\d+\.\d+\.\d+([^/]+)?)?(\/.*)?$/,
     )!;
-
-    if (match[6] === undefined) {
-      if (match[2] === undefined) {
-        return pathToExportName(match[1]);
-      }
-      return pathToExportName(`${match[2]}_${match[3]}`);
-    }
-
-    return pathToExportName(match[6]);
+    if (match[6] !== undefined) return pathToExportName(match[6]);
+    if (match[2] !== undefined) return pathToExportName(`${match[2]}_${match[3]}`);
+    return pathToExportName(match[1]);
   }
 
   const match = spec.match(/^(@([^/]+)\/([^@/]+)|[^@/]+)(\/.*)?$/);
   if (match !== null) {
-    if (match[4] === undefined) {
-      if (match[2] !== undefined) {
-        return pathToExportName(`${match[2]}_${match[3]}`);
-      }
-
-      return pathToExportName(match[1]);
-    }
-
-    return pathToExportName(match[4]);
+    if (match[4] !== undefined) return pathToExportName(match[4]);
+    if (match[2] !== undefined) return pathToExportName(`${match[2]}_${match[3]}`);
+    return pathToExportName(match[1]);
   }
 
   return pathToExportName(spec);

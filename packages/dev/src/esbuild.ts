@@ -11,8 +11,16 @@ export interface FreshBundleOptions {
   entryPoints: Record<string, string>;
   target: string | string[];
   jsxImportSource?: string;
-  // NEW
+  /**
+   * Alias map passed directly to esbuild.
+   * @example { "react": "npm:preact/compat", "react-dom": "npm:preact/compat" }
+   */
   alias?: Record<string, string>;
+  /**
+   * Additional esbuild plugins injected before the Deno resolver.
+   * User plugins run after internal plugins (build-id, preact-debugger)
+   * but before denoPlugin so they can intercept imports first.
+   */
   plugins?: EsbuildPlugin[];
   sourceMap?: {
     kind: BuildOptions["sourcemap"];
@@ -74,7 +82,7 @@ export async function bundleJs(
     write: false,
     metafile: true,
 
-    // NEW: alias map — e.g. react → preact/compat
+    // React → Preact/compat shim and other aliases
     alias: options.alias,
 
     define: {
@@ -87,12 +95,12 @@ export async function bundleJs(
       preactDebugger(PREACT_ENV),
       buildIdPlugin(options.buildId),
       windowsPathFixer(),
-      // NEW: user plugins injected BEFORE denoPlugin so they resolve first
+      // User plugins before denoPlugin so they resolve first
       ...(options.plugins ?? []),
       denoPlugin({
         preserveJsx: true,
         debug: false,
-        publicEnvVarPrefix: "FRESH_PUBLIC_",
+        publicEnvVarPrefix: "HARMONY_PUBLIC_",
       }),
     ],
   });
@@ -132,7 +140,7 @@ export async function bundleJs(
         .map(({ path }) => path);
       dependencies.set(entryPath, imports);
 
-      if (entryPath !== "fresh-runtime.js" && entry.entryPoint !== undefined) {
+      if (entryPath !== "harmony-runtime.js" && entry.entryPoint !== undefined) {
         const basename = path.basename(entryPath, path.extname(entryPath));
         const filePath = options.entryPoints[basename];
         const name = entryToName.get(filePath)!;
@@ -151,7 +159,7 @@ export async function bundleJs(
 let initialized = false;
 
 export async function startEsbuild() {
-  esbuild = Deno.env.get("FRESH_ESBUILD_LOADER") === "portable"
+  esbuild = Deno.env.get("HARMONY_ESBUILD_LOADER") === "portable"
     ? await import("esbuild-wasm")
     : await import("esbuild");
 
@@ -161,62 +169,59 @@ export async function startEsbuild() {
   }
 }
 
-// --- internal plugins (unchanged) ---
+// --- internal plugins ---
 
 function buildIdPlugin(buildId: string): EsbuildPlugin {
   return {
-    name: "fresh-build-id",
+    name: "harmony-build-id",
     setup(build) {
-      build.onResolve({ filter: /^(jsr:)?@fresh\/build-id/ }, (args) => {
-        return { path: args.path, namespace: "fresh-internal-build-id" };
-      });
-      build.onLoad(
-        { filter: /.*/, namespace: "fresh-internal-build-id" },
-        () => {
-          return { contents: `export const BUILD_ID = "${buildId}";` };
-        },
-      );
+      build.onResolve({ filter: /^(jsr:)?@fresh\/build-id/ }, (args) => ({
+        path: args.path,
+        namespace: "harmony-internal-build-id",
+      }));
+      build.onLoad({
+        filter: /.*/,
+        namespace: "harmony-internal-build-id",
+      }, () => ({
+        contents: `export const BUILD_ID = "${buildId}";`,
+      }));
     },
   };
 }
 
 function toPreactModPath(mod: string): string {
-  if (mod === "preact/debug") {
-    return path.join("debug", "dist", "debug.module.js");
-  } else if (mod === "preact/hooks") {
-    return path.join("hooks", "dist", "hooks.module.js");
-  } else if (mod === "preact/devtools") {
-    return path.join("devtools", "dist", "devtools.module.js");
-  } else if (mod === "preact/compat") {
-    return path.join("compat", "dist", "compat.module.js");
-  } else if (mod === "preact/jsx-runtime" || mod === "preact/jsx-dev-runtime") {
+  if (mod === "preact/debug") return path.join("debug", "dist", "debug.module.js");
+  if (mod === "preact/hooks") return path.join("hooks", "dist", "hooks.module.js");
+  if (mod === "preact/devtools") return path.join("devtools", "dist", "devtools.module.js");
+  if (mod === "preact/compat") return path.join("compat", "dist", "compat.module.js");
+  if (mod === "preact/jsx-runtime" || mod === "preact/jsx-dev-runtime") {
     return path.join("jsx-runtime", "dist", "jsxRuntime.module.js");
-  } else return path.join("dist", "preact.module.js");
+  }
+  return path.join("dist", "preact.module.js");
 }
 
 function preactDebugger(preactPath: string | undefined): EsbuildPlugin {
   return {
-    name: "fresh-preact-debugger",
+    name: "harmony-preact-debugger",
     setup(build) {
       if (preactPath === undefined) return;
-      build.onResolve({ filter: /^preact/ }, (args) => {
-        return { path: path.resolve(preactPath, toPreactModPath(args.path)) };
-      });
+      build.onResolve({ filter: /^preact/ }, (args) => ({
+        path: path.resolve(preactPath, toPreactModPath(args.path)),
+      }));
     },
   };
 }
 
 function windowsPathFixer(): EsbuildPlugin {
   return {
-    name: "fresh-fix-windows",
+    name: "harmony-fix-windows",
     setup(build) {
-      if (Deno.build.os === "windows") {
-        build.onResolve({ filter: /\.*/ }, (args) => {
-          if (args.path.startsWith("\\")) {
-            return { path: path.resolve(args.path) };
-          }
-        });
-      }
+      if (Deno.build.os !== "windows") return;
+      build.onResolve({ filter: /\.*/ }, (args) => {
+        if (args.path.startsWith("\\")) {
+          return { path: path.resolve(args.path) };
+        }
+      });
     },
   };
 }
