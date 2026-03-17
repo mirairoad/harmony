@@ -1,0 +1,194 @@
+{
+  "deno.enable": true,
+  "deno.lint": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "denoland.vscode-deno",
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "css.customData": [
+    ".vscode/tailwind.json"
+  ],
+  "commit-message-editor.staticTemplate": [
+    "[TKT-]: Short description #time 1hr",
+    "",
+    "Message body"
+  ],
+  "commit-message-editor.dynamicTemplate": [
+    "{ticket} {emoji} {description} {time}",
+    "",
+    "{body}"
+  ],
+  "commit-message-editor.tokens": [
+    {
+      "label": "Ticket Reference",
+      "name": "ticket",
+      "type": "text",
+      "description": "The ticket in Notion, e.g. TKT-000123,\ncan be list, e.g. TKT-000123 TKT-000124",
+      "prefix": "[",
+      "suffix": "]"
+    },
+    {
+      "label": "Commit Type",
+      "description": "What type of commit is this?",
+      "name": "emoji",
+      "type": "enum",
+      "combobox": true,
+      "options": [
+        {
+          "label": "🩹 Bug Fix.",
+          "value": "🩹",
+          "description": "Bug fix for a non-critical issue [applicable anywhere]."
+        },
+        {
+          "label": "🔄 Refactoring code.",
+          "value": "🔄",
+          "description": "Refactoring code."
+        },
+        {
+          "label": "⛙ Merging code.",
+          "value": "⛙",
+          "description": "Merging code."
+        },
+        {
+          "label": "📦 Updating dependencies.",
+          "value": "📦",
+          "description": "Updating dependencies."
+        },
+        {
+          "label": "🔼 Updating App Version.",
+          "value": "🔼",
+          "description": "Updating app version."
+        },
+        {
+          "label": "📄 New frontend page.",
+          "value": "📄",
+          "description": "Add new frontend page."
+        },
+        {
+          "label": "🎨 Update frontend components.",
+          "value": "🎨",
+          "description": "Update frontend components."
+        },
+        {
+          "label": "🔌 New plugin.",
+          "value": "🔌",
+          "description": "Add new plugin."
+        },  
+        {
+          "label": "🚚 New api backend.",
+          "value": "🚚",
+          "description": "Add new api backend."
+        },
+        {
+          "label": "🚚 New service backend.",
+          "value": "🚚",
+          "description": "Add new service backend."
+        },
+        {
+          "label": "🎠 Update Configuration.",
+          "value": "🎠",
+          "description": "Update configuration."
+        },
+        {
+          "label":"Migrating database schema.",
+          "value": "💾",
+          "description": "Migrating database schema."
+        },
+        {
+          "label":"updating database schema.",
+          "value": "🔄",
+          "description": "updating database schema."
+        },
+      ]
+    },
+    {
+      "label": "Time Spent",
+      "name": "time",
+      "type": "enum",
+      "description": "time spent on this commit",
+      "prefix": "#time ",
+      "combobox": true,
+      "options": [
+        {
+          "label": "5 Minutes",
+          "value": "5m",
+          "description": ""
+        },
+        {
+          "label": "15 Minutes",
+          "value": "15m",
+          "description": ""
+        },
+        {
+          "label": "30 Minutes",
+          "value": "30m",
+          "description": ""
+        },
+        {
+          "label": "45 Minutes",
+          "value": "45m",
+          "description": ""
+        },
+        {
+          "label": "1 Hour",
+          "value": "1h",
+          "description": ""
+        },
+        {
+          "label": "1.5 Hours",
+          "value": "1.5h",
+          "description": ""
+        },
+        {
+          "label": "2 Hours",
+          "value": "2h",
+          "description": ""
+        },
+        {
+          "label": "3 Hours",
+          "value": "3h",
+          "description": ""
+        },
+        {
+          "label": "4 Hours (1/2 day)",
+          "value": "4h",
+          "description": ""
+        },
+        {
+          "label": "8 Hours (1 day)",
+          "value": "8h",
+          "description": ""
+        },
+      ]
+    },
+    {
+      "label": "Short description",
+      "name": "description",
+      "description": "Short description in the subject line.",
+      "type": "text",
+      "multiline": false
+    },
+    {
+      "label": "Body",
+      "name": "body",
+      "description": "Optional body",
+      "type": "text",
+      "multiline": true,
+      "lines": 5,
+      "maxLines": 10
+    }
+  ]
+}

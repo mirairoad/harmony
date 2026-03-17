@@ -1,0 +1,33 @@
+{
+    "name": "@harmony/basic",
+    "version": "0.0.0",
+    "exports": "./main.ts",
+    "imports": {
+        "@harmony/core": "../../packages/core/mod.ts",
+        "@harmony/dev": "../../packages/dev/mod.ts",
+        "preact": "npm:preact@^10.25.0",
+        "preact/hooks": "npm:preact@^10.25.0/hooks",
+        "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",
+        "preact/jsx-dev-runtime": "npm:preact@^10.25.0/jsx-dev-runtime"
+    },
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "preact",
+        "jsxPrecompileSkipElements": [
+            "a",
+            "img",
+            "source",
+            "body",
+            "html",
+            "head",
+            "title",
+            "meta",
+            "script",
+            "link",
+            "style",
+            "base",
+            "noscript",
+            "template"
+        ]
+    }
+}

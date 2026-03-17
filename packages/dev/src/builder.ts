@@ -1,5 +1,6 @@
 import {
   App,
+  fsAdapter,
   type ListenOptions,
   parseDirPath,
   pathToExportName,
@@ -7,7 +8,6 @@ import {
   TEST_FILE_PATTERN,
   UniqueNamer,
   UPDATE_INTERVAL,
-  fsAdapter,
 } from "@harmony/core";
 import * as path from "@std/path";
 import * as colors from "@std/fmt/colors";
@@ -256,12 +256,13 @@ export class Builder<State = any> {
       // Ignore
     }
 
-    const runtimePath = dev
-      ? "../runtime/client/dev.ts"
-      : "../runtime/client/mod.ts";
+    const runtimeUrl = new URL(
+      dev ? "../../core/src/runtime/client/dev.ts" : "../../core/src/runtime/client/mod.ts",
+      import.meta.url,
+    ).href;
 
     const entryPoints: Record<string, string> = {
-      "harmony-runtime": new URL(runtimePath, import.meta.url).href,
+      "harmony-runtime": runtimeUrl,
     };
 
     const namer = new UniqueNamer();
@@ -300,8 +301,7 @@ export class Builder<State = any> {
       if (chunkName === undefined) {
         throw new Error(`Could not find chunk for island: ${name}`);
       }
-      buildCache.islandModNameToChunk.get(name)!.browser =
-        `${prefix}${chunkName}`;
+      buildCache.islandModNameToChunk.get(name)!.browser = `${prefix}${chunkName}`;
     }
 
     for (let i = 0; i < output.files.length; i++) {

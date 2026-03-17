@@ -326,6 +326,11 @@
       "npm:@preact/signals@^2.8.2"
     ],
     "members": {
+      "apps/basic": {
+        "dependencies": [
+          "npm:preact@^10.25.0"
+        ]
+      },
       "packages/core": {
         "dependencies": [
           "jsr:@fresh/build-id@1",

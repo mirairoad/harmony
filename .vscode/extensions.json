@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "denoland.vscode-deno",
+    "bradlc.vscode-tailwindcss",
+    "eamodio.gitlens",
+    "ms-azuretools.vscode-docker",
+    "formulahendry.auto-rename-tag",
+    "formulahendry.auto-close-tag",
+    "adam-bender.commit-message-editor"
+  ]
+}
+

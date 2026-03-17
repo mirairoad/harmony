@@ -1,21 +1,31 @@
 {
   "workspace": [
     "./packages/core",
-    "./packages/dev"
+    "./packages/dev",
+    "./apps/basic"
   ],
   "tasks": {
+    "dev:basic": "deno run -A --watch apps/basic/dev.ts",
+    "build:basic": "deno run -A apps/basic/dev.ts build",
     "lint": "deno lint",
     "fmt": "deno fmt",
-    "fmt:check": "deno fmt --check",
     "check": "deno check packages/core/mod.ts packages/dev/mod.ts",
     "test": "deno test -A --no-check"
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"],
-      "exclude": ["no-explicit-any"]
+      "tags": [
+        "recommended"
+      ],
+      "exclude": [
+        "no-explicit-any"
+      ]
     },
-    "exclude": ["**/node_modules", "**/_fresh", "**/.git"]
+    "exclude": [
+      "**/node_modules",
+      "**/_fresh",
+      "**/.git"
+    ]
   },
   "fmt": {
     "useTabs": false,
@@ -23,7 +33,10 @@
     "indentWidth": 2,
     "semiColons": true,
     "singleQuote": false,
-    "exclude": ["**/node_modules", "**/_fresh"]
+    "exclude": [
+      "**/node_modules",
+      "**/_fresh"
+    ]
   },
   "imports": {
     "@preact/signals": "npm:@preact/signals@^2.8.2"
