@@ -25,10 +25,7 @@ import {
 } from "../shared_internal.ts";
 import type { BuildCache } from "../../build_cache.ts";
 import { BUILD_ID } from "@fresh/build-id";
-import {
-  DEV_ERROR_OVERLAY_URL,
-  PARTIAL_SEARCH_PARAM,
-} from "../../constants.ts";
+import { DEV_ERROR_OVERLAY_URL, PARTIAL_SEARCH_PARAM } from "../../constants.ts";
 import { escape as escapeHtml } from "@std/html";
 import { HttpError } from "../../error.ts";
 import { getCodeFrame } from "@harmony/dev/middlewares/error_overlay/code_frame";
@@ -201,7 +198,6 @@ options[OptionsType.DIFF] = (vnode) => {
         const insideIsland = hasIslandOwner(RENDER_STATE, vnode);
         if (island === undefined) {
           if (insideIsland) break patcher;
-
           // Not an island, but we might need to preserve keys
           if (vnode.key !== undefined) {
             const key = normalizeKey(vnode.key);
@@ -213,6 +209,24 @@ options[OptionsType.DIFF] = (vnode) => {
             };
           }
 
+          break patcher;
+        }
+        // NEW: skip SSR for islands with ssr: false
+        if (island.ssr === false) {
+          const { islands, islandProps, islandAssets } = RENDER_STATE;
+          for (let i = 0; i < island.css.length; i++) {
+            islandAssets.add(island.css[i]);
+          }
+          islands.add(island);
+          const props = vnode.props ?? {};
+          const propsIdx = islandProps.push({ slots: [], props }) - 1;
+          const key = vnode.key ? normalizeKey(vnode.key) : "";
+          vnode.type = () =>
+            wrapWithMarker(
+              h("div", { style: "display:contents" }),
+              "island",
+              `${island.name}:${propsIdx}:${key}`,
+            );
           break patcher;
         }
 
@@ -573,8 +587,7 @@ export interface PartialStateJson {
 }
 
 function FreshRuntimeScript() {
-  const { islands, nonce, ctx, islandProps, partialId, buildCache } =
-    RENDER_STATE!;
+  const { islands, nonce, ctx, islandProps, partialId, buildCache } = RENDER_STATE!;
   const basePath = ctx.config.basePath;
 
   const islandArr = Array.from(islands);
@@ -611,9 +624,7 @@ function FreshRuntimeScript() {
         ? `{ ${island.exportName} }`
         : `{ ${island.exportName} as ${island.name} }`;
 
-      const islandSpec = island.file.startsWith(".")
-        ? island.file.slice(1)
-        : island.file;
+      const islandSpec = island.file.startsWith(".") ? island.file.slice(1) : island.file;
       return `import ${named} from "${basePath}${islandSpec}";`;
     }).join("");
 

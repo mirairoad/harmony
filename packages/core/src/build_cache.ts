@@ -92,6 +92,7 @@ export class ProdBuildCache<State> implements BuildCache<State> {
 export class IslandPreparer {
   #namer = new UniqueNamer();
 
+  // Replace the prepare method:
   prepare(
     registry: ServerIslandRegistry,
     mod: Record<string, unknown>,
@@ -99,6 +100,10 @@ export class IslandPreparer {
     modName: string,
     css: string[],
   ) {
+    // Read the harmony directive if exported
+    const harmonyDirective = mod["harmony"] as { ssr?: boolean } | undefined;
+    const ssr = harmonyDirective?.ssr !== false; // default true
+
     for (const [name, value] of Object.entries(mod)) {
       if (typeof value !== "function") continue;
 
@@ -112,6 +117,7 @@ export class IslandPreparer {
         fn,
         name: uniqueName,
         css,
+        ssr,
       });
     }
   }

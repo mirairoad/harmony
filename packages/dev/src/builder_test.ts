@@ -148,7 +148,7 @@ Deno.test({
         tmp,
         "dist",
         "static",
-        "_fresh",
+        "_harmony",
         "js",
         BUILD_ID,
         `${name}.js`,
@@ -182,7 +182,7 @@ Deno.test({
         tmp,
         "dist",
         "static",
-        "_fresh",
+        "_harmony",
         "js",
         BUILD_ID,
         `${name}.js`,
@@ -525,7 +525,7 @@ export const app = new App()
     await new Builder({ root: tmp }).build();
 
     await withChildProcessServer(
-      { cwd: tmp, args: ["serve", "-A", "--port=0", "_fresh/server.js"] },
+      { cwd: tmp, args: ["serve", "-A", "--port=0", "_harmony/server.js"] },
       async (address) => {
         let res = await fetch(`${address}/foo.txt`);
         expect(await res.text()).toEqual("ok");
@@ -555,7 +555,7 @@ export const app = new App()
     await new Builder({ root: tmp, serverEntry: "other.ts" }).build();
 
     await withChildProcessServer(
-      { cwd: tmp, args: ["serve", "-A", "--port=0", "_fresh/server.js"] },
+      { cwd: tmp, args: ["serve", "-A", "--port=0", "_harmony/server.js"] },
       async (address) => {
         const res = await fetch(`${address}`);
         expect(await res.text()).toEqual("ok");
@@ -676,7 +676,7 @@ export const app = new App().fsRoutes()`,
     const assetDir = path.join(
       builder.config.outDir,
       "static",
-      "_fresh",
+      "_harmony",
       "js",
       builder.config.buildId,
     );
@@ -750,10 +750,10 @@ export const app = new App()
         "--include",
         "static/",
         "--include",
-        "_fresh",
+        "_harmony",
         "--output",
         outBin,
-        path.join("_fresh", "compiled-entry.js"),
+        path.join("_harmony", "compiled-entry.js"),
       ],
       cwd: tmp,
     }).output();

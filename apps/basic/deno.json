@@ -5,13 +5,17 @@
     "imports": {
         "@harmony/core": "../../packages/core/mod.ts",
         "@harmony/dev": "../../packages/dev/mod.ts",
+        "@harmony/plugins": "../../packages/plugins/mod.ts",
         "preact": "npm:preact@^10.25.0",
         "preact/hooks": "npm:preact@^10.25.0/hooks",
         "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",
-        "preact/jsx-dev-runtime": "npm:preact@^10.25.0/jsx-dev-runtime"
+        "preact/jsx-dev-runtime": "npm:preact@^10.25.0/jsx-dev-runtime",
+        "react-hot-toast": "npm:react-hot-toast@^2.6.0",
+        "sonner": "npm:sonner@^2.0.7",
+        "tailwindcss": "npm:tailwindcss@^4.0.0"
     },
     "compilerOptions": {
-        "jsx": "react-jsx",
+        "jsx": "precompile",
         "jsxImportSource": "preact",
         "jsxPrecompileSkipElements": [
             "a",

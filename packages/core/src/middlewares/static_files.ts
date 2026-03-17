@@ -16,20 +16,23 @@ export function staticFiles<T>(): Middleware<T> {
     const { req, url, config } = ctx;
 
     const buildCache = getBuildCache(ctx);
+    // deno-lint-ignore no-console
+
     if (buildCache === null) return await ctx.next();
 
     let pathname = decodeURIComponent(url.pathname);
     if (config.basePath) {
-      pathname = pathname !== config.basePath
-        ? pathname.slice(config.basePath.length)
-        : "/";
+      pathname = pathname !== config.basePath ? pathname.slice(config.basePath.length) : "/";
     }
 
-    // Fast path bail out
+    // deno-lint-ignore no-console
+
     const startTime = performance.now() + performance.timeOrigin;
     const file = await buildCache.readFile(pathname);
+
+    // deno-lint-ignore no-console
+
     if (pathname === "/" || file === null) {
-      // Optimization: Prevent long responses for favicon.ico requests
       if (pathname === "/favicon.ico") {
         return new Response(null, { status: 404 });
       }
@@ -88,7 +91,7 @@ export function staticFiles<T>(): Middleware<T> {
         ctx.config.mode !== "development" &&
         (BUILD_ID === cacheKey ||
           url.pathname.startsWith(
-            `${ctx.config.basePath}/_fresh/js/${BUILD_ID}/`,
+            `${ctx.config.basePath}/_harmony/js/${BUILD_ID}/`,
           ))
       ) {
         span.setAttribute("fresh.cache", "immutable");

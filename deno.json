@@ -1,8 +1,10 @@
 {
+  "nodeModulesDir": "auto",
   "workspace": [
     "./packages/core",
     "./packages/dev",
-    "./apps/basic"
+    "./apps/basic",
+    "./packages/plugins"
   ],
   "tasks": {
     "dev:basic": "deno run -A --watch apps/basic/dev.ts",
@@ -39,6 +41,14 @@
     ]
   },
   "imports": {
-    "@preact/signals": "npm:@preact/signals@^2.8.2"
+    "@preact/signals": "npm:@preact/signals@^2.8.2",
+    "react": "npm:preact/compat",
+    "react-dom": "npm:preact/compat",
+    "react/jsx-runtime": "npm:preact/jsx-runtime",
+    "react/jsx-dev-runtime": "npm:preact/jsx-dev-runtime"
+  },
+  "compilerOptions": {
+    "jsx": "precompile",
+    "jsxImportSource": "preact"
   }
 }

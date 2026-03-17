@@ -8,3 +8,4 @@ export { type HarmonyConfig, type ResolvedHarmonyConfig, parseDirPath } from "./
 export { type Route, type RouteConfig, type LayoutConfig, type MaybeLazy, type Lazy } from "./types.ts";
 export * from "./constants.ts";export { fsAdapter } from "./fs.ts";
 export { pathToExportName, UniqueNamer } from "./utils.ts";
+export { staticFiles } from "./middlewares/static_files.ts";

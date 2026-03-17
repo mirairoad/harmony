@@ -1,6 +1,8 @@
 import * as colors from "@std/fmt/colors";
 import { App, type ListenOptions } from "./app.ts";
-import type { Middleware } from "./middlewares/mod.ts";
+import type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";
+import type { LayoutConfig, MaybeLazy, Route, RouteConfig } from "./types.ts";
+import type { RouteComponent } from "./segments.ts";
 
 export type HarmonyMode = "fullstack" | "backend";
 
@@ -24,6 +26,10 @@ export interface ApiConfig {
 
 export interface HarmonyOptions {
   basePath?: string;
+  /**
+   * "fullstack" — islands, builder, client runtime active
+   * "backend"   — zero client build, pure API server
+   */
   mode: HarmonyMode;
 }
 
@@ -38,7 +44,7 @@ export class Harmony<State = any> {
     this.#mode = options.mode;
     this.#app = new App<State>({
       basePath: options.basePath,
-      mode: options.mode === "fullstack" ? "production" : "production",
+      mode: "production",
     });
   }
 
@@ -55,7 +61,7 @@ export class Harmony<State = any> {
     if (this.#mode === "backend") {
       throw new Error(
         `Cannot register client "${config.name}" in backend mode. ` +
-        `Switch to mode: "fullstack" to enable client apps.`,
+          `Switch to mode: "fullstack" to enable client apps.`,
       );
     }
     this.#clients.push(config);
@@ -75,10 +81,175 @@ export class Harmony<State = any> {
   }
 
   /**
-   * Add middleware to the shared backend.
+   * Add one or more middlewares at the root or specified path.
+   *
+   * @example
+   * app.use(authMiddleware);
+   * app.use("/admin", adminOnly);
    */
-  use(...middleware: Middleware<State>[]): this {
-    this.#app.use(...middleware);
+  use(...middleware: MaybeLazyMiddleware<State>[]): this;
+  use(path: string, ...middleware: MaybeLazyMiddleware<State>[]): this;
+  use(
+    pathOrMiddleware: string | MaybeLazyMiddleware<State>,
+    ...middlewares: MaybeLazyMiddleware<State>[]
+  ): this {
+    if (typeof pathOrMiddleware === "string") {
+      this.#app.use(pathOrMiddleware, ...middlewares);
+    } else {
+      this.#app.use(pathOrMiddleware, ...middlewares);
+    }
+    return this;
+  }
+
+  /**
+   * Add a GET handler at the specified path.
+   *
+   * @example
+   * app.get("/api/ping", (ctx) => ctx.json({ ok: true }));
+   */
+  get(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.get(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a POST handler at the specified path.
+   *
+   * @example
+   * app.post("/api/users", createUserHandler);
+   */
+  post(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.post(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a PATCH handler at the specified path.
+   *
+   * @example
+   * app.patch("/api/users/:id", updateUserHandler);
+   */
+  patch(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.patch(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a PUT handler at the specified path.
+   *
+   * @example
+   * app.put("/api/users/:id", replaceUserHandler);
+   */
+  put(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.put(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a DELETE handler at the specified path.
+   *
+   * @example
+   * app.delete("/api/users/:id", deleteUserHandler);
+   */
+  delete(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.delete(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a HEAD handler at the specified path.
+   */
+  head(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.head(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a handler for all HTTP verbs at the specified path.
+   *
+   * @example
+   * app.all("/api/*", corsMiddleware);
+   */
+  all(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#app.all(path, ...middlewares);
+    return this;
+  }
+
+  /**
+   * Add a route with optional config.
+   *
+   * @example
+   * app.route("/about", { component: AboutPage });
+   */
+  route(
+    path: string,
+    route: MaybeLazy<Route<State>>,
+    config?: RouteConfig,
+  ): this {
+    this.#app.route(path, route, config);
+    return this;
+  }
+
+  /**
+   * Mount file-system based routes collected by the Builder.
+   * Call this once after registering clients.
+   *
+   * @example
+   * app.fsRoutes();
+   */
+  fsRoutes(pattern = "*"): this {
+    this.#app.fsRoutes(pattern);
+    return this;
+  }
+
+  /**
+   * Set a custom 404 handler.
+   *
+   * @example
+   * app.notFound((ctx) => ctx.render(<NotFoundPage />));
+   */
+  notFound(routeOrMiddleware: Route<State> | Middleware<State>): this {
+    this.#app.notFound(routeOrMiddleware);
+    return this;
+  }
+
+  /**
+   * Set an error handler at a specific path.
+   *
+   * @example
+   * app.onError("/api/*", apiErrorHandler);
+   */
+  onError(
+    path: string,
+    routeOrMiddleware: Route<State> | Middleware<State>,
+  ): this {
+    this.#app.onError(path, routeOrMiddleware);
+    return this;
+  }
+
+  /**
+   * Set the app wrapper component (outermost layout).
+   *
+   * @example
+   * app.appWrapper(RootLayout);
+   */
+  appWrapper(component: RouteComponent<State>): this {
+    this.#app.appWrapper(component);
+    return this;
+  }
+
+  /**
+   * Add a layout component at a path.
+   *
+   * @example
+   * app.layout("/dashboard", DashboardLayout);
+   */
+  layout(
+    path: string,
+    component: RouteComponent<State>,
+    config?: LayoutConfig,
+  ): this {
+    this.#app.layout(path, component, config);
     return this;
   }
 
@@ -135,7 +306,7 @@ export class Harmony<State = any> {
         console.log(colors.dim("  clients:"));
         for (const client of this.#clients) {
           console.log(
-            `    ${colors.green("▸")} ${colors.bold(client.name)} → ${colors.cyan(client.mount)}`
+            `    ${colors.green("▸")} ${colors.bold(client.name)} → ${colors.cyan(client.mount)}`,
           );
         }
         console.log();

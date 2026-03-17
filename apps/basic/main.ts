@@ -1,8 +1,9 @@
-import { Harmony } from "@harmony/core";
+import { Harmony, staticFiles } from "@harmony/core";
 
 export const app = new Harmony({ mode: "fullstack" });
 
-app.getApp().get("/api/ping", (ctx) => ctx.json({ ok: true }));
-app.getApp().fsRoutes();
+app.use(staticFiles());
+app.get("/api/ping", (ctx) => ctx.json({ ok: true }));
+app.fsRoutes();
 
 export default { fetch: app.handler() };

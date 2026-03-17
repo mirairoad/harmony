@@ -17,10 +17,12 @@
     "./router": "./src/router.ts",
     "./otel": "./src/otel.ts",
     "./middlewares": "./src/middlewares/mod.ts",
-    "./runtime/server/preact_hooks": "./src/runtime/server/preact_hooks.ts"
+    "./runtime/server/preact_hooks": "./src/runtime/server/preact_hooks.ts",
+    "./static_files": "./src/middlewares/static_files.ts"
   },
   "imports": {
     "@preact/signals": "npm:@preact/signals@^2.8.2",
+    "@std/expect": "jsr:@std/expect@^1.0.18",
     "@std/html": "jsr:@std/html@^1.0.5",
     "preact": "npm:preact@^10.25.0",
     "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",

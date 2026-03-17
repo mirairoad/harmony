@@ -98,7 +98,7 @@ function createOnListen(
     console.log();
     // deno-lint-ignore no-console
     console.log(
-      colors.bgRgb8(colors.rgb8(" 🍋 Fresh ready   ", 0), 121),
+      colors.bgRgb8(colors.rgb8(" 🎵 Harmony ready   ", 0), 121),
     );
     const sep = options.remoteAddress ? "" : "\n";
     const space = options.remoteAddress ? " " : "";
@@ -378,7 +378,7 @@ export class App<State> {
         DENO_DEPLOYMENT_ID !== undefined
       ) {
         throw new Error(
-          `Could not find _fresh directory. Maybe you forgot to run "deno task build" or maybe you're trying to run "main.ts" directly instead of "_fresh/server.js"?`,
+          `Could not find _harmony directory. Maybe you forgot to run "deno task build" or maybe you're trying to run "main.ts" directly instead of "_harmony/server.js"?`,
         );
       } else {
         buildCache = new MockBuildCache([], this.config.mode);

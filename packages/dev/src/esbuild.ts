@@ -2,6 +2,69 @@ import { denoPlugin } from "@deno/esbuild-plugin";
 import type { BuildOptions, Plugin as EsbuildPlugin } from "esbuild";
 import * as path from "@std/path";
 
+/**
+ * Forces all React imports to resolve to preact/compat.
+ * This works at the resolver level, catching imports inside node_modules
+ * that the alias map misses.
+ */
+function reactCompatPlugin(cwd: string): EsbuildPlugin {
+  return {
+    name: "harmony-react-compat",
+    setup(build) {
+      build.onResolve({ filter: /^react$/ }, () => ({
+        path: "react",
+        namespace: "harmony-react-compat",
+      }));
+      build.onResolve({ filter: /^react-dom$/ }, () => ({
+        path: "react-dom",
+        namespace: "harmony-react-compat",
+      }));
+      build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({
+        path: "react/jsx-runtime",
+        namespace: "harmony-react-compat",
+      }));
+      build.onResolve({ filter: /^react\/jsx-dev-runtime$/ }, () => ({
+        path: "react/jsx-dev-runtime",
+        namespace: "harmony-react-compat",
+      }));
+
+      build.onLoad(
+        { filter: /^react$/, namespace: "harmony-react-compat" },
+        () => ({
+          contents: `export * from "preact/compat"; export { default } from "preact/compat";`,
+          loader: "js",
+          resolveDir: cwd,
+        }),
+      );
+      build.onLoad(
+        { filter: /^react-dom$/, namespace: "harmony-react-compat" },
+        () => ({
+          contents: `export * from "preact/compat"; export { default } from "preact/compat";`,
+          loader: "js",
+          resolveDir: cwd,
+        }),
+      );
+      build.onLoad(
+        { filter: /^react\/jsx-runtime$/, namespace: "harmony-react-compat" },
+        () => ({
+          contents:
+            `export * from "preact/jsx-runtime"; export { default } from "preact/jsx-runtime";`,
+          loader: "js",
+          resolveDir: cwd,
+        }),
+      );
+      build.onLoad(
+        { filter: /^react\/jsx-dev-runtime$/, namespace: "harmony-react-compat" },
+        () => ({
+          contents:
+            `export * from "preact/jsx-dev-runtime"; export { default } from "preact/jsx-dev-runtime";`,
+          loader: "js",
+          resolveDir: cwd,
+        }),
+      );
+    },
+  };
+}
 export interface FreshBundleOptions {
   dev: boolean;
   cwd: string;
@@ -95,7 +158,7 @@ export async function bundleJs(
       preactDebugger(PREACT_ENV),
       buildIdPlugin(options.buildId),
       windowsPathFixer(),
-      // User plugins before denoPlugin so they resolve first
+      reactCompatPlugin(options.cwd),
       ...(options.plugins ?? []),
       denoPlugin({
         preserveJsx: true,

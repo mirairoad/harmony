@@ -117,7 +117,7 @@ document.addEventListener("click", async (e) => {
       }
 
       // deno-lint-ignore no-explicit-any
-      const indicator = (el as any)._freshIndicator;
+      const indicator = (el as any)._harmonyIndicator;
       if (indicator !== undefined) {
         indicator.value = true;
       }
@@ -401,7 +401,7 @@ export async function applyPartials(res: Response): Promise<void> {
       }
     } else if (child.nodeName === "SCRIPT") {
       const script = child as HTMLScriptElement;
-      if (script.src === `${INTERNAL_PREFIX}/fresh-runtime.js`) return;
+      if (script.src === `${INTERNAL_PREFIX}/harmony-runtime.js`) return;
       // TODO: What to do with script tags?
     } else if (child.nodeName === "STYLE") {
       const style = child as HTMLStyleElement;

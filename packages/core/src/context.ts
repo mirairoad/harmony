@@ -12,11 +12,7 @@ import { SpanStatusCode } from "@opentelemetry/api";
 import type { ResolvedHarmonyConfig } from "./config.ts";
 import type { BuildCache } from "./build_cache.ts";
 import type { LayoutConfig } from "./types.ts";
-import {
-  FreshScripts,
-  RenderState,
-  setRenderState,
-} from "./runtime/server/preact_hooks.ts";
+import { FreshScripts, RenderState, setRenderState } from "./runtime/server/preact_hooks.ts";
 import { DEV_ERROR_OVERLAY_URL, PARTIAL_SEARCH_PARAM } from "./constants.ts";
 import { tracer } from "./otel.ts";
 import {
@@ -36,6 +32,8 @@ export interface Island {
   exportName: string;
   fn: ComponentType;
   css: string[];
+  /** Skip SSR for this island. Set via `export const harmony = { ssr: false }` in the island file. */
+  ssr: boolean;
 }
 
 export type ServerIslandRegistry = Map<ComponentType, Island>;
@@ -127,8 +125,7 @@ export class Context<State> {
     // deno-lint-ignore no-explicit-any
     getInternals = <T>(ctx: Context<T>) => ctx.#internal as any;
     getBuildCache = <T>(ctx: Context<T>) => ctx.#buildCache;
-    setAdditionalStyles = <T>(ctx: Context<T>, css: string[]) =>
-      ctx.#additionalStyles = css;
+    setAdditionalStyles = <T>(ctx: Context<T>, css: string[]) => ctx.#additionalStyles = css;
   }
 
   constructor(
@@ -350,16 +347,12 @@ export class Context<State> {
         const runtimeUrl = state.buildCache.clientEntry.startsWith(".")
           ? state.buildCache.clientEntry.slice(1)
           : state.buildCache.clientEntry;
-        let link = `<${
-          encodeURI(`${basePath}${runtimeUrl}`)
-        }>; rel="modulepreload"; as="script"`;
+        let link = `<${encodeURI(`${basePath}${runtimeUrl}`)}>; rel="modulepreload"; as="script"`;
         state.islands.forEach((island) => {
           const specifier = `${basePath}${
             island.file.startsWith(".") ? island.file.slice(1) : island.file
           }`;
-          link += `, <${
-            encodeURI(specifier)
-          }>; rel="modulepreload"; as="script"`;
+          link += `, <${encodeURI(specifier)}>; rel="modulepreload"; as="script"`;
         });
 
         if (link !== "") {
