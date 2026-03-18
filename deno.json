@@ -2,12 +2,12 @@
   "nodeModulesDir": "auto",
   "workspace": [
     "./packages",
-    "./apps/basic"
+    "./examples/basic"
   ],
   "tasks": {
-    "dev:basic": "deno run -A --watch apps/basic/dev.ts",
-    "build:basic": "deno run -A apps/basic/dev.ts build",
-    "start:basic": "deno run -A apps/basic/_harmony/compiled-entry.js",
+    "dev:basic": "deno run -A --watch examples/basic/dev.ts",
+    "build:basic": "deno run -A examples/basic/dev.ts build",
+    "start:basic": "deno run -A examples/basic/dist/compiled-entry.js",
     "lint": "deno lint",
     "fmt": "deno fmt",
     "check": "deno check packages/core/mod.ts packages/dev/mod.ts",

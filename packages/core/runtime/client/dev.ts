@@ -1,6 +1,7 @@
 import "preact/debug";
 export * from "./mod.ts";
 import { IS_BROWSER } from "../shared.ts";
+import * as colors from "@std/fmt/colors";
 
 let ws: WebSocket;
 let revision = 0;
@@ -85,11 +86,14 @@ function handleMessage(e: MessageEvent) {
   switch (data.type) {
     case "initial-state": {
       if (revision === 0) {
-        // deno-lint-ignore no-console
+        // background color: #472773; color: white, padding 10px
         console.log(
-          `%c Fresh %c Connected to development server.`,
-          "background-color: #86efac; color: black",
-          "color: inherit",
+          `${
+            colors.bgRgb24(
+              colors.rgb24(colors.bold("Howl 🐺 Connected to development server."), 0xffffff),
+              0x472773,
+            )
+          }`,
         );
       }
 

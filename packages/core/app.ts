@@ -1,5 +1,4 @@
 import { trace } from "@opentelemetry/api";
-
 import { DENO_DEPLOYMENT_ID } from "../utils/build-id.ts";
 import * as colors from "@std/fmt/colors";
 import { type MaybeLazyMiddleware, type Middleware, runMiddlewares } from "./middlewares/mod.ts";
@@ -25,8 +24,19 @@ import {
   newRouteCmd,
 } from "./commands.ts";
 import { MockBuildCache } from "./test_utils.ts";
+import { HowlLogger, type LoggerOptions } from "./logger.ts";
+export interface ClientConfig {
+  name: string;
+  dir: string;
+  mount: string;
+}
 
-// TODO: Completed type clashes in older Deno versions
+export interface ApiConfig {
+  dir: string;
+  prefix: string;
+  spec?: boolean;
+}
+
 // deno-lint-ignore no-explicit-any
 export const DEFAULT_CONN_INFO: any = {
   localAddr: { transport: "tcp", hostname: "localhost", port: 8080 },
@@ -42,10 +52,10 @@ const defaultOptionsHandler = (methods: string[]): () => Promise<Response> => {
       }),
     );
 };
+
 // deno-lint-ignore require-await
 const DEFAULT_ERROR_HANDLER = async <State>(ctx: Context<State>) => {
   const { error } = ctx;
-
   if (error instanceof HttpError) {
     if (error.status >= 500) {
       // deno-lint-ignore no-console
@@ -53,19 +63,29 @@ const DEFAULT_ERROR_HANDLER = async <State>(ctx: Context<State>) => {
     }
     return new Response(error.message, { status: error.status });
   }
-
   // deno-lint-ignore no-console
   console.error(error);
   return new Response("Internal server error", { status: 500 });
 };
 
+function getNetworkIp(): string | null {
+  try {
+    const ifaces = Deno.networkInterfaces();
+    for (const iface of ifaces) {
+      if (iface.family === "IPv4" && !iface.address.startsWith("127.")) {
+        return iface.address;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export type ListenOptions =
-  & Partial<
-    Deno.ServeTcpOptions & Deno.TlsCertifiedKeyPem
-  >
-  & {
-    remoteAddress?: string;
-  };
+  & Partial<Deno.ServeTcpOptions & Deno.TlsCertifiedKeyPem>
+  & { remoteAddress?: string };
+
 function createOnListen(
   basePath: string,
   options: ListenOptions,
@@ -89,15 +109,7 @@ function createOnListen(
       `${protocol}//${hostname}:${params.port}${pathname}`,
       0x9b59b6,
     );
-    const helper = hostname === "0.0.0.0" || hostname === "::"
-      ? colors.rgb24(
-        ` (${protocol}//localhost:${params.port}${pathname})`,
-        0x9b59b6,
-      )
-      : "";
-
-    const sep = options.remoteAddress ? "" : "\n";
-    const space = options.remoteAddress ? " " : "";
+    const networkIp = getNetworkIp();
 
     // deno-lint-ignore no-console
     console.log();
@@ -106,36 +118,39 @@ function createOnListen(
       colors.bgRgb24(colors.rgb24(" 🐺 Howl ready   ", 0xffffff), 0x472773),
     );
     // deno-lint-ignore no-console
-    console.log(
-      `    ${colors.bold("Local:")}  ${space}${address}${helper}${sep}`,
-    );
+    console.log(`    ${colors.bold("Local:")}    ${address}`);
+    if (networkIp) {
+      // deno-lint-ignore no-console
+      console.log(
+        `    ${colors.bold("Network:")}  ${
+          colors.rgb24(
+            `${protocol}//${networkIp}:${params.port}${pathname}`,
+            0x9b59b6,
+          )
+        }  ${colors.dim("← phone/tablet")}`,
+      );
+    }
     if (options.remoteAddress) {
       // deno-lint-ignore no-console
       console.log(
-        `    ${colors.bold("Remote:")}  ${colors.rgb24(options.remoteAddress, 0x9b59b6)}\n`,
+        `    ${colors.bold("Remote:")}   ${colors.rgb24(options.remoteAddress, 0x9b59b6)}`,
       );
     }
+    // deno-lint-ignore no-console
+    console.log();
   };
 }
 
-async function listenOnFreePort(
+function listenOnFreePort(
   options: ListenOptions,
-  handler: (
-    request: Request,
-    info?: Deno.ServeHandlerInfo,
-  ) => Promise<Response>,
+  handler: (request: Request, info?: Deno.ServeHandlerInfo) => Promise<Response>,
 ) {
-  // No port specified, check for a free port. Instead of picking just
-  // any port we'll check if the next one is free for UX reasons.
-  // That way the user only needs to increment a number when running
-  // multiple apps vs having to remember completely different ports.
   let firstError = null;
   for (let port = 8000; port < 8020; port++) {
     try {
-      return await Deno.serve({ ...options, port }, handler);
+      return Deno.serve({ ...options, port }, handler);
     } catch (err) {
       if (err instanceof Deno.errors.AddrInUse) {
-        // Throw first EADDRINUSE error if no port is free
         if (!firstError) firstError = err;
         continue;
       }
@@ -145,27 +160,60 @@ async function listenOnFreePort(
   throw firstError;
 }
 
-export let getBuildCache: <State>(app: App<State>) => BuildCache<State> | null;
+export let getBuildCache: <State>(app: Howl<State>) => BuildCache<State> | null;
 export let setBuildCache: <State>(
-  app: App<State>,
+  app: Howl<State>,
   cache: BuildCache<State>,
   mode: "development" | "production",
 ) => void;
 export let setErrorInterceptor: <State>(
-  app: App<State>,
+  app: Howl<State>,
   fn: (err: unknown) => void,
 ) => void;
 
 const NOOP = () => {};
 
+export interface HowlOptions extends HowlConfig {
+  /**
+   * Enable Howl's built-in logger.
+   * Adds timestamp and PID to all console output.
+   * @default false
+   */
+  logger?: boolean;
+  /**
+   * Enable debug logging. No-ops when false.
+   * @default false
+   */
+  debug?: boolean;
+  /**
+   * Custom logger options — ignored if logger: false.
+   */
+  loggerOptions?: LoggerOptions;
+}
+
 /**
- * Create an application instance that passes the incoming `Request`
- * instance through middlewares and routes.
+ * The Howl application — single unified class for routing,
+ * middleware, server startup, and framework configuration.
+ *
+ * @example
+ * ```ts
+ * import { Howl } from "@hushkey/howl";
+ *
+ * const app = new Howl({ mode: "production", logger: true });
+ *
+ * app.get("/api/ping", (ctx) => ctx.json({ ok: true }));
+ * app.fsRoutes();
+ *
+ * export default { fetch: app.handler() };
+ * ```
  */
-export class App<State> {
+// deno-lint-ignore no-explicit-any
+export class Howl<State = any> {
+  #clients: ClientConfig[] = [];
   #getBuildCache: () => BuildCache<State> | null = () => null;
   #commands: Command<State>[] = [];
   #onError: (err: unknown) => void = NOOP;
+  #logger: HowlLogger | null = null;
 
   static {
     getBuildCache = (app) => app.#getBuildCache();
@@ -179,21 +227,51 @@ export class App<State> {
     };
   }
 
-  /**
-   * The final resolved Fresh configuration.
-   */
+  /** The resolved Howl configuration. */
   config: ResolvedHowlConfig;
 
-  constructor(config: HowlConfig = {}) {
+  /** Access the logger instance directly. */
+  get logger(): HowlLogger | null {
+    return this.#logger;
+  }
+
+  constructor(options: HowlOptions = {}) {
     this.config = {
       root: ".",
-      basePath: config.basePath ?? "",
-      mode: config.mode ?? "production",
+      basePath: options.basePath ?? "",
+      mode: options.mode ?? "production",
     };
+
+    if (options.logger) {
+      this.#logger = new HowlLogger({
+        debug: options.debug,
+        ...options.loggerOptions,
+      });
+      this.#logger.install();
+    }
   }
 
   /**
-   * Add one or more middlewares at the top or the specified path.
+   * Configure the app with a callback.
+   * Useful for modular setup.
+   *
+   * @example
+   * app.configure((app) => {
+   *   app.use(staticFiles());
+   *   app.use(authMiddleware);
+   * });
+   */
+  configure(fn: (app: this) => void): this {
+    fn(this);
+    return this;
+  }
+
+  /**
+   * Add one or more middlewares at the root or specified path.
+   *
+   * @example
+   * app.use(authMiddleware);
+   * app.use("/admin", adminOnly);
    */
   use(...middleware: MaybeLazyMiddleware<State>[]): this;
   use(path: string, ...middleware: MaybeLazyMiddleware<State>[]): this;
@@ -211,20 +289,17 @@ export class App<State> {
       middlewares.unshift(pathOrMiddleware);
       fns = middlewares;
     }
-
     this.#commands.push(newMiddlewareCmd(pattern, fns, true));
-
     return this;
   }
 
-  /**
-   * Set the app's 404 error handler. Can be a {@linkcode Route} or a {@linkcode Middleware}.
-   */
+  /** Set a custom 404 handler. */
   notFound(routeOrMiddleware: Route<State> | Middleware<State>): this {
     this.#commands.push(newNotFoundCmd(routeOrMiddleware));
     return this;
   }
 
+  /** Set an error handler at a specific path. */
   onError(
     path: string,
     routeOrMiddleware: Route<State> | Middleware<State>,
@@ -233,11 +308,13 @@ export class App<State> {
     return this;
   }
 
+  /** Set the outermost app wrapper component. */
   appWrapper(component: RouteComponent<State>): this {
     this.#commands.push(newAppCmd(component));
     return this;
   }
 
+  /** Add a layout component at a path. */
   layout(
     path: string,
     component: RouteComponent<State>,
@@ -247,6 +324,7 @@ export class App<State> {
     return this;
   }
 
+  /** Add a route with optional config. */
   route(
     path: string,
     route: MaybeLazy<Route<State>>,
@@ -256,61 +334,53 @@ export class App<State> {
     return this;
   }
 
-  /**
-   * Add middlewares for GET requests at the specified path.
-   */
+  /** Add a GET handler. */
   get(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("GET", path, middlewares, false));
     return this;
   }
-  /**
-   * Add middlewares for POST requests at the specified path.
-   */
+
+  /** Add a POST handler. */
   post(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("POST", path, middlewares, false));
     return this;
   }
-  /**
-   * Add middlewares for PATCH requests at the specified path.
-   */
+
+  /** Add a PATCH handler. */
   patch(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("PATCH", path, middlewares, false));
     return this;
   }
-  /**
-   * Add middlewares for PUT requests at the specified path.
-   */
+
+  /** Add a PUT handler. */
   put(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("PUT", path, middlewares, false));
     return this;
   }
-  /**
-   * Add middlewares for DELETE requests at the specified path.
-   */
+
+  /** Add a DELETE handler. */
   delete(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("DELETE", path, middlewares, false));
     return this;
   }
-  /**
-   * Add middlewares for HEAD requests at the specified path.
-   */
+
+  /** Add a HEAD handler. */
   head(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("HEAD", path, middlewares, false));
     return this;
   }
 
-  /**
-   * Add middlewares for all HTTP verbs at the specified path.
-   */
+  /** Add a handler for all HTTP verbs. */
   all(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
     this.#commands.push(newHandlerCmd("ALL", path, middlewares, false));
     return this;
   }
 
   /**
-   * Insert file routes collected in {@linkcode Builder} at this point.
-   * @param pattern Append file routes at this pattern instead of the root
-   * @returns
+   * Insert file-system routes collected by the Builder.
+   *
+   * @example
+   * app.fsRoutes();
    */
   fsRoutes(pattern = "*"): this {
     this.#commands.push({
@@ -327,20 +397,16 @@ export class App<State> {
   }
 
   /**
-   * Merge another {@linkcode App} instance into this app at the
-   * specified path.
+   * Merge another Howl instance into this app at the specified path.
    */
-  mountApp(path: string, app: App<State>): this {
+  mountApp(path: string, app: Howl<State>): this {
     for (let i = 0; i < app.#commands.length; i++) {
       const cmd = app.#commands[i];
-
       if (cmd.type !== CommandType.App && cmd.type !== CommandType.NotFound) {
-        // Apply the inner app's basePath if it exists
         let effectivePattern = cmd.pattern;
         if (app.config.basePath) {
           effectivePattern = mergePath(app.config.basePath, cmd.pattern, false);
         }
-
         const clone = {
           ...cmd,
           pattern: mergePath(path, effectivePattern, true),
@@ -349,20 +415,17 @@ export class App<State> {
         this.#commands.push(clone);
         continue;
       }
-
       this.#commands.push(cmd);
     }
 
     // deno-lint-ignore no-this-alias
     const self = this;
     app.#getBuildCache = () => self.#getBuildCache();
-
     return this;
   }
 
   /**
-   * Create handler function for `Deno.serve` or to be used in
-   * testing.
+   * Create a handler function for `Deno.serve` or testing.
    */
   handler(): (
     request: Request,
@@ -370,12 +433,9 @@ export class App<State> {
   ) => Promise<Response> {
     let buildCache = this.#getBuildCache();
     if (buildCache === null) {
-      if (
-        this.config.mode === "production" &&
-        DENO_DEPLOYMENT_ID !== undefined
-      ) {
+      if (this.config.mode === "production" && DENO_DEPLOYMENT_ID !== undefined) {
         throw new Error(
-          `Could not find _howl directory. Maybe you forgot to run "deno task build" or maybe you're trying to run "main.ts" directly instead of "_howl/server.js"?`,
+          `Could not find _howl directory. Did you forget to run "deno task build"?`,
         );
       } else {
         buildCache = new MockBuildCache([], this.config.mode);
@@ -383,7 +443,6 @@ export class App<State> {
     }
 
     const router = new UrlPatternRouter<MaybeLazyMiddleware<State>>();
-
     const { rootMiddlewares } = applyCommands(
       router,
       this.#commands,
@@ -395,7 +454,6 @@ export class App<State> {
       conn: Deno.ServeHandlerInfo = DEFAULT_CONN_INFO,
     ) => {
       const url = new URL(req.url);
-      // Prevent open redirect attacks
       url.pathname = url.pathname.replace(/\/+/g, "/");
 
       const method = req.method.toUpperCase() as Method;
@@ -409,7 +467,6 @@ export class App<State> {
       }
 
       let next: () => Promise<Response>;
-
       if (pattern === null || !methodMatch) {
         handlers = rootMiddlewares;
       }
@@ -438,18 +495,13 @@ export class App<State> {
 
       try {
         if (handlers.length === 0) return await next();
-
         const result = await runMiddlewares(handlers, ctx, this.#onError);
         if (!(result instanceof Response)) {
           throw new Error(
-            `Expected a "Response" instance to be returned, but got: ${result}`,
+            `Expected a "Response" instance, but got: ${result}`,
           );
         }
-
-        if (method === "HEAD") {
-          return new Response(null, result);
-        }
-
+        if (method === "HEAD") return new Response(null, result);
         return result;
       } catch (err) {
         ctx.error = err;
@@ -459,19 +511,46 @@ export class App<State> {
   }
 
   /**
-   * Spawn a server for this app.
+   * Start the server.
+   *
+   * @example
+   * await app.listen({ port: 8000 });
    */
   async listen(options: ListenOptions = {}): Promise<void> {
     if (!options.onListen) {
       options.onListen = createOnListen(this.config.basePath, options);
     }
-
     const handler = this.handler();
     if (options.port) {
       await Deno.serve(options, handler);
       return;
     }
-
     await listenOnFreePort(options, handler);
   }
+
+  /**
+   * Returns registered client configs.
+   * Used internally by HowlBuilder.
+   */
+  getClients(): ClientConfig[] {
+    return this.#clients;
+  }
+
+  /**
+   * Register a client app.
+   * Each client is an isolated island/route build mounted at a path.
+   *
+   * @example
+   * app.client({ name: "main", dir: "./apps/main", mount: "/" });
+   */
+  client(config: ClientConfig): this {
+    this.#clients.push(config);
+    return this;
+  }
 }
+
+/**
+ * @deprecated Use {@linkcode Howl} directly.
+ * App is kept as an internal alias for backward compatibility.
+ */
+export { Howl as App };

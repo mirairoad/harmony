@@ -7,6 +7,7 @@
         "@hushkey/howl/dev": "../../packages/dev/mod.ts",
         "@hushkey/howl/plugins": "../../packages/plugins/mod.ts",
         "@hushkey/howl/runtime": "../../packages/core/runtime/client/mod.ts",
+        "@std/path": "jsr:@std/path@^1.0.0",
         "preact": "npm:preact@^10.25.0",
         "preact/hooks": "npm:preact@^10.25.0/hooks",
         "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",

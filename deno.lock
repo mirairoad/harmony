@@ -793,8 +793,9 @@
       "npm:preact@*"
     ],
     "members": {
-      "apps/basic": {
+      "examples/basic": {
         "dependencies": [
+          "jsr:@std/path@1",
           "npm:preact@^10.25.0",
           "npm:react-hot-toast@^2.6.0",
           "npm:sonner@^2.0.7",

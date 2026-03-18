@@ -1,5 +1,5 @@
 import { App, type ListenOptions } from "../core/app.ts";
-import type { Howl } from "../core/howl.ts";
+import type { Howl } from "../core/app.ts";
 import { Builder, type BuildOptions } from "./builder.ts";
 import { cssModulesPlugin } from "./plugins/css_modules.ts";
 
@@ -57,8 +57,6 @@ export class HowlBuilder<State = any> {
   }
 
   #setupBuilders() {
-    if (this.#howl.getMode() === "backend") return;
-
     const clients = this.#howl.getClients();
 
     if (clients.length === 0) {
@@ -91,11 +89,6 @@ export class HowlBuilder<State = any> {
   }
 
   async listen(options: ListenOptions = {}): Promise<void> {
-    if (this.#howl.getMode() === "backend") {
-      await this.#howl.getApp().listen(options);
-      return;
-    }
-
     const { importApp } = this.#options;
     if (!importApp) {
       throw new Error(
@@ -128,12 +121,7 @@ export class HowlBuilder<State = any> {
   }
 
   async build(): Promise<void> {
-    if (this.#howl.getMode() === "backend") {
-      console.log("Backend mode: skipping client build.");
-      return;
-    }
-
-    const app = this.#howl.getApp();
+    const app = this.#howl;
 
     await Promise.all(
       Array.from(this.#builders.entries()).map(async ([name, builder]) => {

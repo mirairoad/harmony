@@ -258,7 +258,7 @@ export class Builder<State = any> {
     ).href;
 
     const entryPoints: Record<string, string> = {
-      "harmony-runtime": runtimeUrl,
+      "howl-runtime": runtimeUrl,
     };
 
     const namer = new UniqueNamer();
@@ -290,7 +290,7 @@ export class Builder<State = any> {
       plugins: this.config.plugins,
     });
 
-    const prefix = `/_harmony/js/${BUILD_ID}/`;
+    const prefix = `/_howl/js/${BUILD_ID}/`;
 
     for (const name of buildCache.islandModNameToChunk.keys()) {
       const chunkName = output.entryToChunk.get(name);

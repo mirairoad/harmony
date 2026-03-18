@@ -509,7 +509,7 @@ export async function generateSnapshotServer(
     .join(",\n");
 
   return `${EDIT_WARNING}
-import { IslandPreparer } from "@howl/core/internal";
+import { IslandPreparer } from "@hushkey/howl";
 ${islandImports}
 ${fsRouteImports}
 
@@ -568,7 +568,8 @@ export function generateServerEntry(
   }
 
   return `${EDIT_WARNING}
-import { setBuildCache, ProdBuildCache, path } from "@howl/core/internal";
+import { setBuildCache, ProdBuildCache } from "@hushkey/howl";
+import * as path from "@std/path";
 import * as snapshot from "${options.snapshotSpecifier}";
 import { app } from "${options.serverEntry}";
 
@@ -582,5 +583,5 @@ export default {
 }
 
 function getClientEntry(buildId: string) {
-  return `/_harmony/js/${buildId}/harmony-runtime.js`;
+  return `/_howl/js/${buildId}/howl-runtime.js`;
 }

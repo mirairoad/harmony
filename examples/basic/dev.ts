@@ -1,16 +1,12 @@
-import { Howl } from "@hushkey/howl";
 import { HowlBuilder } from "@hushkey/howl/dev";
 import { tailwindPlugin } from "@hushkey/howl/plugins";
-import type { State } from "./howl.config.ts";
+import { app } from "./main.ts";
+import { State } from "./howl.config.ts";
 
-const howl = new Howl<State>({ mode: "fullstack" });
-
-const builder = new HowlBuilder(howl, {
+const builder = new HowlBuilder<State>(app, {
   root: import.meta.dirname ?? "",
-  importApp: async () => {
-    const mod = await import("./main.ts");
-    return mod.app.getApp();
-  },
+  importApp: () => Promise.resolve(app),
+  outDir: "dist",
 });
 
 tailwindPlugin(builder.getBuilder("default")!);

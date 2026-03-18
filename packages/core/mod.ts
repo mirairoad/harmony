@@ -1,18 +1,16 @@
 // =============================================================================
-// @howl/core — Public API
+// @hushkey/howl — Public API
 // =============================================================================
 
 // --- Framework entry point ---
 export {
-  type ApiConfig,
-  type ClientConfig,
+  App,
+  getBuildCache,
   Howl,
-  type HowlMode,
   type HowlOptions,
-} from "./howl.ts";
-
-// --- App & routing ---
-export { App, getBuildCache, type ListenOptions, setBuildCache } from "./app.ts";
+  type ListenOptions,
+  setBuildCache,
+} from "./app.ts";
 
 // --- Request context ---
 export { Context, type FreshContext } from "./context.ts";
@@ -23,6 +21,9 @@ export type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";
 
 // --- Client-only utility ---
 export { ClientOnly } from "./client_only.tsx";
+
+// --- Logger ---
+export { HowlLogger, type LoggerOptions } from "./logger.ts";
 
 // --- HTTP errors ---
 export { HttpError } from "./error.ts";
@@ -50,12 +51,11 @@ export {
 } from "./constants.ts";
 
 // --- Internals used by @howl/dev (not public API) ---
-// These are exported for cross-package use but not part of the user-facing API
 export { fsAdapter } from "./fs.ts";
 export { assertInDir, pathToExportName, pathToSpec, UniqueNamer } from "./utils.ts";
 export { type BuildCache, IslandPreparer } from "./build_cache.ts";
 export { fsItemsToCommands, type FsRouteFile } from "./fs_routes.ts";
 export { type Command, CommandType } from "./commands.ts";
 export { type ServerIslandRegistry } from "./context.ts";
-
-export { HowlBuilder } from "@hushkey/howl/dev";
+export type { ApiConfig, ClientConfig } from "./app.ts";
+export { ProdBuildCache } from "./build_cache.ts";
