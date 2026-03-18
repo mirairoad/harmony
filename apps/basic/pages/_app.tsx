@@ -1,9 +1,10 @@
 import type { RouteConfig } from "@harmony/core/types";
-import type { JSX } from "preact";
+import type { FunctionComponent, JSX } from "preact";
+import { Partial } from "@harmony/core/runtime/shared";
 
 export const config: RouteConfig = {};
 
-export default function App({ Component }: { Component: JSX.Element }): JSX.Element {
+export default function App({ Component }: { Component: FunctionComponent }): JSX.Element {
   return (
     <html>
       <head>
@@ -11,7 +12,11 @@ export default function App({ Component }: { Component: JSX.Element }): JSX.Elem
         <link rel="stylesheet" href="/style.css" />
       </head>
       <body>
-        <Component />
+        <body f-client-nav>
+          <Partial name="main">
+            <Component />
+          </Partial>
+        </body>
       </body>
     </html>
   );

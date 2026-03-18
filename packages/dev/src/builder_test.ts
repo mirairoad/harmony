@@ -5,11 +5,8 @@ import { App } from "@harmony/core/app";
 import { DEV_ERROR_OVERLAY_URL } from "@harmony/core/constants";
 import { BUILD_ID } from "@fresh/build-id";
 import { withTmpDir, writeFiles } from "../test_utils.ts";
-import {
-  getStdOutput,
-  withChildProcessServer,
-} from "../../tests/test_utils.tsx";
-import { staticFiles } from "../middlewares/static_files.ts";
+import { getStdOutput, withChildProcessServer } from "@harmony/test";
+import { staticFiles } from "@harmony/core/static_files";
 
 Deno.test({
   name: "Builder - chain onTransformStaticFile",
@@ -682,9 +679,7 @@ export const app = new App().fsRoutes()`,
     );
     const entries = await Array.fromAsync(Deno.readDir(assetDir));
 
-    const map = entries.find((entry) =>
-      entry.isFile && entry.name.endsWith(".js.map")
-    );
+    const map = entries.find((entry) => entry.isFile && entry.name.endsWith(".js.map"));
     if (!map) throw new Error(`Sourcemap not found`);
 
     const content = await Deno.readTextFile(path.join(assetDir, map.name));

@@ -1,14 +1,14 @@
 {
-    "name": "@harmony/plugins",
+    "name": "@howl/plugins",
     "version": "0.1.0",
     "exports": {
         ".": "./mod.ts",
         "./tailwind": "./src/tailwind.plugin.ts",
-        "./tailwind.config.base": "./src/tailwind.config.base.ts"
+        "./tailwind/config": "./src/tailwind.config.base.ts"
     },
     "imports": {
-        "@harmony/core": "../core/mod.ts",
-        "@harmony/dev": "../dev/mod.ts",
+        "@howl/core": "../core/mod.ts",
+        "@howl/dev": "../dev/mod.ts",
         "@std/path": "jsr:@std/path@^1.0.0",
         "@tailwindcss/postcss": "npm:@tailwindcss/postcss@^4.0.0",
         "postcss": "npm:postcss@^8.5.6",

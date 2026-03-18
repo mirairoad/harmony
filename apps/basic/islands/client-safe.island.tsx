@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { toast, Toaster } from "sonner";
 
 // Export the harmony directive to skip SSR
@@ -6,6 +6,9 @@ export const harmony = { ssr: false };
 
 export default function ToasterIsland() {
   const [count, setCount] = useState(0);
+  useEffect(() => {
+    console.log("from the client!");
+  }, []);
   return (
     <div>
       <Toaster />

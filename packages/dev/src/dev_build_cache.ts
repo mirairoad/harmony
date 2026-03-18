@@ -509,7 +509,7 @@ export async function generateSnapshotServer(
     .join(",\n");
 
   return `${EDIT_WARNING}
-import { IslandPreparer } from "harmony/internal";
+import { IslandPreparer } from "@harmony/core/internal";
 ${islandImports}
 ${fsRouteImports}
 
@@ -568,7 +568,7 @@ export function generateServerEntry(
   }
 
   return `${EDIT_WARNING}
-import { setBuildCache, ProdBuildCache, path } from "harmony/internal";
+import { setBuildCache, ProdBuildCache, path } from "@harmony/core/internal";
 import * as snapshot from "${options.snapshotSpecifier}";
 import { app } from "${options.serverEntry}";
 

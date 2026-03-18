@@ -27,7 +27,6 @@ import {
   MemoryBuildCache,
 } from "./dev_build_cache.ts";
 import { BUILD_ID } from "@fresh/build-id";
-import { updateCheck } from "./update_check.ts";
 import { devErrorOverlay } from "./middlewares/error_overlay/middleware.tsx";
 import { automaticWorkspaceFolders } from "./middlewares/automatic_workspace_folders.ts";
 import { checkDenoCompilerOptions } from "./check.ts";
@@ -158,8 +157,6 @@ export class Builder<State = any> {
     importApp: () => Promise<{ app: App<State> } | App<State>>,
     options: ListenOptions = {},
   ): Promise<void> {
-    updateCheck(UPDATE_INTERVAL).catch(() => {});
-
     this.config.mode = "development";
 
     await this.#crawlFsItems();
