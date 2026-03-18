@@ -24,7 +24,7 @@ import {
   setActiveUrl,
 } from "../shared_internal.ts";
 import type { BuildCache } from "../../build_cache.ts";
-import { BUILD_ID } from "@fresh/build-id";
+import { BUILD_ID } from "../../../utils/build-id.ts";
 import { DEV_ERROR_OVERLAY_URL, PARTIAL_SEARCH_PARAM } from "../../constants.ts";
 import { escape as escapeHtml } from "@std/html";
 import { HttpError } from "../../error.ts";

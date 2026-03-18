@@ -17,10 +17,7 @@
         "./plugins": "./plugins/mod.ts"
     },
     "imports": {
-        "@howl/core": "./core/src/mod.ts",
-        "@howl/dev": "./dev/src/mod.ts",
-        "@howl/plugins": "./plugins/src/mod.ts",
-        "@howl/core/runtime": "./core/runtime/mod.ts",
+        "@std/streams": "jsr:@std/streams@^1.0.17",
         "@std/html": "jsr:@std/html@^1.0.5",
         "@std/path": "jsr:@std/path@^1.0.0",
         "@std/expect": "jsr:@std/expect@^1.0.18",
@@ -49,6 +46,7 @@
         "tailwindcss": "npm:tailwindcss@^4.0.0",
         "@tailwindcss/postcss": "npm:@tailwindcss/postcss@^4.0.0",
         "postcss": "npm:postcss@^8.5.6",
-        "@fresh/build-id": "jsr:@fresh/build-id@^1.0.0"
+        "@astral/astral": "jsr:@astral/astral@^0.5.5",
+        "linkedom": "npm:linkedom@^0.18.12"
     }
 }

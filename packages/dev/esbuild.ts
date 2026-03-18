@@ -236,17 +236,20 @@ export async function startEsbuild() {
 
 function buildIdPlugin(buildId: string): EsbuildPlugin {
   return {
-    name: "harmony-build-id",
+    name: "howl-build-id",
     setup(build) {
-      build.onResolve({ filter: /^(jsr:)?@fresh\/build-id/ }, (args) => ({
+      build.onResolve({
+        filter: /^(jsr:)?@fresh\/build-id|build-id\.ts$|\/build-id$/,
+      }, (args) => ({
         path: args.path,
-        namespace: "harmony-internal-build-id",
+        namespace: "howl-internal-build-id",
       }));
       build.onLoad({
         filter: /.*/,
-        namespace: "harmony-internal-build-id",
+        namespace: "howl-internal-build-id",
       }, () => ({
-        contents: `export const BUILD_ID = "${buildId}";`,
+        contents:
+          `export const BUILD_ID = "${buildId}"; export const DENO_DEPLOYMENT_ID = undefined; export function setBuildId(id) { }`,
       }));
     },
   };

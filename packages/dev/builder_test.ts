@@ -3,7 +3,7 @@ import * as path from "@std/path";
 import { Builder, specToName } from "./builder.ts";
 import { App } from "../core/app.ts";
 import { DEV_ERROR_OVERLAY_URL } from "../core/constants.ts";
-import { BUILD_ID } from "@fresh/build-id";
+import { BUILD_ID } from "../utils/build-id.ts";
 import { withTmpDir, writeFiles } from "../core/test_utils.ts";
 import { getStdOutput, withChildProcessServer } from "../tests/test_utils.tsx";
 import { staticFiles } from "../core/mod.ts";

@@ -1,12 +1,8 @@
 import { trace } from "@opentelemetry/api";
 
-import { DENO_DEPLOYMENT_ID } from "@fresh/build-id";
+import { DENO_DEPLOYMENT_ID } from "../utils/build-id.ts";
 import * as colors from "@std/fmt/colors";
-import {
-  type MaybeLazyMiddleware,
-  type Middleware,
-  runMiddlewares,
-} from "./middlewares/mod.ts";
+import { type MaybeLazyMiddleware, type Middleware, runMiddlewares } from "./middlewares/mod.ts";
 import { Context } from "./context.ts";
 import { mergePath, type Method, UrlPatternRouter } from "./router.ts";
 import type { HowlConfig, ResolvedHowlConfig } from "./config.ts";
@@ -75,48 +71,49 @@ function createOnListen(
   options: ListenOptions,
 ): (localAddr: Deno.NetAddr) => void {
   return (params) => {
-    // Don't spam logs with this on live deployments
     if (DENO_DEPLOYMENT_ID) return;
 
     const pathname = basePath + "/";
-    const protocol = "key" in options && options.key && options.cert
-      ? "https:"
-      : "http:";
+    const protocol = "key" in options && options.key && options.cert ? "https:" : "http:";
 
     let hostname = params.hostname;
-    // Windows being windows...
     if (
       Deno.build.os === "windows" &&
       (hostname === "0.0.0.0" || hostname === "::")
     ) {
       hostname = "localhost";
     }
-    // Work around https://github.com/denoland/deno/issues/23650
     hostname = hostname.startsWith("::") ? `[${hostname}]` : hostname;
+
+    const address = colors.rgb24(
+      `${protocol}//${hostname}:${params.port}${pathname}`,
+      0x9b59b6,
+    );
+    const helper = hostname === "0.0.0.0" || hostname === "::"
+      ? colors.rgb24(
+        ` (${protocol}//localhost:${params.port}${pathname})`,
+        0x9b59b6,
+      )
+      : "";
+
+    const sep = options.remoteAddress ? "" : "\n";
+    const space = options.remoteAddress ? " " : "";
 
     // deno-lint-ignore no-console
     console.log();
     // deno-lint-ignore no-console
     console.log(
-      colors.bgRgb8(colors.rgb8(" 🐺 Howl ready   ", 0), 121),
+      colors.bgRgb24(colors.rgb24(" 🐺 Howl ready   ", 0xffffff), 0x472773),
     );
-    const sep = options.remoteAddress ? "" : "\n";
-    const space = options.remoteAddress ? " " : "";
-
-    const localLabel = colors.bold("Local:");
-    const address = colors.cyan(
-      `${protocol}//${hostname}:${params.port}${pathname}`,
-    );
-    const helper = hostname === "0.0.0.0" || hostname === "::"
-      ? colors.cyan(` (${protocol}//localhost:${params.port}${pathname})`)
-      : "";
     // deno-lint-ignore no-console
-    console.log(`    ${localLabel}  ${space}${address}${helper}${sep}`);
+    console.log(
+      `    ${colors.bold("Local:")}  ${space}${address}${helper}${sep}`,
+    );
     if (options.remoteAddress) {
-      const remoteLabel = colors.bold("Remote:");
-      const remoteAddress = colors.cyan(options.remoteAddress);
       // deno-lint-ignore no-console
-      console.log(`    ${remoteLabel}  ${remoteAddress}\n`);
+      console.log(
+        `    ${colors.bold("Remote:")}  ${colors.rgb24(options.remoteAddress, 0x9b59b6)}\n`,
+      );
     }
   };
 }

@@ -3,6 +3,7 @@ import { App, type ListenOptions } from "./app.ts";
 import type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";
 import type { LayoutConfig, MaybeLazy, Route, RouteConfig } from "./types.ts";
 import type { RouteComponent } from "./segments.ts";
+import { HowlLogger } from "./logger.ts";
 
 export type HowlMode = "fullstack" | "backend";
 
@@ -26,10 +27,11 @@ export interface ApiConfig {
 
 export interface HowlOptions {
   basePath?: string;
-  /**
-   * "fullstack" — islands, builder, client runtime active
-   * "backend"   — zero client build, pure API server
-   */
+  /** Happy color logging with timestamps*/
+  logger?: boolean;
+  /** Debug mode with more verbose logging */
+  debug?: boolean;
+  /** Mode: "fullstack" (islands, builder, client runtime) or "backend" (zero client build, pure API server) */
   mode: HowlMode;
 }
 
@@ -39,6 +41,12 @@ export class Howl<State = any> {
   #mode: HowlMode;
   #clients: ClientConfig[] = [];
   #apiConfig: ApiConfig | null = null;
+  #logger: HowlLogger | null = null;
+
+  /** Access the logger directly if needed */
+  get logger(): HowlLogger | null {
+    return this.#logger;
+  }
 
   constructor(options: HowlOptions) {
     this.#mode = options.mode;
@@ -46,6 +54,12 @@ export class Howl<State = any> {
       basePath: options.basePath,
       mode: "production",
     });
+
+    // Install logger if requested
+    if (options.logger) {
+      this.#logger = new HowlLogger({ debug: options.debug });
+      this.#logger.install();
+    }
   }
 
   /**
@@ -290,23 +304,33 @@ export class Howl<State = any> {
 
   #createOnListen(options: ListenOptions) {
     return (params: Deno.NetAddr) => {
-      console.log();
-      console.log(colors.bgRgb8(colors.rgb8(" 🐺 Howl ready  ", 0), 93));
-
       const protocol = "key" in options && options.key ? "https:" : "http:";
       let hostname = params.hostname;
       if (hostname === "0.0.0.0" || hostname === "::") hostname = "localhost";
 
-      const modeLabel = colors.dim(`[${this.#mode}]`);
+      const modeLabel = colors.rgb24(`[${this.#mode}]`, 0x472773);
       const localLabel = colors.bold("Local:");
-      const address = colors.cyan(`${protocol}//${hostname}:${params.port}/`);
+      const address = colors.rgb24(
+        `${protocol}//${hostname}:${params.port}/`,
+        0x9b59b6, // lighter purple for the URL
+      );
+
+      console.log();
+      console.log(
+        colors.bgRgb24(
+          colors.rgb24(" 🐺 Howl ready   ", 0xffffff),
+          0x472773,
+        ),
+      );
       console.log(`    ${localLabel}  ${address}  ${modeLabel}\n`);
 
       if (this.#clients.length > 0) {
-        console.log(colors.dim("  clients:"));
+        console.log(colors.rgb24("  clients:", 0x472773));
         for (const client of this.#clients) {
           console.log(
-            `    ${colors.green("▸")} ${colors.bold(client.name)} → ${colors.cyan(client.mount)}`,
+            `    ${colors.rgb24("▸", 0x472773)} ${colors.bold(client.name)} → ${
+              colors.rgb24(client.mount, 0x9b59b6)
+            }`,
           );
         }
         console.log();

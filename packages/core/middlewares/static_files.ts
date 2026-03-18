@@ -1,6 +1,6 @@
 import type { Middleware } from "./mod.ts";
 import { ASSET_CACHE_BUST_KEY } from "../constants.ts";
-import { BUILD_ID } from "@fresh/build-id";
+import { BUILD_ID } from "../../utils/build-id.ts";
 import { tracer } from "../otel.ts";
 import { getBuildCache } from "../context.ts";
 
@@ -22,9 +22,7 @@ export function staticFiles<T>(): Middleware<T> {
 
     let pathname = decodeURIComponent(url.pathname);
     if (config.basePath) {
-      pathname = pathname !== config.basePath
-        ? pathname.slice(config.basePath.length)
-        : "/";
+      pathname = pathname !== config.basePath ? pathname.slice(config.basePath.length) : "/";
     }
 
     // deno-lint-ignore no-console

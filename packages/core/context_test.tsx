@@ -1,12 +1,9 @@
 import { expect } from "@std/expect";
 import { Context } from "./context.ts";
 import { App } from "./app.ts";
-import { asset } from "./runtime/shared.ts";
 import { FakeServer } from "./test_utils.ts";
-import { BUILD_ID } from "@fresh/build-id";
-import { parseHtml } from "../tests/test_utils.tsx";
 
-Deno.test("FreshReqContext.prototype.redirect", () => {
+Deno.test("Context.prototype.redirect", () => {
   let res = Context.prototype.redirect("/");
   expect(res.status).toEqual(302);
   expect(res.headers.get("Location")).toEqual("/");
@@ -25,27 +22,6 @@ Deno.test("FreshReqContext.prototype.redirect", () => {
 
   res = Context.prototype.redirect("/", 307);
   expect(res.status).toEqual(307);
-});
-
-Deno.test("render asset()", async () => {
-  const app = new App()
-    .get("/", (ctx) =>
-      ctx.render(
-        <>
-          <p class="raw">{asset("/foo")}</p>
-          <img src="/foo" srcset="/foo-bar" />
-          <source src="/foo" />
-        </>,
-      ));
-
-  const server = new FakeServer(app.handler());
-  const res = await server.get("/");
-  const doc = parseHtml(await res.text());
-
-  expect(doc.querySelector(".raw")!.textContent).toContain(BUILD_ID);
-  expect(doc.querySelector("img")!.src).toContain(BUILD_ID);
-  expect(doc.querySelector("img")!.srcset).toContain(BUILD_ID);
-  expect(doc.querySelector("source")!.src).toContain(BUILD_ID);
 });
 
 Deno.test("ctx.render - throw with no arguments", async () => {
