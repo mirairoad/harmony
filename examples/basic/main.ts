@@ -1,5 +1,7 @@
 import { Howl, staticFiles } from "@hushkey/howl";
 import type { State } from "./howl.config.ts";
+import { apis } from "./apis/_index.apis.ts";
+import { middleware } from "./middleware/_index.middleware.ts";
 
 export const app = new Howl<State>({
   logger: true,
@@ -14,12 +16,9 @@ app.use(staticFiles());
 // console.debug("debug!");
 // console.log("log!");
 
-app.use((ctx) => {
-  ctx.state.text = "from the server!";
-  return ctx.next();
-});
+app.configure(middleware);
+app.configure(apis);
 
-app.get("/api/ping", (ctx) => ctx.json({ ok: true }));
 app.fsRoutes();
 
-export default { fetch: app.handler() };
+export default { app };

@@ -1,11 +1,11 @@
 import { App, type ListenOptions } from "../core/app.ts";
-import type { Howl } from "../core/app.ts";
+import { Howl } from "../core/app.ts";
 import { Builder, type BuildOptions } from "./builder.ts";
 import { cssModulesPlugin } from "./plugins/css_modules.ts";
 
 export interface HowlDevOptions<State = any>
   extends Omit<BuildOptions, "routeDir" | "islandDir" | "staticDir"> {
-  importApp?: () => Promise<{ app: App<State> } | App<State>>;
+  importApp?: () => Promise<Howl<State> | { app: Howl<State> }> | Howl<State>;
 }
 
 /**
@@ -97,7 +97,11 @@ export class HowlBuilder<State = any> {
     }
 
     if (this.#builders.size === 1) {
-      await this.#builders.values().next().value!.listen(importApp, options);
+      await this.#builders.values().next().value!.listen(async () => {
+        const result = await Promise.resolve(importApp());
+        const app = result instanceof Howl ? result : result.app;
+        return app;
+      }, options);
       return;
     }
 
@@ -108,8 +112,8 @@ export class HowlBuilder<State = any> {
         const client = clients.find((c) => c.name === name)!;
         return builder.listen(
           async () => {
-            const result = await importApp();
-            const app = result instanceof App ? result : result.app;
+            const result = await Promise.resolve(importApp());
+            const app = result instanceof Howl ? result : result.app;
             const clientApp = new App<State>({ basePath: client.mount });
             clientApp.mountApp(client.mount, app);
             return clientApp;

@@ -5,7 +5,7 @@ import { State } from "./howl.config.ts";
 
 const builder = new HowlBuilder<State>(app, {
   root: import.meta.dirname ?? "",
-  importApp: () => Promise.resolve(app),
+  importApp: () => app,
   outDir: "dist",
 });
 

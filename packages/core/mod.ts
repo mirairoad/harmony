@@ -15,6 +15,9 @@ export {
 // --- Request context ---
 export { Context, type FreshContext } from "./context.ts";
 
+// --- Cookies ---
+export { CookieManager, type CookieOptions } from "./cookies.ts";
+
 // --- Middleware ---
 export { staticFiles } from "./middlewares/static_files.ts";
 export type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";

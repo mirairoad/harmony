@@ -491,6 +491,7 @@ export class Howl<State = any> {
         this.config,
         next,
         buildCache!,
+        new Headers(), // response headers instance
       );
 
       try {
@@ -516,16 +517,16 @@ export class Howl<State = any> {
    * @example
    * await app.listen({ port: 8000 });
    */
-  async listen(options: ListenOptions = {}): Promise<void> {
+  listen(options: ListenOptions = {}): void {
     if (!options.onListen) {
       options.onListen = createOnListen(this.config.basePath, options);
     }
     const handler = this.handler();
     if (options.port) {
-      await Deno.serve(options, handler);
+      Deno.serve(options, handler);
       return;
     }
-    await listenOnFreePort(options, handler);
+    listenOnFreePort(options, handler);
   }
 
   /**

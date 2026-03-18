@@ -94,6 +94,7 @@ export function serveMiddleware<T>(
       config,
       () => Promise.resolve(next()),
       buildCache,
+      new Headers(),
     );
     return await middleware(ctx);
   });

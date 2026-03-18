@@ -23,6 +23,7 @@ import {
   renderRouteComponent,
 } from "./render.ts";
 import { renderToString } from "preact-render-to-string";
+import { CookieManager } from "./cookies.ts";
 
 const ENCODER = new TextEncoder();
 
@@ -62,6 +63,7 @@ export class Context<State> {
     app: null,
     layouts: [],
   };
+
   /** Reference to the resolved Fresh configuration */
   readonly config: ResolvedHowlConfig;
   /**
@@ -137,6 +139,7 @@ export class Context<State> {
     config: ResolvedHowlConfig,
     next: () => Promise<Response>,
     buildCache: BuildCache<State>,
+    headers: Headers,
   ) {
     this.url = url;
     this.req = req;
@@ -147,7 +150,30 @@ export class Context<State> {
     this.isPartial = url.searchParams.has(PARTIAL_SEARCH_PARAM);
     this.next = next;
     this.#buildCache = buildCache;
+    this.headers = headers; // ← before cookies
+    this.cookies = new CookieManager(req.headers, this.headers); // ← after headers
   }
+
+  /**
+   * Mutable response headers — automatically merged into all responses.
+   * Use this to set headers that persist across the request lifecycle.
+   *
+   * @example
+   * ctx.headers.set("X-Request-Id", crypto.randomUUID());
+   * ctx.headers.append("Vary", "Accept-Encoding");
+   */
+  readonly headers: Headers;
+
+  /**
+   * First-class cookie manager.
+   * Reads from request, writes to response headers with correct append semantics.
+   *
+   * @example
+   * ctx.cookies.set("token", jwt, { httpOnly: true });
+   * const token = ctx.cookies.get("token");
+   * ctx.cookies.delete("session");
+   */
+  readonly cookies: CookieManager;
 
   /**
    * Return a redirect response to the specified path. This is the
@@ -258,8 +284,18 @@ export class Context<State> {
     }
 
     const headers = getHeadersFromInit(init);
-
     headers.set("Content-Type", "text/html; charset=utf-8");
+
+    // Merge ctx.headers into render response — cookies and headers set in
+    // middleware are automatically included in the page response
+    this.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") {
+        headers.append(key, value);
+      } else {
+        headers.set(key, value);
+      }
+    });
+
     const responseInit: ResponseInit = {
       status: init.status ?? 200,
       headers,
@@ -368,39 +404,41 @@ export class Context<State> {
     return new Response(html, responseInit);
   }
 
-  /**
-   * Respond with text. Sets `Content-Type: text/plain`.
-   * ```tsx
-   * app.use(ctx => ctx.text("Hello World!"));
-   * ```
-   */
-  text(content: string, init?: ResponseInit): Response {
-    return new Response(content, init);
+  // Helper to merge ctx.headers into ResponseInit
+  #mergeHeaders(init?: ResponseInit): ResponseInit {
+    const merged = new Headers(this.headers);
+    if (init?.headers) {
+      const incoming = init.headers instanceof Headers
+        ? init.headers
+        : new Headers(init.headers as HeadersInit);
+      for (const [key, value] of incoming.entries()) {
+        // Set-Cookie must append, everything else can set
+        if (key.toLowerCase() === "set-cookie") {
+          merged.append(key, value);
+        } else {
+          merged.set(key, value);
+        }
+      }
+    }
+    return { ...init, headers: merged };
   }
 
-  /**
-   * Respond with html string. Sets `Content-Type: text/html`.
-   * ```tsx
-   * app.get("/", ctx => ctx.html("<h1>foo</h1>"));
-   * ```
-   */
-  html(content: string, init?: ResponseInit): Response {
-    const headers = getHeadersFromInit(init);
-    headers.set("Content-Type", "text/html; charset=utf-8");
-
-    return new Response(content, { ...init, headers });
-  }
-
-  /**
-   * Respond with json string, same as `Response.json()`. Sets
-   * `Content-Type: application/json`.
-   * ```tsx
-   * app.get("/", ctx => ctx.json({ foo: 123 }));
-   * ```
-   */
-  // deno-lint-ignore no-explicit-any
+  // Update json():
   json(content: any, init?: ResponseInit): Response {
-    return Response.json(content, init);
+    return Response.json(content, this.#mergeHeaders(init));
+  }
+
+  // Update text():
+  text(content: string, init?: ResponseInit): Response {
+    return new Response(content, this.#mergeHeaders(init));
+  }
+
+  // Update html():
+  html(content: string, init?: ResponseInit): Response {
+    const merged = this.#mergeHeaders(init);
+    const headers = new Headers(merged.headers);
+    headers.set("Content-Type", "text/html; charset=utf-8");
+    return new Response(content, { ...merged, headers });
   }
 
   /**
@@ -454,6 +492,25 @@ export class Context<State> {
       );
 
     return new Response(body, init);
+  }
+  /**
+   * Get query parameters from the request URL.
+   *
+   * @example
+   * const search = ctx.query("q");         // single param
+   * const all = ctx.query();               // all params
+   */
+  query(): Record<string, string>;
+  query(key: string): string | undefined;
+  query(key?: string): Record<string, string> | string | undefined {
+    if (key !== undefined) {
+      return this.url.searchParams.get(key) ?? undefined;
+    }
+    const result: Record<string, string> = {};
+    for (const [k, v] of this.url.searchParams.entries()) {
+      result[k] = v;
+    }
+    return result;
   }
 }
 
