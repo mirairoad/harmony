@@ -1,4 +1,4 @@
-import { App, staticFiles } from "fresh";
+import { App, staticFiles } from "../core/mod.ts";
 import { Counter } from "./fixtures_islands/Counter.tsx";
 import { IslandInIsland } from "./fixtures_islands/IslandInIsland.tsx";
 import { JsonIsland } from "./fixtures_islands/JsonIsland.tsx";
@@ -11,22 +11,16 @@ import { JsxIsland } from "./fixtures_islands/JsxIsland.tsx";
 import { JsxChildrenIsland } from "./fixtures_islands/JsxChildrenIsland.tsx";
 import { NodeProcess } from "./fixtures_islands/NodeProcess.tsx";
 import { signal } from "@preact/signals";
-import {
-  ALL_ISLAND_DIR,
-  buildProd,
-  Doc,
-  ISLAND_GROUP_DIR,
-  withBrowserApp,
-} from "./test_utils.tsx";
+import { ALL_ISLAND_DIR, buildProd, Doc, ISLAND_GROUP_DIR, withBrowserApp } from "./test_utils.tsx";
 import { parseHtml, waitForText } from "./test_utils.tsx";
 import { expect } from "@std/expect";
 import { JsxConditional } from "./fixtures_islands/JsxConditional.tsx";
 import { FnIsland } from "./fixtures_islands/FnIsland.tsx";
 import { EscapeIsland } from "./fixtures_islands/EscapeIsland.tsx";
-import type { FreshConfig } from "../src/config.ts";
+import type { ResolvedHowlConfig } from "../core/config.ts";
 import { FreshAttrs } from "./fixtures_islands/FreshAttrs.tsx";
-import { FakeServer } from "../src/test_utils.ts";
-import { PARTIAL_SEARCH_PARAM } from "../src/constants.ts";
+import { FakeServer } from "../core/test_utils.ts";
+import { PARTIAL_SEARCH_PARAM } from "../core/constants.ts";
 import { ComputedSignal } from "./fixtures_islands/Computed.tsx";
 import { EnvIsland } from "./fixtures_islands/EnvIsland.tsx";
 
@@ -35,7 +29,7 @@ Deno.env.set("FRESH_PRIVATE_TEST_FOO", "i-should-not-be-visible");
 const allIslandCache = await buildProd({ islandDir: ALL_ISLAND_DIR });
 const islandGroupCache = await buildProd({ root: ISLAND_GROUP_DIR });
 
-function testApp(config?: FreshConfig): App<unknown> {
+function testApp(config?: ResolvedHowlConfig): App<unknown> {
   const app = new App(config)
     .use(staticFiles())
     .fsRoutes();
@@ -45,7 +39,7 @@ function testApp(config?: FreshConfig): App<unknown> {
   return app;
 }
 
-function testGroupApp(config?: FreshConfig): App<unknown> {
+function testGroupApp(config?: ResolvedHowlConfig): App<unknown> {
   const app = new App(config)
     .use(staticFiles())
     .fsRoutes();
@@ -167,7 +161,7 @@ Deno.test({
       await page.locator("pre").wait();
       const text = await page
         .locator<HTMLPreElement>("pre")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLPreElement) => el.textContent!);
       const json = JSON.parse(text);
       expect(json).toEqual({ foo: 123 });
     });
@@ -261,7 +255,7 @@ Deno.test({
 
       const text = await page
         .locator<HTMLPreElement>("pre")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLPreElement) => el.textContent!);
       expect(JSON.parse(text)).toEqual({ jsx: true, children: true });
     });
   },
@@ -287,12 +281,12 @@ Deno.test({
 
       const text = await page
         .locator<HTMLScriptElement>("script")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLScriptElement) => el.textContent!);
       expect(text).not.toContain("foobar");
 
       const childText = await page
         .locator<HTMLDivElement>(".after")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(childText).toEqual("foobar");
     });
   },
@@ -483,22 +477,22 @@ Deno.test({
 
       const checkboxChecked = await page
         .locator<HTMLInputElement>("input[name='check']")
-        .evaluate((el) => el.checked);
+        .evaluate((el: HTMLInputElement) => el.checked);
       expect(checkboxChecked).toEqual(true);
 
       const required = await page
         .locator<HTMLInputElement>("input[name='text']")
-        .evaluate((el) => el.required);
+        .evaluate((el: HTMLInputElement) => el.required);
       expect(required).toEqual(true);
 
       const radio1 = await page
         .locator<HTMLInputElement>("input[type='radio'][value='1']")
-        .evaluate((el) => el.checked);
+        .evaluate((el: HTMLInputElement) => el.checked);
       expect(radio1).toEqual(false);
 
       const radio2 = await page
         .locator<HTMLInputElement>("input[type='radio'][value='2']")
-        .evaluate((el) => el.checked);
+        .evaluate((el: HTMLInputElement) => el.checked);
       expect(radio2).toEqual(true);
     });
   },
@@ -522,7 +516,7 @@ Deno.test({
 
       const text = await page
         .locator<HTMLDivElement>(".ready")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
     });
   },
@@ -561,13 +555,13 @@ Deno.test({
       // Page would error here
       const text = await page
         .locator<HTMLDivElement>(".ready p")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
 
       // Page would error here
       const text2 = await page
         .locator<HTMLDivElement>(".ready div")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text2).toEqual(`"foo"asdf`);
     });
 
@@ -579,12 +573,12 @@ Deno.test({
 
       const text = await page
         .locator<HTMLDivElement>(".ready p")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
 
       const text2 = await page
         .locator<HTMLDivElement>(".ready div")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text2).toEqual(`<script>alert('hey')</script>`);
     });
 
@@ -596,12 +590,12 @@ Deno.test({
 
       const text = await page
         .locator<HTMLDivElement>(".ready p")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
 
       const text2 = await page
         .locator<HTMLDivElement>(".ready div")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text2).toEqual(`<!--<script>alert('hey')</script>`);
     });
 
@@ -613,7 +607,7 @@ Deno.test({
 
       const text = await page
         .locator<HTMLScriptElement>("script[type='application/json']")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLScriptElement) => el.textContent!);
 
       const json = JSON.parse(text);
       expect(json.props).toContain("<script>alert('hey')</script>");
@@ -639,7 +633,7 @@ Deno.test({
       // Page would error here
       const text = await page
         .locator<HTMLDivElement>(".ready")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("value: production");
     });
   },
@@ -648,7 +642,7 @@ Deno.test({
 Deno.test({
   name: "islands - in base path",
   fn: async () => {
-    const app = testApp({ basePath: "/foo" })
+    const app = testApp({ root: "/foo", mode: "development" } as ResolvedHowlConfig)
       .get("/", (ctx) =>
         ctx.render(
           <Doc>
@@ -682,9 +676,9 @@ Deno.test({
       await page.locator(".ready").wait();
 
       const truthy = await page.locator<HTMLDivElement>(".f-client-nav-true")
-        .evaluate((el) => el.getAttribute("f-client-nav"));
+        .evaluate((el: HTMLDivElement) => el.getAttribute("f-client-nav"));
       const falsy = await page.locator<HTMLDivElement>(".f-client-nav-false")
-        .evaluate((el) => el.getAttribute("f-client-nav"));
+        .evaluate((el: HTMLDivElement) => el.getAttribute("f-client-nav"));
 
       expect(truthy).toEqual("true");
       expect(falsy).toEqual("false");
@@ -708,24 +702,24 @@ Deno.test({
       await page.locator(".ready").wait();
 
       const denoEnv = await page.locator<HTMLDivElement>(".deno-env")
-        .evaluate((el) => el.textContent);
+        .evaluate((el: HTMLDivElement | null) => el?.textContent);
       const denoEnv2 = await page.locator<HTMLDivElement>(".deno-env-2")
-        .evaluate((el) => el.textContent);
+        .evaluate((el: HTMLDivElement | null) => el?.textContent);
       const processEnv = await page.locator<HTMLDivElement>(".process-env")
-        .evaluate((el) => el.textContent);
+        .evaluate((el: HTMLDivElement | null) => el?.textContent);
 
       const denoEnvPrivate = await page.locator<HTMLDivElement>(
         ".deno-env-private",
       )
-        .evaluate((el) => el.textContent);
+        .evaluate((el: HTMLDivElement | null) => el?.textContent);
       const denoEnvPrivate2 = await page.locator<HTMLDivElement>(
         ".deno-env-private-2",
       )
-        .evaluate((el) => el.textContent);
+        .evaluate((el: HTMLDivElement | null) => el?.textContent);
       const processEnvPrivate = await page.locator<HTMLDivElement>(
         ".process-env-private",
       )
-        .evaluate((el) => el.textContent);
+        .evaluate((el: HTMLDivElement | null) => el?.textContent);
 
       expect(denoEnv).toEqual("test-env-value");
       expect(denoEnv2).toEqual("test-env-value");
@@ -750,7 +744,7 @@ Deno.test({
       // Page would error here
       const text = await page
         .locator<HTMLDivElement>(".ready")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
     });
   },
@@ -769,12 +763,12 @@ Deno.test({
       // Page would error here
       let text = await page
         .locator<HTMLDivElement>("#foo.ready")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
 
       text = await page
         .locator<HTMLDivElement>("#foo-both.ready")
-        .evaluate((el) => el.textContent!);
+        .evaluate((el: HTMLDivElement) => el.textContent!);
       expect(text).toEqual("it works");
     });
   },

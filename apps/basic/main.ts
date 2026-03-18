@@ -1,7 +1,7 @@
-import { Harmony, staticFiles } from "@harmony/core";
-import type { State } from "./harmony.config.ts";
+import { Howl, staticFiles } from "@hushkey/howl";
+import type { State } from "./howl.config.ts";
 
-export const app = new Harmony<State>({ mode: "fullstack" });
+export const app = new Howl<State>({ mode: "fullstack" });
 
 app.use(staticFiles());
 

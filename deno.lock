@@ -644,8 +644,9 @@
           "npm:tailwindcss@4"
         ]
       },
-      "packages/core": {
+      "packages": {
         "dependencies": [
+          "jsr:@deno/esbuild-plugin@^1.2.1",
           "jsr:@fresh/build-id@1",
           "jsr:@std/encoding@1",
           "jsr:@std/expect@^1.0.18",
@@ -653,37 +654,20 @@
           "jsr:@std/fs@1",
           "jsr:@std/html@^1.0.5",
           "jsr:@std/http@^1.0.25",
-          "jsr:@std/media-types@1",
-          "jsr:@std/path@1",
-          "npm:@opentelemetry/api@^1.9.0",
-          "npm:@preact/signals@^2.8.2",
-          "npm:preact-render-to-string@6",
-          "npm:preact@^10.25.0"
-        ]
-      },
-      "packages/dev": {
-        "dependencies": [
-          "jsr:@deno/esbuild-plugin@^1.2.1",
-          "jsr:@fresh/build-id@1",
-          "jsr:@std/encoding@1",
-          "jsr:@std/fmt@1",
-          "jsr:@std/fs@1",
-          "jsr:@std/http@^1.0.25",
           "jsr:@std/jsonc@^1.0.2",
           "jsr:@std/media-types@1",
           "jsr:@std/path@1",
           "jsr:@std/semver@^1.0.8",
+          "jsr:@std/testing@1",
           "jsr:@std/uuid@^1.1.0",
+          "npm:@opentelemetry/api@^1.9.0",
+          "npm:@preact/signals@^2.8.2",
+          "npm:@tailwindcss/postcss@4",
           "npm:esbuild-wasm@~0.27.4",
           "npm:esbuild@0.25",
-          "npm:preact@^10.25.0"
-        ]
-      },
-      "packages/plugins": {
-        "dependencies": [
-          "jsr:@std/path@1",
-          "npm:@tailwindcss/postcss@4",
           "npm:postcss@^8.5.6",
+          "npm:preact-render-to-string@6",
+          "npm:preact@^10.25.0",
           "npm:tailwindcss@4"
         ]
       }

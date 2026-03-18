@@ -1,0 +1,54 @@
+{
+    "name": "@hushkey/howl",
+    "version": "0.1.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/hushkey/howl"
+    },
+    "license": "MIT",
+    "author": {
+        "name": "Leo Termine",
+        "email": "leotermine@hushkey.app"
+    },
+    "exports": {
+        ".": "./core/mod.ts",
+        "./runtime": "./core/runtime/client/mod.ts",
+        "./dev": "./dev/mod.ts",
+        "./plugins": "./plugins/mod.ts"
+    },
+    "imports": {
+        "@howl/core": "./core/src/mod.ts",
+        "@howl/dev": "./dev/src/mod.ts",
+        "@howl/plugins": "./plugins/src/mod.ts",
+        "@howl/core/runtime": "./core/runtime/mod.ts",
+        "@std/html": "jsr:@std/html@^1.0.5",
+        "@std/path": "jsr:@std/path@^1.0.0",
+        "@std/expect": "jsr:@std/expect@^1.0.18",
+        "@std/fs": "jsr:@std/fs@^1.0.0",
+        "@std/fmt": "jsr:@std/fmt@^1.0.0",
+        "@std/encoding": "jsr:@std/encoding@^1.0.0",
+        "@std/media-types": "jsr:@std/media-types@^1.0.0",
+        "@std/http": "jsr:@std/http@^1.0.25",
+        "@std/jsonc": "jsr:@std/jsonc@^1.0.2",
+        "@std/semver": "jsr:@std/semver@^1.0.8",
+        "@std/uuid": "jsr:@std/uuid@^1.1.0",
+        "@std/testing": "jsr:@std/testing@^1.0.0",
+        "@deno/esbuild-plugin": "jsr:@deno/esbuild-plugin@^1.2.1",
+        "esbuild": "npm:esbuild@^0.25.0",
+        "esbuild-wasm": "npm:esbuild-wasm@^0.27.4",
+        "preact": "npm:preact@^10.25.0",
+        "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",
+        "@opentelemetry/api": "npm:@opentelemetry/api@^1.9.0",
+        "preact/jsx-dev-runtime": "npm:preact@^10.25.0/jsx-dev-runtime",
+        "preact/hooks": "npm:preact@^10.25.0/hooks",
+        "preact/debug": "npm:preact@^10.25.0/debug",
+        "preact/compat": "npm:preact@^10.25.0/compat",
+        "preact/devtools": "npm:preact@^10.25.0/devtools",
+        "preact-render-to-string": "npm:preact-render-to-string@^6.0.0",
+        "@preact/signals": "npm:@preact/signals@^2.8.2",
+        "tailwindcss": "npm:tailwindcss@^4.0.0",
+        "@tailwindcss/postcss": "npm:@tailwindcss/postcss@^4.0.0",
+        "postcss": "npm:postcss@^8.5.6",
+        "@fresh/build-id": "jsr:@fresh/build-id@^1.0.0"
+    }
+}

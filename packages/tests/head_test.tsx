@@ -1,13 +1,8 @@
-import { App, staticFiles } from "fresh";
-import { Head } from "fresh/runtime";
-import {
-  buildProd,
-  parseHtml,
-  waitFor,
-  withBrowserApp,
-} from "./test_utils.tsx";
+import { App, staticFiles } from "../core/mod.ts";
+import { Head } from "../core/runtime/head.ts";
+import { buildProd, parseHtml, waitFor, withBrowserApp } from "./test_utils.tsx";
 import { expect } from "@std/expect";
-import { FakeServer } from "../src/test_utils.ts";
+import { FakeServer } from "../core/test_utils.ts";
 import * as path from "@std/path";
 
 Deno.test("Head - ssr - updates title", async () => {

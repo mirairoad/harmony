@@ -1,4 +1,4 @@
-import { App } from "../../../src/app.ts";
+import { App } from "../../../core/app.ts";
 
 const app = new App().get(
   "/",

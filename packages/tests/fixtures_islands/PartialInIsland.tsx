@@ -1,4 +1,4 @@
-import { Partial } from "fresh/runtime";
+import { Partial } from "../../core/runtime/shared.ts";
 
 export function PartialInIsland() {
   return (

@@ -1,10 +1,11 @@
-import { Harmony } from "@harmony/core";
-import { HarmonyBuilder } from "@harmony/dev";
-import { tailwindPlugin } from "@harmony/plugins";
+import { Howl } from "@hushkey/howl";
+import { HowlBuilder } from "@hushkey/howl/dev";
+import { tailwindPlugin } from "@hushkey/howl/plugins";
+import type { State } from "./howl.config.ts";
 
-const harmony = new Harmony({ mode: "fullstack" });
+const howl = new Howl<State>({ mode: "fullstack" });
 
-const builder = new HarmonyBuilder(harmony, {
+const builder = new HowlBuilder(howl, {
   root: import.meta.dirname ?? "",
   importApp: async () => {
     const mod = await import("./main.ts");

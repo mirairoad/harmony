@@ -1,4 +1,4 @@
-import { App, staticFiles } from "fresh";
+import { App, staticFiles } from "../core/mod.ts";
 import {
   ALL_ISLAND_DIR,
   assertNotSelector,
@@ -9,8 +9,8 @@ import {
   withBrowserApp,
 } from "./test_utils.tsx";
 
-import { FakeServer } from "../src/test_utils.ts";
-import { Partial } from "fresh/runtime";
+import { FakeServer } from "../core/test_utils.ts";
+import { Partial } from "../core/runtime/shared.ts";
 
 const allIslandCache = await buildProd({ islandDir: ALL_ISLAND_DIR });
 

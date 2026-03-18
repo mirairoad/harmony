@@ -1,11 +1,12 @@
 {
-    "name": "@harmony/basic",
+    "name": "@howl/basic",
     "version": "0.0.0",
     "exports": "./main.ts",
     "imports": {
-        "@harmony/core": "../../packages/core/mod.ts",
-        "@harmony/dev": "../../packages/dev/mod.ts",
-        "@harmony/plugins": "../../packages/plugins/mod.ts",
+        "@hushkey/howl": "../../packages/core/mod.ts",
+        "@hushkey/howl/dev": "../../packages/dev/mod.ts",
+        "@hushkey/howl/plugins": "../../packages/plugins/mod.ts",
+        "@hushkey/howl/runtime": "../../packages/core/runtime/client/mod.ts",
         "preact": "npm:preact@^10.25.0",
         "preact/hooks": "npm:preact@^10.25.0/hooks",
         "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",
@@ -15,7 +16,7 @@
         "tailwindcss": "npm:tailwindcss@^4.0.0"
     },
     "compilerOptions": {
-        "jsx": "precompile",
+        "jsx": "react-jsx",
         "jsxImportSource": "preact",
         "jsxPrecompileSkipElements": [
             "a",

@@ -1,4 +1,4 @@
-import type { PageProps } from "@fresh/core";
+import type { PageProps } from "../../../core/render.ts";
 
 export default function Page({ Component }: PageProps) {
   return (

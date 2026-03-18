@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { Head } from "fresh/runtime";
+import { Head } from "../../../core/runtime/head.ts";
 
 export function TitleIsland() {
   const [s, set] = useState(0);

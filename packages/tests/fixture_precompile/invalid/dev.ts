@@ -1,4 +1,4 @@
-import { Builder } from "../../../src/dev/mod.ts";
+import { Builder } from "../../../dev/builder.ts";
 
 const builder = new Builder();
 
