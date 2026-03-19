@@ -2,16 +2,16 @@ import { defineApi } from "../../../howl.config.ts";
 import { z } from "zod";
 
 export default defineApi({
-  name: "Ping",
-  directory: "public",
-  method: "GET",
-  roles: [],
+  name: "Pong",
+  directory: "private",
+  method: "POST",
+  roles: ["PUBLISHER"],
   caching: {
     ttl: 5,
   },
-  query: z.object({
-    pagination: z.string().optional(),
-    limit: z.string().optional(),
+  requestBody: z.object({
+    name: z.string(),
+    email: z.email(),
   }),
   responses: {
     200: z.object({
@@ -20,10 +20,8 @@ export default defineApi({
     }),
   },
   handler: (ctx) => {
-    // ctx.req.body typesafe
-    const { pagination, limit } = ctx.query(); // typesafe
-
-    console.log(pagination, limit);
+    console.log(ctx.req.body.email); // typesafe
+    console.log(ctx.req.body.name); // typesafe
 
     return {
       statusCode: 200,

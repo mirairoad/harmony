@@ -1,4 +1,4 @@
-import type { ApiDefinition, HowlApiConfig, RequestBodySchema, ResponsesMap } from "./types.ts";
+import type { ApiDefinition, HowlApiConfig, QuerySchema, RequestBodySchema, ResponsesMap } from "./types.ts";
 import { memoryCache } from "./cache/memory.ts";
 
 /**
@@ -40,9 +40,10 @@ export function defineConfig<
   defineApi: <
     R extends ResponsesMap = ResponsesMap,
     B extends RequestBodySchema | null = null,
+    Q extends QuerySchema | null = null,
   >(
-    definition: ApiDefinition<State, Role, R, B>,
-  ) => ApiDefinition<State, Role, R, B>;
+    definition: ApiDefinition<State, Role, R, B, Q>,
+  ) => ApiDefinition<State, Role, R, B, Q>;
   /** Pass to app.fsApiRoutes(apiConfig) */
   config: HowlApiConfig<State, Role>;
 } {
@@ -65,8 +66,9 @@ export function defineApi<
   Role extends string,
   R extends ResponsesMap = ResponsesMap,
   B extends RequestBodySchema | null = null,
+  Q extends QuerySchema | null = null,
 >(
-  config: ApiDefinition<State, Role, R, B>,
-): ApiDefinition<State, Role, R, B> {
+  config: ApiDefinition<State, Role, R, B, Q>,
+): ApiDefinition<State, Role, R, B, Q> {
   return config;
 }

@@ -1,13 +1,13 @@
 @import "tailwindcss";
-/* @plugin 'daisyui' {
+@plugin "daisyui" {
   themes: light --default, dark --prefersdark;
 }
 
-@plugin 'daisyui/theme' {
-  name: 'light';
+@plugin "daisyui/theme" {
+  name: "light";
   default: true;
   prefersdark: false;
-  color-scheme: 'light';
+  color-scheme: "light";
   --color-base-100: oklch(96% 0.016 293.756);
   --color-base-200: oklch(94% 0.029 294.588);
   --color-base-300: oklch(89% 0.057 293.283);
@@ -36,7 +36,7 @@
   --border: 1px;
   --depth: 1;
   --noise: 1;
-} */
+}
 
 html {
   background-color: #f0f0f0;

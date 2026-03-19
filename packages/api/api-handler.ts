@@ -82,7 +82,7 @@ export function apiHandler<State, Role extends string>(
     for (const path of paths) {
       app[method](
         path,
-        preAsyncHandler(api.params, api.requestBody),
+        preAsyncHandler(api.params, api.requestBody, api.query),
         asyncHandler(app, api, howlConfig, cache),
       );
     }

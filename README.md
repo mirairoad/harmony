@@ -38,7 +38,8 @@ Howl solves all of these natively.
 my-app/
 ├── client/
 │   ├── pages/
-│   │   ├── _app.tsx        ← root layout
+│   │   ├── _app.tsx        ← root shell (html/head/body)
+│   │   ├── _layout.tsx     ← shared UI layout (nav, sidebar, etc.)
 │   │   └── index.tsx
 │   └── islands/
 │       └── counter.island.tsx
@@ -131,7 +132,7 @@ if (Deno.args.includes("build")) {
 }
 ```
 
-**`client/pages/_app.tsx`**
+**`client/pages/_app.tsx`** — root HTML shell
 ```tsx
 import type { RouteConfig } from "@hushkey/howl";
 import type { FunctionComponent, JSX } from "preact";
@@ -153,6 +154,34 @@ export default function App({ Component }: { Component: FunctionComponent }): JS
 }
 ```
 
+**`client/pages/_layout.tsx`** — shared UI layout (nav, sidebar, etc.)
+```tsx
+import type { FunctionComponent, JSX } from "preact";
+
+export default function ({ Component }: { Component: FunctionComponent }): JSX.Element {
+  return (
+    <>
+      <div class="navbar bg-base-200">
+        <div class="navbar-start">
+          <a href="/" class="btn btn-ghost text-xl">🐺 Howl</a>
+        </div>
+        <div class="navbar-end">
+          <a href="/" class="btn btn-ghost btn-sm">Home</a>
+          <a href="/docs" class="btn btn-ghost btn-sm">Docs</a>
+        </div>
+      </div>
+      <main>
+        <Component />
+      </main>
+    </>
+  );
+}
+```
+
+> **Note:** `@hushkey/howl/runtime` must point to `shared.ts`, not `client/mod.ts`.
+> `client/mod.ts` imports `partials.ts` which calls `document.addEventListener` at module level — it crashes server-side.
+> `shared.ts` exports `Partial`, `IS_BROWSER`, `asset`, and `Head` safely for both server and client.
+
 **`client/pages/index.tsx`**
 ```tsx
 import type { Context } from "@hushkey/howl";
@@ -167,7 +196,7 @@ export default function Index(ctx: Context<State>) {
 
 ## Endpoint contracts
 
-Each `.api.ts` file is a self-contained, typed endpoint contract: method, roles, Zod-validated request body and responses, optional caching. No wiring needed — drop the file and it's live.
+Each `.api.ts` file is a self-contained, typed endpoint contract: method, roles, Zod-validated query params / request body / responses, optional caching. No wiring needed — drop the file and it's live.
 
 **`server/apis/public/ping.api.ts`**
 ```typescript
@@ -181,14 +210,22 @@ export default defineApi({
   // path is optional — auto-generated as /api/public/ping
   roles: [],
   caching: { ttl: 5 },
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string(),
+  }),
   responses: {
     200: z.object({ ok: z.boolean(), message: z.string() }),
   },
-  handler: () => ({
-    statusCode: 200,
-    ok: true,
-    message: "pong 🐺",
-  }),
+  handler: (ctx) => {
+    const { limit } = ctx.query();  // typed: { page?: string; limit: string }
+    const page = ctx.query("page"); // typed: string | undefined
+    return {
+      statusCode: 200,
+      ok: true,
+      message: `pong 🐺 — page ${page ?? 1}, limit ${limit}`,
+    };
+  },
 });
 ```
 
@@ -239,7 +276,7 @@ export default defineApi({
 });
 ```
 
-OpenAPI spec is automatically exposed at `/api/docs`.
+OpenAPI spec is automatically exposed at `/api/docs` — query params, request body, path params, roles, and responses all appear in Scalar/Swagger UI.
 
 ---
 
@@ -289,6 +326,8 @@ export default function ToastIsland() {
 
 | Convention | Path |
 |---|---|
+| Root HTML shell | `client/pages/_app.tsx` |
+| Shared UI layout | `client/pages/_layout.tsx` |
 | Pages | `client/pages/` |
 | Islands | `client/islands/` |
 | Endpoint contracts | `server/apis/**/*.api.ts` |
@@ -297,6 +336,7 @@ export default function ToastIsland() {
 | Config | `howl.config.ts` |
 | Build output | `dist/` |
 | OpenAPI docs | `/api/docs` |
+| Client runtime import | `@hushkey/howl/runtime` → `shared.ts` |
 
 ---
 

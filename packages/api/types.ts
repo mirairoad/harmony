@@ -51,6 +51,8 @@ export type RequestBodySchema =
   | z.ZodUnion<any>
   | z.ZodAny;
 
+export type QuerySchema = z.ZodObject<any, any>;
+
 /**
  * Infer return type union from responses map.
  */
@@ -84,6 +86,38 @@ export type ContextWithBody<
   };
 
 /**
+ * Context with typed query params.
+ * Used when query is defined on the API.
+ */
+export type ContextWithQuery<
+  Q extends QuerySchema,
+  State,
+> =
+  & Omit<Context<State>, "query">
+  & {
+    query(): z.infer<Q>;
+    query<K extends keyof z.infer<Q>>(key: K): z.infer<Q>[K] | undefined;
+  };
+
+/**
+ * Context with both typed body and typed query params.
+ * Used when both requestBody and query are defined on the API.
+ */
+export type ContextWithBodyAndQuery<
+  B extends RequestBodySchema,
+  Q extends QuerySchema,
+  State,
+> =
+  & Omit<Context<State>, "req" | "query">
+  & {
+    req: Omit<Context<State>["req"], "body"> & {
+      body: B extends z.ZodTypeAny ? z.infer<B> : unknown;
+    };
+    query(): z.infer<Q>;
+    query<K extends keyof z.infer<Q>>(key: K): z.infer<Q>[K] | undefined;
+  };
+
+/**
  * Full API definition shape.
  */
 export interface ApiDefinition<
@@ -91,6 +125,7 @@ export interface ApiDefinition<
   Role extends string = string,
   R extends ResponsesMap = ResponsesMap,
   B extends RequestBodySchema | null = null,
+  Q extends QuerySchema | null = null,
 > {
   /** Human readable name — used in OpenAPI docs and error logs */
   name: string;
@@ -126,17 +161,18 @@ export interface ApiDefinition<
   redirectOnFailure?: string | null;
   responses: R;
   requestBody?: B;
+  /** Query params Zod schema — parsed, validated, and typed on ctx.query() */
+  query?: Q;
   /** Path params Zod schema */
   params?: z.ZodObject<any, any>;
-  handler: B extends RequestBodySchema ? (
-      ctx: ContextWithBody<B, State>,
-      app: Howl<State>,
-    ) => HandlerReturn<R>
-    : (
-      ctx: Context<State>,
-      app: Howl<State>,
-    ) => HandlerReturn<R>;
+  handler: B extends RequestBodySchema
+    ? Q extends QuerySchema
+      ? (ctx: ContextWithBodyAndQuery<B, Q, State>, app: Howl<State>) => HandlerReturn<R>
+      : (ctx: ContextWithBody<B, State>, app: Howl<State>) => HandlerReturn<R>
+    : Q extends QuerySchema
+    ? (ctx: ContextWithQuery<Q, State>, app: Howl<State>) => HandlerReturn<R>
+    : (ctx: Context<State>, app: Howl<State>) => HandlerReturn<R>;
 }
 
 // deno-lint-ignore no-explicit-any
-export type AnyApiDefinition = ApiDefinition<any, any, any, any>;
+export type AnyApiDefinition = ApiDefinition<any, any, any, any, any>;

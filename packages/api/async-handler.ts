@@ -65,7 +65,7 @@ export function asyncHandler<State, Role extends string>(
         }
       }
 
-      // --- Body proxy — exposes ctx.req.body typed from Zod schema ---
+      // --- Proxy — exposes ctx.req.body and ctx.query() typed from Zod schemas ---
       const ctxWithBody = new Proxy(ctx, {
         get(target, prop) {
           if (prop === "req") {
@@ -77,6 +77,12 @@ export function asyncHandler<State, Role extends string>(
                 return (reqTarget as any)[reqProp];
               },
             });
+          }
+          if (prop === "query" && (target.state as any).__query !== undefined) {
+            return (key?: string) => {
+              const q = (target.state as any).__query;
+              return key !== undefined ? q[key] : q;
+            };
           }
           return (target as any)[prop];
         },

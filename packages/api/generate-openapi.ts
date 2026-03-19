@@ -82,6 +82,20 @@ export function generateOpenApiSpec(
         );
       }
 
+      // Query params
+      if (api.query instanceof z.ZodObject) {
+        const queryParams = Object.entries(api.query.shape).map(
+          ([name, schema]): OpenAPIV3_1.ParameterObject => ({
+            name,
+            in: "query",
+            required: !(schema as z.ZodTypeAny).isOptional(),
+            // deno-lint-ignore no-explicit-any
+            schema: zodToSchema(schema) as any,
+          }),
+        );
+        operation.parameters = [...(operation.parameters ?? []), ...queryParams];
+      }
+
       // Request body
       if (api.requestBody) {
         operation.requestBody = {

@@ -44,15 +44,16 @@ function checkClientNavEnabled(el: HTMLElement) {
 }
 
 // Keep track of history state to apply forward or backward animations
-let index = history.state?.index || 0;
-if (!history.state) {
+let index = typeof history !== "undefined" ? history.state?.index || 0 : 0;
+
+if (typeof history !== "undefined" && !history.state) {
   const state: FreshHistoryState = {
     fClientNav: true,
     index,
-    scrollX,
-    scrollY,
+    scrollX: typeof scrollX !== "undefined" ? scrollX : 0,
+    scrollY: typeof scrollY !== "undefined" ? scrollY : 0,
   };
-  history.replaceState(state, document.title);
+  if (typeof history !== "undefined") history.replaceState(state, document.title);
 }
 
 function maybeUpdateHistory(nextUrl: URL) {
@@ -224,9 +225,8 @@ document.addEventListener("submit", async (e) => {
       return;
     }
 
-    const lowerMethod =
-      e.submitter?.getAttribute("formmethod")?.toLowerCase() ??
-        el.method.toLowerCase();
+    const lowerMethod = e.submitter?.getAttribute("formmethod")?.toLowerCase() ??
+      el.method.toLowerCase();
     if (lowerMethod !== "get" && lowerMethod !== "post") {
       return;
     }
