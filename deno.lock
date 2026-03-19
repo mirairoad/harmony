@@ -801,7 +801,17 @@
       "npm:preact@*"
     ],
     "members": {
-      "examples/basic": {
+      "examples/backend": {
+        "dependencies": [
+          "jsr:@std/path@1",
+          "npm:preact@^10.25.0",
+          "npm:react-hot-toast@^2.6.0",
+          "npm:sonner@^2.0.7",
+          "npm:tailwindcss@4",
+          "npm:zod@4.3.6"
+        ]
+      },
+      "examples/fullstack": {
         "dependencies": [
           "jsr:@std/path@1",
           "npm:preact@^10.25.0",

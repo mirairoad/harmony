@@ -1,6 +1,6 @@
 import { Howl, staticFiles } from "@hushkey/howl";
-import type { State } from "./howl.config.ts";
-import { apiConfig } from "./howl.config.ts";
+import type { State } from "../howl.config.ts";
+import { apiConfig } from "../howl.config.ts";
 import { middleware } from "./middleware/_index.middleware.ts";
 
 export const app = new Howl<State>({

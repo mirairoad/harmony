@@ -2,12 +2,13 @@
   "nodeModulesDir": "auto",
   "workspace": [
     "./packages",
-    "./examples/basic"
+    "./examples/backend",
+    "./examples/fullstack"
   ],
   "tasks": {
-    "dev:basic": "deno run -A --watch examples/basic/dev.ts",
-    "build:basic": "deno run -A examples/basic/dev.ts build",
-    "start:basic": "deno run -A examples/basic/dist/compiled-entry.js",
+    "dev:fullstack": "deno run -A --watch examples/fullstack/dev.ts",
+    "build:fullstack": "deno run -A examples/fullstack/dev.ts build",
+    "start:fullstack": "deno run -A examples/fullstack/dist/compiled-entry.js",
     "lint": "deno lint",
     "fmt": "deno fmt",
     "check": "deno check packages/core/mod.ts packages/dev/mod.ts",

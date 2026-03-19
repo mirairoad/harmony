@@ -1,0 +1,41 @@
+{
+    "name": "@howl/fullstack",
+    "version": "0.0.0",
+    "exports": "./main.ts",
+    "imports": {
+        "@hushkey/howl": "../../packages/core/mod.ts",
+        "@hushkey/howl/api": "../../packages/api/mod.ts",
+        "@hushkey/howl/dev": "../../packages/dev/mod.ts",
+        "@hushkey/howl/plugins": "../../packages/plugins/mod.ts",
+        "@hushkey/howl/runtime": "../../packages/core/runtime/client/mod.ts",
+        "@std/path": "jsr:@std/path@^1.0.0",
+        "preact": "npm:preact@^10.25.0",
+        "preact/hooks": "npm:preact@^10.25.0/hooks",
+        "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",
+        "preact/jsx-dev-runtime": "npm:preact@^10.25.0/jsx-dev-runtime",
+        "react-hot-toast": "npm:react-hot-toast@^2.6.0",
+        "sonner": "npm:sonner@^2.0.7",
+        "tailwindcss": "npm:tailwindcss@^4.0.0",
+        "zod": "npm:zod@4.3.6"
+    },
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "preact",
+        "jsxPrecompileSkipElements": [
+            "a",
+            "img",
+            "source",
+            "body",
+            "html",
+            "head",
+            "title",
+            "meta",
+            "script",
+            "link",
+            "style",
+            "base",
+            "noscript",
+            "template"
+        ]
+    }
+}

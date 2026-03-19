@@ -69,6 +69,14 @@ export interface BuildOptions {
    */
   serverEntry?: string;
   /**
+   * Client entry point (e.g. `./client/pages/_app.ts`).
+   * When set, `routeDir` and `islandDir` are resolved relative to its
+   * grandparent directory (the "client root") instead of `root`.
+   * For example, `./client/pages/_app.ts` → client root = `./client/`,
+   * so pages crawl from `./client/pages` and islands from `./client/islands`.
+   */
+  clientEntry?: string;
+  /**
    * File paths to ignore when crawling.
    */
   ignore?: RegExp[];
@@ -96,8 +104,9 @@ export interface BuildOptions {
 }
 
 export type ResolvedBuildConfig =
-  & Required<Omit<BuildOptions, "sourceMap" | "plugins">>
+  & Required<Omit<BuildOptions, "sourceMap" | "plugins" | "clientEntry">>
   & {
+    clientEntry?: string;
     mode: "development" | "production";
     buildId: string;
     sourceMap?: FreshBundleOptions["sourceMap"];
@@ -116,16 +125,26 @@ export class Builder<State = any> {
   constructor(options?: BuildOptions) {
     const root = parseDirPath(options?.root ?? ".", Deno.cwd());
     const serverEntry = parseDirPath(options?.serverEntry ?? "main.ts", root);
+    const clientEntry = options?.clientEntry
+      ? parseDirPath(options.clientEntry, root)
+      : undefined;
+    // When clientEntry is provided (e.g. ./client/pages/_app.ts) derive the
+    // client root as its grandparent (./client/), so pages/islands resolve
+    // there instead of project root.
+    const clientBase = clientEntry
+      ? path.dirname(path.dirname(clientEntry))
+      : root;
     const outDir = parseDirPath(options?.outDir ?? "_harmony", root);
     const staticDir = parseDirPath(options?.staticDir ?? "static", root);
-    const islandDir = parseDirPath(options?.islandDir ?? "islands", root);
-    const routeDir = parseDirPath(options?.routeDir ?? "routes", root);
+    const islandDir = parseDirPath(options?.islandDir ?? "islands", clientBase);
+    const routeDir = parseDirPath(options?.routeDir ?? "routes", clientBase);
 
     this.#fsRoutes = { dir: routeDir, files: [], id: "default" };
     this.#transformer = new FileTransformer(fsAdapter, root);
 
     this.config = {
       serverEntry,
+      clientEntry,
       target: options?.target ?? ["chrome99", "firefox99", "safari15"],
       root,
       outDir,

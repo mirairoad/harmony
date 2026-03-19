@@ -1,4 +1,4 @@
-import { defineApi } from "../../howl.config.ts";
+import { defineApi } from "../../../howl.config.ts";
 import { z } from "zod";
 
 export default defineApi({

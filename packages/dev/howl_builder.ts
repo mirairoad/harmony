@@ -85,7 +85,15 @@ export class HowlBuilder<State = any> {
     if (!this.#howl.isApiRoutesEnabled()) return;
 
     const root = this.#options.root ?? Deno.cwd();
-    const apisDir = path.join(root, "apis");
+    // When serverEntry is provided (e.g. ./server/main.ts) look for apis/
+    // inside that directory rather than project root.
+    const serverEntry = this.#options.serverEntry;
+    const serverBase = serverEntry
+      ? path.dirname(
+        path.isAbsolute(serverEntry) ? serverEntry : path.join(root, serverEntry),
+      )
+      : root;
+    const apisDir = path.join(serverBase, "apis");
 
     try {
       const stat = await Deno.stat(apisDir);

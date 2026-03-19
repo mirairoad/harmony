@@ -1,5 +1,5 @@
 {
-    "name": "@howl/basic",
+    "name": "@howl/backend",
     "version": "0.0.0",
     "exports": "./main.ts",
     "imports": {
