@@ -43,17 +43,24 @@ export interface State {
 }
 
 export interface UserContext {
-  isAuthenticated: boolean;
-  id: string;
-  roles: Role[];
+  user?: { id: string; roles: Role[] };
 }
 
 export const roles = ["user", "admin"] as const;
 export type Role = typeof roles[number];
 
-export default defineConfig<State, Role>({
+// defineConfig returns a pre-typed defineApi — import it in your .api.ts files
+// so you don't need explicit <State, Role> type params everywhere.
+export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
   roles,
-  getUser: async (ctx) => ctx.state.userContext ?? null,
+  checkPermissionStrategy: (ctx, allowedRoles) => {
+    const user = ctx.state.userContext?.user;
+    if (!user) return ctx.json({ message: "Unauthorized" }, { status: 401 });
+    if (!allowedRoles.some((r) => user.roles.includes(r))) {
+      return ctx.json({ message: "Forbidden" }, { status: 403 });
+    }
+    // return nothing = allow
+  },
 });
 ```
 
@@ -61,12 +68,13 @@ export default defineConfig<State, Role>({
 ```typescript
 import { Howl, staticFiles } from "@hushkey/howl";
 import type { State } from "./howl.config.ts";
+import { apiConfig } from "./howl.config.ts";
 
 export const app = new Howl<State>({ logger: true });
 
 app.use(staticFiles());
-app.fsApiRoutes(); // crawls apis/, registers all .api.ts, exposes /api/docs
-app.fsRoutes();    // crawls pages/, mounts all routes
+app.fsApiRoutes(apiConfig); // crawls apis/, registers all .api.ts, exposes /api/docs
+app.fsRoutes();             // crawls pages/, mounts all routes
 
 export default { fetch: app.handler() };
 ```
@@ -117,7 +125,7 @@ export default function Index(ctx: Context<State>) {
 
 **`apis/public/ping.api.ts`**
 ```typescript
-import { defineApi } from "@hushkey/howl/api";
+import { defineApi } from "../../howl.config.ts"; // pre-typed, no <State, Role> needed
 import { z } from "zod";
 
 export default defineApi({
@@ -125,7 +133,7 @@ export default defineApi({
   directory: "public",
   method: "GET",
   // path is optional — auto-generated as /api/public/ping
-  roles: [],
+  roles: [], // Role[] autocomplete from howl.config.ts
   responses: {
     200: z.object({ ok: z.boolean(), message: z.string() }),
   },
@@ -139,37 +147,35 @@ export default defineApi({
 
 **`apis/private/users/get-me.api.ts`**
 ```typescript
-import { defineApi } from "@hushkey/howl/api";
+import { defineApi } from "../../howl.config.ts";
 import { z } from "zod";
-import type { State, Role } from "../../howl.config.ts";
 
-export default defineApi<State, Role>({
+export default defineApi({
   name: "Get Me",
   directory: "private/users",
   method: "GET",
-  roles: ["user", "admin"],  // typed from your Role union
+  roles: ["user", "admin"], // typed — autocomplete works
   responses: {
     200: z.object({ data: z.any() }),
   },
   handler: async (ctx) => ({
     statusCode: 200,
-    data: ctx.state.userContext,
+    data: ctx.state.userContext, // ctx.state typed as State
   }),
 });
 ```
 
 **`apis/authentication/signin.api.ts`** — with typed request body:
 ```typescript
-import { defineApi } from "@hushkey/howl/api";
+import { defineApi } from "../../howl.config.ts";
 import { z } from "zod";
-import type { State, Role } from "../../howl.config.ts";
 
 const body = z.object({
-  em.string().email(),
+  email: z.string().email(),
   password: z.string().min(8),
 });
 
-export default defineApi<State, Role, typeof body>({
+export default defineApi({
   name: "Sign In",
   directory: "authentication",
   method: "POST",

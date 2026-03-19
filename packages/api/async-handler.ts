@@ -40,20 +40,17 @@ export function asyncHandler<State, Role extends string>(
     const protectedRoute = roles.length > 0;
 
     try {
-      // --- Auth & permission check ---
-      if (protectedRoute && howlConfig) {
-        const user = await howlConfig.getUser(ctx, app);
-
-        if (!user?.isAuthenticated) {
-          throw new HttpError(401, "Unauthorized");
+      // --- Auth check — delegate to checkPermissionStrategy ---
+      if (protectedRoute) {
+        if (!howlConfig?.checkPermissionStrategy) {
+          // deno-lint-ignore no-console
+          console.warn(
+            `🐺 "${name}" requires roles ${JSON.stringify(roles)} but no checkPermissionStrategy is configured. Pass checkPermissionStrategy to app.fsApiRoutes(). Request will proceed without auth.`,
+          );
+        } else {
+          const result = await howlConfig.checkPermissionStrategy(ctx, roles as Role[]);
+          if (result instanceof Response) return result;
         }
-
-        const hasRole = user.roles?.some((r: string) => roles.includes(r));
-        if (!hasRole) {
-          throw new HttpError(403, "Forbidden");
-        }
-
-        (ctx.state as any).userContext = user;
       }
 
       // --- Cache read ---

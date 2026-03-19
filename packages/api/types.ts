@@ -13,7 +13,7 @@ export interface CacheAdapter {
 }
 
 /**
- * Howl API configuration — defined in howl.config.ts.
+ * Howl API configuration — passed to app.fsApiRoutes().
  */
 export interface HowlApiConfig<
   State = unknown,
@@ -22,20 +22,22 @@ export interface HowlApiConfig<
   /** Valid roles for this app — typed from your Role union */
   roles: readonly Role[];
   /**
-   * Extract authenticated user from context.
-   * Return null if unauthenticated.
+   * Auth middleware called before every role-protected endpoint.
+   * Return a Response to deny access, return nothing to allow.
+   *
+   * @example
+   * checkPermissionStrategy: (ctx, allowedRoles) => {
+   *   const user = ctx.state.userContext?.user;
+   *   if (!user) return ctx.json({ message: "Unauthorized" }, 401);
+   *   if (!allowedRoles.some(r => user.roles.includes(r))) {
+   *     return ctx.json({ message: "Forbidden" }, 403);
+   *   }
+   * }
    */
-  getUser: (
+  checkPermissionStrategy?: (
     ctx: Context<State>,
-    app: Howl<State>,
-  ) => Promise<
-    {
-      isAuthenticated: boolean;
-      roles: Role[];
-      id: string;
-      [key: string]: unknown;
-    } | null
-  >;
+    allowedRoles: Role[],
+  ) => Response | void | Promise<Response | void>;
   /**
    * Cache adapter. Defaults to in-memory LRU.
    */

@@ -2,51 +2,63 @@ import type { ApiDefinition, HowlApiConfig, RequestBodySchema, ResponsesMap } fr
 import { memoryCache } from "./cache/memory.ts";
 
 /**
- * Define your Howl API configuration.
- * Place the default export in howl.config.ts at your project root.
+ * Define your Howl API configuration and get back a pre-typed defineApi factory.
+ * Export both from howl.config.ts so .api.ts files don't need explicit type params.
  *
  * @example
  * // howl.config.ts
  * import { defineConfig } from "@hushkey/howl/api";
  *
  * export interface State { userContext?: UserContext }
- * export const roles = ["user", "admin"] as const;
+ * export const roles = ["USER", "ADMIN"] as const;
  * export type Role = typeof roles[number];
  *
- * export default defineConfig<State, Role>({
+ * export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
  *   roles,
- *   getUser: async (ctx) => ctx.state.userContext ?? null,
+ *   checkPermissionStrategy: (ctx, allowedRoles) => {
+ *     const user = ctx.state.userContext?.user;
+ *     if (!user) return ctx.json({ message: "Unauthorized" }, 401);
+ *     if (!allowedRoles.some(r => user.roles.includes(r))) {
+ *       return ctx.json({ message: "Forbidden" }, 403);
+ *     }
+ *   },
  * });
+ *
+ * // apis/public/ping.api.ts
+ * import { defineApi } from "../../howl.config.ts";
+ * export default defineApi({ name: "Ping", roles: [], ... });
+ * //                                        ^ Role[] autocomplete, no explicit type params
  */
 export function defineConfig<
   State,
   Role extends string,
->(config: HowlApiConfig<State, Role>): HowlApiConfig<State, Role> {
-  return {
+>(config: HowlApiConfig<State, Role>): {
+  /**
+   * Pre-typed defineApi with State and Role already bound.
+   * Import this from howl.config.ts in your .api.ts files.
+   */
+  defineApi: <
+    R extends ResponsesMap = ResponsesMap,
+    B extends RequestBodySchema | null = null,
+  >(
+    definition: ApiDefinition<State, Role, R, B>,
+  ) => ApiDefinition<State, Role, R, B>;
+  /** Pass to app.fsApiRoutes(apiConfig) */
+  config: HowlApiConfig<State, Role>;
+} {
+  const resolvedConfig: HowlApiConfig<State, Role> = {
     cache: memoryCache(),
     ...config,
+  };
+  return {
+    defineApi: (definition) => definition,
+    config: resolvedConfig,
   };
 }
 
 /**
- * Define a typed API endpoint.
- * Place in apis/**\/*.api.ts — auto-discovered by HowlBuilder.
- *
- * @example
- * export default defineApi<State, Role>({
- *   name: "Get Me",
- *   directory: "private/users",
- *   method: "GET",
- *   path: "/api/v1/private/users/me",
- *   roles: ["user"],
- *   responses: {
- *     200: z.object({ data: z.any() }),
- *   },
- *   handler: async (ctx) => ({
- *     statusCode: 200,
- *     data: ctx.state.userContext,
- *   }),
- * });
+ * Define a typed API endpoint with explicit type params.
+ * Prefer importing the bound defineApi from howl.config.ts instead.
  */
 export function defineApi<
   State,

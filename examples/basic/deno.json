@@ -4,6 +4,7 @@
     "exports": "./main.ts",
     "imports": {
         "@hushkey/howl": "../../packages/core/mod.ts",
+        "@hushkey/howl/api": "../../packages/api/mod.ts",
         "@hushkey/howl/dev": "../../packages/dev/mod.ts",
         "@hushkey/howl/plugins": "../../packages/plugins/mod.ts",
         "@hushkey/howl/runtime": "../../packages/core/runtime/client/mod.ts",

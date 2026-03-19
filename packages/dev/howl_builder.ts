@@ -126,8 +126,7 @@ export class HowlBuilder<State = any> {
     if (!this.#howl.isApiRoutesEnabled()) return;
     if (this.#apis.length === 0) return;
 
-    // deno-lint-ignore no-explicit-any
-    apiHandler(app, this.#apis, (app as any).config ?? null);
+    apiHandler(app, this.#apis, app.getApiConfig() ?? null);
   }
 
   // --- Public API ---

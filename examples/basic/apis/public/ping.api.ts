@@ -1,11 +1,11 @@
-import { defineApi } from "@hushkey/howl/api";
+import { defineApi } from "../../howl.config.ts";
 import { z } from "zod";
 
 export default defineApi({
   name: "Ping",
   directory: "public",
   method: "GET",
-  roles: ["SUPER_ADMIN"],
+  roles: ["PUBLISHER"],
   caching: {
     ttl: 5,
   },
@@ -18,8 +18,8 @@ export default defineApi({
       message: z.string(),
     }),
   },
-  handler: async (_ctx) => {
-    await Promise.resolve(new Promise((resolve) => setTimeout(resolve, 5000)));
+  handler: (_ctx) => {
+    // await Promise.resolve(new Promise((resolve) => setTimeout(resolve, 5000)));
 
     return {
       statusCode: 200,

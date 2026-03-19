@@ -215,6 +215,8 @@ export class Howl<State = any> {
   #onError: (err: unknown) => void = NOOP;
   #logger: HowlLogger | null = null;
   #apiRoutesEnabled = false;
+  // deno-lint-ignore no-explicit-any
+  #apiConfig: any = null;
 
   static {
     getBuildCache = (app) => app.#getBuildCache();
@@ -405,16 +407,25 @@ export class Howl<State = any> {
    * Convention: place API definitions in apis/**\/*.api.ts
    *
    * @example
-   * app.fsApiRoutes();
+   * import { apiConfig } from "./howl.config.ts";
+   * app.fsApiRoutes(apiConfig);
    */
-  fsApiRoutes(): this {
+  // deno-lint-ignore no-explicit-any
+  fsApiRoutes(config?: any): this {
     this.#apiRoutesEnabled = true;
+    if (config !== undefined) this.#apiConfig = config;
     return this;
   }
 
   /** @internal — used by HowlBuilder */
   isApiRoutesEnabled(): boolean {
     return this.#apiRoutesEnabled;
+  }
+
+  /** @internal — used by HowlBuilder */
+  // deno-lint-ignore no-explicit-any
+  getApiConfig(): any {
+    return this.#apiConfig;
   }
 
   /**
