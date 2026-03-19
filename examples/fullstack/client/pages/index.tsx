@@ -1,5 +1,5 @@
 import type { Context } from "@hushkey/howl";
-import type { State } from "../howl.config.ts";
+import type { State } from "../../howl.config.ts";
 import ClientSafeIsland from "../islands/client-safe.island.tsx";
 
 export default function Index(ctx: Context<State>) {

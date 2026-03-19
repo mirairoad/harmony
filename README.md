@@ -13,7 +13,7 @@ Fresh is excellent. But building a production platform on top of it revealed gap
 - No native cookie API on `ctx`
 - Response headers set in middleware didn't propagate to page renders
 - No React ecosystem compatibility without Vite
-- No first-class API contract system with Zod validation
+- No first-class typed endpoint system with Zod validation
 - No auto-generated OpenAPI spec
 - No role-based access control built in
 
@@ -26,9 +26,35 @@ Howl solves all of these natively.
 | Import | Description |
 |---|---|
 | `@hushkey/howl` | Core runtime — routing, context, islands, SSR |
-| `@hushkey/howl/dev` | Build pipeline — esbuirver, HMR |
+| `@hushkey/howl/dev` | Build pipeline — esbuild, HMR |
 | `@hushkey/howl/plugins` | Official plugins — Tailwind v4, CSS Modules |
-| `@hushkey/howl/api` | API layer — defineApi, Zod validation, OpenAPI |
+| `@hushkey/howl/api` | Endpoint contracts — defineApi, Zod validation, OpenAPI |
+
+---
+
+## Project structure
+
+```
+my-app/
+├── client/
+│   ├── pages/
+│   │   ├── _app.tsx        ← root layout
+│   │   └── index.tsx
+│   └── islands/
+│       └── counter.island.tsx
+├── server/
+│   ├── main.ts             ← app entrypoint
+│   ├── middleware/
+│   │   └── _index.middleware.ts
+│   └── apis/
+│       └── public/
+│           └── ping.api.ts
+├── static/
+│   └── style.css
+├── howl.config.ts          ← State type + defineApi factory
+├── dev.ts                  ← dev/build entrypoint
+└── deno.json
+```
 
 ---
 
@@ -64,30 +90,36 @@ export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
 });
 ```
 
-**`main.ts`**
+**`server/main.ts`**
 ```typescript
 import { Howl, staticFiles } from "@hushkey/howl";
-import type { State } from "./howl.config.ts";
-import { apiConfig } from "./howl.config.ts";
+import type { State } from "../howl.config.ts";
+import { apiConfig } from "../howl.config.ts";
+import { middleware } from "./middleware/_index.middleware.ts";
 
 export const app = new Howl<State>({ logger: true });
 
 app.use(staticFiles());
-app.fsApiRoutes(apiConfig); // crawls apis/, registers all .api.ts, exposes /api/docs
-app.fsRoutes();             // crawls pages/, mounts all routes
+app.configure(middleware);
+app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts, exposes /api/docs
+app.fsRoutes();             // crawls client/pages/, mounts all routes
 
-export default { fetch: app.handler() };
+export default { app };
 ```
 
-**`dev.*
+**`dev.ts`**
 ```typescript
 import { HowlBuilder } from "@hushkey/howl/dev";
 import { tailwindPlugin } from "@hushkey/howl/plugins";
-import { app } from "./main.ts";
+import { app } from "./server/main.ts";
+import type { State } from "./howl.config.ts";
 
-const builder = new HowlBuilder(app, {
+const builder = new HowlBuilder<State>(app, {
   root: import.meta.dirname ?? "",
-  importApp: () => Promise.resolve(app),
+  importApp: () => app,
+  outDir: "dist",
+  serverEntry: "./server/main.ts",
+  clientEntry: "./client/pages/_app.ts",
 });
 
 tailwindPlugin(builder.getBuilder("default")!);
@@ -99,12 +131,14 @@ if (Deno.args.includes("build")) {
 }
 ```
 
-**`pages/index.tsx`**
+**`client/pages/_app.tsx`**
 ```tsx
-import type { Context } from "@hushkey/howl";
-import type { State } from "../main.ts";
+import type { RouteConfig } from "@hushkey/howl";
+import type { FunctionComponent, JSX } from "preact";
 
-export default function Index(ctx: Context<State>) {
+export const config: RouteConfig = {};
+
+export default function App({ Component }: { Component: FunctionComponent }): JSX.Element {
   return (
     <html>
       <head>
@@ -112,20 +146,32 @@ export default function Index(ctx: Context<State>) {
         <link rel="stylesheet" href="/style.css" />
       </head>
       <body>
-        <h1>Hello, {ctx.state.userContext?.id}</h1>
+        <Component />
       </body>
     </html>
   );
 }
 ```
 
+**`client/pages/index.tsx`**
+```tsx
+import type { Context } from "@hushkey/howl";
+import type { State } from "../../howl.config.ts";
+
+export default function Index(ctx: Context<State>) {
+  return <h1>Hello, {ctx.state.userContext?.user?.id}</h1>;
+}
+```
+
 ---
 
-## API Layer
+## Endpoint contracts
 
-**`apis/public/ping.api.ts`**
+Each `.api.ts` file is a self-contained, typed endpoint contract: method, roles, Zod-validated request body and responses, optional caching. No wiring needed — drop the file and it's live.
+
+**`server/apis/public/ping.api.ts`**
 ```typescript
-import { defineApi } from "../../howl.config.ts"; // pre-typed, no <State, Role> needed
+import { defineApi } from "../../../howl.config.ts"; // pre-typed, no <State, Role> needed
 import { z } from "zod";
 
 export default defineApi({
@@ -133,7 +179,8 @@ export default defineApi({
   directory: "public",
   method: "GET",
   // path is optional — auto-generated as /api/public/ping
-  roles: [], // Role[] autocomplete from howl.config.ts
+  roles: [],
+  caching: { ttl: 5 },
   responses: {
     200: z.object({ ok: z.boolean(), message: z.string() }),
   },
@@ -145,9 +192,9 @@ export default defineApi({
 });
 ```
 
-**`apis/private/users/get-me.api.ts`**
+**`server/apis/private/users/get-me.api.ts`**
 ```typescript
-import { defineApi } from "../../howl.config.ts";
+import { defineApi } from "../../../../howl.config.ts";
 import { z } from "zod";
 
 export default defineApi({
@@ -165,9 +212,9 @@ export default defineApi({
 });
 ```
 
-**`apis/authentication/signin.api.ts`** — with typed request body:
+**With typed request body:**
 ```typescript
-import { defineApi } from "../../howl.config.ts";
+import { defineApi } from "../../../howl.config.ts";
 import { z } from "zod";
 
 const body = z.object({
@@ -215,12 +262,11 @@ const all = ctx.query();
 
 ## React ecosystem
 
-React libes work transparently — no configuration needed:
+React libs work transparently — no configuration needed:
 ```tsx
-// islands/ToastIsland.tsx
+// client/islands/ToastIsland.tsx
 import { toast, Toaster } from "sonner";
 import { useState } from "preact/hooks";
-import { ClientOnly } from "@hushkey/howl";
 
 export const howl = { ssr: false }; // skip SSR for hook-heavy components
 
@@ -228,7 +274,7 @@ export default function ToastIsland() {
   const [count, setCount] = useState(0);
   return (
     <div>
-      <ClientOnly>{() => <Toaster />}</ClientOnly>
+      <Toaster />
       <button onClick={() => { setCount(c => c + 1); toast.success(`${count + 1}`); }}>
         Click
       </button>
@@ -241,11 +287,12 @@ export default function ToastIsland() {
 
 ## Conventions
 
-| Convention | Value |
+| Convention | Path |
 |---|---|
-| Pages | `pages/` |
-| Islands | `islands/` |
-| API definitions | `apis/**/*.api.ts` |
+| Pages | `client/pages/` |
+| Islands | `client/islands/` |
+| Endpoint contracts | `server/apis/**/*.api.ts` |
+| Middleware | `server/middleware/` |
 | Static files | `static/` |
 | Config | `howl.config.ts` |
 | Build output | `dist/` |
@@ -262,6 +309,7 @@ const app = new Howl<State>({
 ```
 
 ---
+
 # Powered by Hushkey
 
 Howl is the framework behind [Hushkey](https://hushkey.app) — a platform helping foreigners navigate housing, jobs, and daily life in Japan.
