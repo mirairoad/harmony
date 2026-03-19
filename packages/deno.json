@@ -14,7 +14,10 @@
         ".": "./core/mod.ts",
         "./runtime": "./core/runtime/client/mod.ts",
         "./dev": "./dev/mod.ts",
-        "./plugins": "./plugins/mod.ts"
+        "./plugins": "./plugins/mod.ts",
+        "./api": "./api/mod.ts",
+        "./api/errors": "./api/errors.ts",
+        "./api/cache": "./api/cache/mod.ts"
     },
     "imports": {
         "@std/streams": "jsr:@std/streams@^1.0.17",
@@ -47,6 +50,8 @@
         "@tailwindcss/postcss": "npm:@tailwindcss/postcss@^4.0.0",
         "postcss": "npm:postcss@^8.5.6",
         "@astral/astral": "jsr:@astral/astral@^0.5.5",
-        "linkedom": "npm:linkedom@^0.18.12"
+        "linkedom": "npm:linkedom@^0.18.12",
+        "zod": "npm:zod@4.3.6",
+        "openapi-types": "npm:openapi-types@12.1.3"
     }
 }

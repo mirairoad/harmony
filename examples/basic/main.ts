@@ -1,14 +1,17 @@
 import { Howl, staticFiles } from "@hushkey/howl";
 import type { State } from "./howl.config.ts";
-import { apis } from "./apis/_index.apis.ts";
 import { middleware } from "./middleware/_index.middleware.ts";
+// import { config } from "./howl.config.ts";
 
 export const app = new Howl<State>({
   logger: true,
   debug: true,
+  // config,
 });
 
 app.use(staticFiles());
+
+app.configure(middleware);
 
 // console.info("info!");
 // console.error("error!");
@@ -16,9 +19,7 @@ app.use(staticFiles());
 // console.debug("debug!");
 // console.log("log!");
 
-app.configure(middleware);
-app.configure(apis);
-
+app.fsApiRoutes();
 app.fsRoutes();
 
 export default { app };

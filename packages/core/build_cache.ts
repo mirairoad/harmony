@@ -17,6 +17,8 @@ export interface BuildSnapshot<State> {
   version: string;
   clientEntry: string;
   fsRoutes: FsRouteFile<State>[];
+  /** API definitions — stored for production route registration */
+  apiRoutes?: unknown[];
   staticFiles: Map<string, FileSnapshot>;
   islands: ServerIslandRegistry;
   entryAssets: string[];
@@ -34,11 +36,14 @@ export interface StaticFile {
 export interface BuildCache<State = any> {
   root: string;
   islandRegistry: ServerIslandRegistry;
+  /** Registry of API definitions keyed by path — used for client generation */
+  apiRegistry: Map<string, unknown>;
   clientEntry: string;
   features: {
     errorOverlay: boolean;
   };
   getFsRoutes(): Command<State>[];
+  getApiRoutes(): unknown[];
   readFile(pathname: string): Promise<StaticFile | null>;
   getEntryAssets(): string[];
 }
@@ -47,6 +52,7 @@ export class ProdBuildCache<State> implements BuildCache<State> {
   #snapshot: BuildSnapshot<State>;
   islandRegistry: ServerIslandRegistry;
   clientEntry: string;
+  apiRegistry: Map<string, unknown> = new Map();
   features = { errorOverlay: false };
 
   constructor(public root: string, snapshot: BuildSnapshot<State>) {
@@ -54,6 +60,16 @@ export class ProdBuildCache<State> implements BuildCache<State> {
     this.#snapshot = snapshot;
     this.islandRegistry = snapshot.islands;
     this.clientEntry = snapshot.clientEntry;
+
+    // Populate apiRegistry from snapshot
+    for (const api of snapshot.apiRoutes ?? []) {
+      // deno-lint-ignore no-explicit-any
+      const a = api as any;
+      const paths = Array.isArray(a.path) ? a.path : [a.path];
+      for (const p of paths) {
+        this.apiRegistry.set(`${a.method}:${p}`, api);
+      }
+    }
   }
 
   getEntryAssets(): string[] {
@@ -62,6 +78,10 @@ export class ProdBuildCache<State> implements BuildCache<State> {
 
   getFsRoutes(): Command<State>[] {
     return fsItemsToCommands(this.#snapshot.fsRoutes);
+  }
+
+  getApiRoutes(): unknown[] {
+    return this.#snapshot.apiRoutes ?? [];
   }
 
   async readFile(pathname: string): Promise<StaticFile | null> {
@@ -92,7 +112,6 @@ export class ProdBuildCache<State> implements BuildCache<State> {
 export class IslandPreparer {
   #namer = new UniqueNamer();
 
-  // Replace the prepare method:
   prepare(
     registry: ServerIslandRegistry,
     mod: Record<string, unknown>,
@@ -100,9 +119,12 @@ export class IslandPreparer {
     modName: string,
     css: string[],
   ) {
-    // Read the harmony directive if exported
+    // Read the howl directive if exported
+    const howlDirective = mod["howl"] as { ssr?: boolean } | undefined;
+    // Also support legacy "harmony" directive
     const harmonyDirective = mod["harmony"] as { ssr?: boolean } | undefined;
-    const ssr = harmonyDirective?.ssr !== false; // default true
+    const directive = howlDirective ?? harmonyDirective;
+    const ssr = directive?.ssr !== false; // default true
 
     for (const [name, value] of Object.entries(mod)) {
       if (typeof value !== "function") continue;

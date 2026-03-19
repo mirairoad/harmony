@@ -38,6 +38,10 @@ export interface FsRoute<State> {
 
 export interface DevBuildCache<State> extends BuildCache<State> {
   islandModNameToChunk: Map<string, IslandModChunk>;
+  /** Registry of API definitions keyed by METHOD:path */
+  apiRegistry: Map<string, unknown>;
+  getApiRoutes(): unknown[];
+  setApiRoutes(apis: unknown[]): void;
   addUnprocessedFile(pathname: string, dir: string): void;
   addProcessedFile(
     pathname: string,
@@ -54,7 +58,9 @@ export class MemoryBuildCache<State> implements DevBuildCache<State> {
   #inFlight = new Map<string, Promise<StaticFile | null>>();
   #config: ResolvedBuildConfig;
   #transformer: FileTransformer;
+  #apis: unknown[] = [];
   islandModNameToChunk = new Map<string, IslandModChunk>();
+  apiRegistry: Map<string, unknown> = new Map();
   #fsRoutes: FsRoute<State>;
   #commands: Command<State>[] = [];
   root: string;
@@ -75,7 +81,6 @@ export class MemoryBuildCache<State> implements DevBuildCache<State> {
     this.#fsRoutes = fsRoutes;
     this.#transformer = transformer;
     this.root = config.root;
-
     this.clientEntry = getClientEntry(config.buildId);
   }
 
@@ -85,6 +90,23 @@ export class MemoryBuildCache<State> implements DevBuildCache<State> {
 
   getFsRoutes(): Command<State>[] {
     return this.#commands;
+  }
+
+  getApiRoutes(): unknown[] {
+    return this.#apis;
+  }
+
+  setApiRoutes(apis: unknown[]): void {
+    this.#apis = apis;
+    // Populate registry keyed by METHOD:path
+    for (const api of apis) {
+      // deno-lint-ignore no-explicit-any
+      const a = api as any;
+      const paths = Array.isArray(a.path) ? a.path : [a.path];
+      for (const p of paths) {
+        this.apiRegistry.set(`${a.method}:${p}`, api);
+      }
+    }
   }
 
   async readFile(pathname: string): Promise<StaticFile | null> {
@@ -204,7 +226,6 @@ export class MemoryBuildCache<State> implements DevBuildCache<State> {
   async flush(): Promise<void> {
     const preparer = new IslandPreparer();
 
-    // Load islands
     await Promise.all(
       Array.from(this.islandModNameToChunk.entries()).map(
         async ([name, chunk]) => {
@@ -222,7 +243,6 @@ export class MemoryBuildCache<State> implements DevBuildCache<State> {
   }
 
   async prepare(): Promise<void> {
-    // Load FS routes
     const files = await Promise.all(this.#fsRoutes.files.map(async (file) => {
       const fileUrl = maybeToFileUrl(file.filePath);
       return {
@@ -239,7 +259,9 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
   #unprocessedFiles = new Map<string, string>();
   #transformer: FileTransformer;
   #config: ResolvedBuildConfig;
+  #apis: unknown[] = [];
   islandModNameToChunk = new Map<string, IslandModChunk>();
+  apiRegistry: Map<string, unknown> = new Map();
   #fsRoutes: FsRoute<State>;
   root: string;
   islandRegistry: ServerIslandRegistry = new Map();
@@ -266,6 +288,22 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
 
   getFsRoutes(): Command<State>[] {
     return [];
+  }
+
+  getApiRoutes(): unknown[] {
+    return this.#apis;
+  }
+
+  setApiRoutes(apis: unknown[]): void {
+    this.#apis = apis;
+    for (const api of apis) {
+      // deno-lint-ignore no-explicit-any
+      const a = api as any;
+      const paths = Array.isArray(a.path) ? a.path : [a.path];
+      for (const p of paths) {
+        this.apiRegistry.set(`${a.method}:${p}`, api);
+      }
+    }
   }
 
   addUnprocessedFile(pathname: string, dir: string): void {
@@ -309,13 +347,10 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
         includeDirs: false,
         includeFiles: true,
         followSymlinks: false,
-        // Skip any folder or file starting with a ".", but allow
-        // ".well-known" for things like PWA manifests
         skip: [/\/\.(?!well-known)[^/]+(\/|$)/],
       });
 
       for await (const entry of entries) {
-        // OutDir might be inside static dir
         if (!path.relative(outDir, entry.path).startsWith("..")) {
           continue;
         }
@@ -347,18 +382,9 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
     }
 
     for (const [name, maybeHash] of this.#processedFiles.entries()) {
-      // Ignore esbuild meta file. It's not intended for serving
-      if (name === "/metafile.json") {
-        continue;
-      }
-
+      if (name === "/metafile.json") continue;
       const filePath = path.join(outDir, "static", name);
       staticFiles.push({ filePath, pathname: name, hash: maybeHash });
-    }
-
-    const islandSpecifiers: string[] = [];
-    for (const spec of this.islandModNameToChunk.keys()) {
-      islandSpecifiers.push(spec);
     }
 
     const islands = Array.from(this.islandModNameToChunk.values());
@@ -370,16 +396,14 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
         clientEntry: getClientEntry(this.#config.buildId),
         staticFiles,
         islands,
-        writeSpecifier: (filePath) => {
-          return pathToSpec(outDir, filePath);
-        },
+        writeSpecifier: (filePath) => pathToSpec(outDir, filePath),
         fsRoutesFiles: this.#fsRoutes.files,
+        apiRoutes: this.#apis,
         outDir: root,
         entryAssets: [],
       }),
     );
 
-    // TODO: Make main file configurable
     const appPath = path.relative(outDir, root);
     await Deno.writeTextFile(
       path.join(outDir, "server.js"),
@@ -397,16 +421,11 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
 const EDIT_WARNING = `// WARNING: DO NOT EDIT THIS FILE. It is autogenerated by Howl.`;
 
 export async function hashContent(
-  // This error poppued up since TS 5.9.2 but not sure why
   // deno-lint-ignore no-explicit-any
   content: Uint8Array<any> | ReadableStream<Uint8Array>,
 ): Promise<string> {
   const buffer = await new Response(content).arrayBuffer();
-
-  const hashBuf = await crypto.subtle.digest(
-    "SHA-256",
-    buffer,
-  );
+  const hashBuf = await crypto.subtle.digest("SHA-256", buffer);
   return encodeHex(hashBuf);
 }
 
@@ -445,17 +464,13 @@ export async function generateSnapshotServer(
     islands: IslandModChunk[];
     // deno-lint-ignore no-explicit-any
     fsRoutesFiles: FsRouteFileNoMod<any>[];
+    apiRoutes: unknown[];
     staticFiles: PendingStaticFile[];
     entryAssets: string[];
     writeSpecifier: (filePath: string) => string;
   },
 ): Promise<string> {
-  const {
-    islands,
-    writeSpecifier,
-    fsRoutesFiles,
-    outDir,
-  } = options;
+  const { islands, writeSpecifier, fsRoutesFiles, outDir } = options;
 
   const islandImports = islands
     .map((item) => {
@@ -500,13 +515,18 @@ export async function generateSnapshotServer(
     .join("\n");
 
   const staticFiles = await Promise.all(
-    options.staticFiles.map(async (item) => {
-      return await prepareStaticFile(item, outDir);
-    }),
+    options.staticFiles.map((item) => prepareStaticFile(item, outDir)),
   );
 
   const entryAssets = options.entryAssets.map((url) => JSON.stringify(url))
     .join(",\n");
+
+  // Serialize API routes — strip handler functions, keep metadata only
+  const serializedApiRoutes = options.apiRoutes.map((api) => {
+    // deno-lint-ignore no-explicit-any
+    const { handler: _h, ...meta } = api as any;
+    return JSON.stringify(meta);
+  }).join(",\n");
 
   return `${EDIT_WARNING}
 import { IslandPreparer } from "@hushkey/howl";
@@ -529,15 +549,17 @@ export const entryAssets = [${entryAssets}];
 export const fsRoutes = [
 ${serializedFsRoutes}
 ];
+
+export const apiRoutes = [
+${serializedApiRoutes}
+];
 `.replaceAll(/\n[\n]+/g, "\n\n");
 }
 
 export async function prepareStaticFile(
   item: PendingStaticFile,
   outDir: string,
-): Promise<
-  { name: string; hash: string; filePath: string; contentType: string }
-> {
+): Promise<{ name: string; hash: string; filePath: string; contentType: string }> {
   const file = await Deno.open(item.filePath);
   const hash = item.hash ? item.hash : await hashContent(file.readable);
   const url = new URL(item.pathname, "http://localhost");
@@ -560,10 +582,7 @@ export function generateServerEntry(
   let rootPath = `path.join(import.meta.dirname, ${JSON.stringify(options.root)})`;
   if (path.isAbsolute(options.root)) {
     // deno-lint-ignore no-console
-    console.warn(
-      `WARN: using absolute root path in snapshot: "${options.root}"`,
-    );
-
+    console.warn(`WARN: using absolute root path in snapshot: "${options.root}"`);
     rootPath = JSON.stringify(options.root);
   }
 

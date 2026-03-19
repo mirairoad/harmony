@@ -162,12 +162,17 @@ export class MockBuildCache<State> implements BuildCache<State> {
   #files: FsRouteFile<State>[];
   root = "";
   clientEntry = "";
+  apiRegistry: Map<string, unknown> = new Map();
+
   islandRegistry: ServerIslandRegistry = new Map();
   features = { errorOverlay: false };
 
   constructor(files: FsRouteFile<State>[], mode: "development" | "production") {
     this.features.errorOverlay = mode === "development";
     this.#files = files;
+  }
+  getApiRoutes(): unknown[] {
+    return [];
   }
 
   getEntryAssets(): string[] {

@@ -46,6 +46,7 @@ export const enum CommandType {
   NotFound = "notFound",
   Handler = "handler",
   FsRoute = "fsRoute",
+  ApiRoute = "apiRoute",
 }
 
 export interface ErrorCmd<State> {

@@ -1,7 +1,9 @@
-import { App, type ListenOptions } from "../core/app.ts";
-import { Howl } from "../core/app.ts";
+import { App, Howl, type ListenOptions } from "../core/app.ts";
 import { Builder, type BuildOptions } from "./builder.ts";
 import { cssModulesPlugin } from "./plugins/css_modules.ts";
+import * as path from "@std/path";
+import type { AnyApiDefinition } from "../api/types.ts";
+import { apiHandler } from "../api/api-handler.ts";
 
 export interface HowlDevOptions<State = any>
   extends Omit<BuildOptions, "routeDir" | "islandDir" | "staticDir"> {
@@ -9,23 +11,20 @@ export interface HowlDevOptions<State = any>
 }
 
 /**
- * Wraps Builder with Harmony-aware multi-client support and mode switching.
- *
- * Baked-in defaults:
- * - CSS Modules support via cssModulesPlugin
- * - React → Preact/compat alias for React ecosystem compatibility
- *
- * In "backend" mode: no build pipeline runs.
- * In "fullstack" mode with single client: delegates to Builder directly.
- * In "fullstack" mode with multiple clients: one Builder per client.
+ * Wraps Builder with Howl-aware features:
+ * - CSS Modules baked in
+ * - React → Preact/compat alias baked in
+ * - apis/ directory crawled automatically when app.fsApiRoutes() is called
+ * - OpenAPI spec auto-exposed at /api/docs
  */
 export class HowlBuilder<State = any> {
   #howl: Howl<State>;
   #options: HowlDevOptions<State>;
   #builders: Map<string, Builder<State>> = new Map();
+  #apis: AnyApiDefinition[] = [];
 
-  constructor(harmony: Howl<State>, options: HowlDevOptions<State> = {}) {
-    this.#howl = harmony;
+  constructor(howl: Howl<State>, options: HowlDevOptions<State> = {}) {
+    this.#howl = howl;
     this.#options = options;
     this.#setupBuilders();
   }
@@ -42,12 +41,10 @@ export class HowlBuilder<State = any> {
   #makeBuilderOptions(overrides: Partial<BuildOptions> = {}): BuildOptions {
     return {
       ...this.#options,
-      // Merge user alias on top of defaults
       alias: {
         ...this.#defaultAlias(),
         ...this.#options.alias,
       },
-      // Prepend CSS modules plugin, then user plugins
       plugins: [
         cssModulesPlugin(),
         ...(this.#options.plugins ?? []),
@@ -76,11 +73,64 @@ export class HowlBuilder<State = any> {
           routeDir: `${client.dir}/pages`,
           islandDir: `${client.dir}/islands`,
           staticDir: `${client.dir}/static`,
-          outDir: `${this.#options.outDir ?? "_harmony"}/${client.name}`,
+          outDir: `${this.#options.outDir ?? "_howl"}/${client.name}`,
         })),
       );
     }
   }
+
+  // --- API crawling ---
+
+  async #crawlApis(): Promise<void> {
+    if (!this.#howl.isApiRoutesEnabled()) return;
+
+    const root = this.#options.root ?? Deno.cwd();
+    const apisDir = path.join(root, "apis");
+
+    try {
+      const stat = await Deno.stat(apisDir);
+      if (!stat.isDirectory) return;
+    } catch {
+      // no apis/ folder — skip silently
+      return;
+    }
+
+    await this.#walkApis(apisDir);
+
+    if (this.#apis.length > 0) {
+      // deno-lint-ignore no-console
+      console.info(`[howl] Found ${this.#apis.length} API definitions in apis/`);
+    }
+  }
+
+  async #walkApis(dir: string): Promise<void> {
+    for await (const entry of Deno.readDir(dir)) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory) {
+        await this.#walkApis(fullPath);
+      } else if (entry.name.endsWith(".api.ts")) {
+        try {
+          const mod = await import(path.toFileUrl(fullPath).href);
+          if (mod.default) {
+            this.#apis.push(mod.default as AnyApiDefinition);
+          }
+        } catch (err) {
+          // deno-lint-ignore no-console
+          console.error(`[howl] Failed to load API: ${fullPath}`, err);
+        }
+      }
+    }
+  }
+
+  #registerApis(app: Howl<State>): void {
+    if (!this.#howl.isApiRoutesEnabled()) return;
+    if (this.#apis.length === 0) return;
+
+    // deno-lint-ignore no-explicit-any
+    apiHandler(app, this.#apis, (app as any).config ?? null);
+  }
+
+  // --- Public API ---
 
   registerIsland(specifier: string): void {
     for (const builder of this.#builders.values()) {
@@ -96,10 +146,14 @@ export class HowlBuilder<State = any> {
       );
     }
 
+    // Crawl apis/ before starting
+    await this.#crawlApis();
+
     if (this.#builders.size === 1) {
       await this.#builders.values().next().value!.listen(async () => {
         const result = await Promise.resolve(importApp());
         const app = result instanceof Howl ? result : result.app;
+        this.#registerApis(app);
         return app;
       }, options);
       return;
@@ -114,6 +168,7 @@ export class HowlBuilder<State = any> {
           async () => {
             const result = await Promise.resolve(importApp());
             const app = result instanceof Howl ? result : result.app;
+            this.#registerApis(app);
             const clientApp = new App<State>({ basePath: client.mount });
             clientApp.mountApp(client.mount, app);
             return clientApp;
@@ -125,25 +180,41 @@ export class HowlBuilder<State = any> {
   }
 
   async build(): Promise<void> {
+    // Crawl apis/ before build
+    await this.#crawlApis();
+
     const app = this.#howl;
 
     await Promise.all(
       Array.from(this.#builders.entries()).map(async ([name, builder]) => {
         const applySnapshot = await builder.build({ mode: "production" });
         applySnapshot(app);
-        console.log(`Built client: ${name}`);
+        // deno-lint-ignore no-console
+        console.log(`[howl] Built client: ${name}`);
       }),
     );
+
+    // Register APIs for production
+    this.#registerApis(app);
   }
 
   /**
    * Get a specific client's builder by name.
-   * Useful for registering plugins like tailwind on a specific client.
+   * Useful for registering plugins like tailwindPlugin.
    *
    * @example
    * tailwindPlugin(builder.getBuilder("default")!);
    */
   getBuilder(name = "default"): Builder<State> | undefined {
     return this.#builders.get(name);
+  }
+
+  /**
+   * Get all discovered API definitions.
+   * Available after listen() or build() is called.
+   * Useful for generating a typed HTTP client.
+   */
+  getApis(): AnyApiDefinition[] {
+    return this.#apis;
   }
 }

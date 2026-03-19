@@ -56,9 +56,8 @@ export {
 // --- Internals used by @howl/dev (not public API) ---
 export { fsAdapter } from "./fs.ts";
 export { assertInDir, pathToExportName, pathToSpec, UniqueNamer } from "./utils.ts";
-export { type BuildCache, IslandPreparer } from "./build_cache.ts";
+export { type BuildCache, IslandPreparer, ProdBuildCache } from "./build_cache.ts";
 export { fsItemsToCommands, type FsRouteFile } from "./fs_routes.ts";
 export { type Command, CommandType } from "./commands.ts";
 export { type ServerIslandRegistry } from "./context.ts";
 export type { ApiConfig, ClientConfig } from "./app.ts";
-export { ProdBuildCache } from "./build_cache.ts";

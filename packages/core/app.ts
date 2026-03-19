@@ -214,6 +214,7 @@ export class Howl<State = any> {
   #commands: Command<State>[] = [];
   #onError: (err: unknown) => void = NOOP;
   #logger: HowlLogger | null = null;
+  #apiRoutesEnabled = false;
 
   static {
     getBuildCache = (app) => app.#getBuildCache();
@@ -394,6 +395,26 @@ export class Howl<State = any> {
       includeLastSegment: false,
     });
     return this;
+  }
+
+  /**
+   * Enable API routes from the apis/ directory.
+   * HowlBuilder crawls apis/ at startup and registers all .api.ts files.
+   * Automatically exposes OpenAPI spec at /api/docs.
+   *
+   * Convention: place API definitions in apis/**\/*.api.ts
+   *
+   * @example
+   * app.fsApiRoutes();
+   */
+  fsApiRoutes(): this {
+    this.#apiRoutesEnabled = true;
+    return this;
+  }
+
+  /** @internal — used by HowlBuilder */
+  isApiRoutesEnabled(): boolean {
+    return this.#apiRoutesEnabled;
   }
 
   /**
