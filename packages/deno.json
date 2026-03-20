@@ -10,6 +10,12 @@
         "name": "Leo Termine",
         "email": "leotermine@hushkey.app"
     },
+    "publish": {
+        "exclude": [
+            "core/test_utils copy.ts",
+            "core/test_utils copy 2.ts"
+        ]
+    },
     "exports": {
         ".": "./core/mod.ts",
         "./runtime": "./core/runtime/shared.ts",

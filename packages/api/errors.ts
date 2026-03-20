@@ -20,13 +20,13 @@ export class HttpError extends Error {
 }
 
 const errors = {
-  badRequest: (message = "Bad Request") => new HttpError(400, message),
-  unauthorized: (message = "Unauthorized") => new HttpError(401, message),
-  forbidden: (message = "Forbidden") => new HttpError(403, message),
-  notFound: (message = "Not Found") => new HttpError(404, message),
-  disabled: (message = "Method Not Allowed") => new HttpError(405, message),
-  conflict: (message = "Conflict") => new HttpError(409, message),
-  internal: (message = "Internal Server Error") => new HttpError(500, message),
+  badRequest: (message = "Bad Request"): HttpError => new HttpError(400, message),
+  unauthorized: (message = "Unauthorized"): HttpError => new HttpError(401, message),
+  forbidden: (message = "Forbidden"): HttpError => new HttpError(403, message),
+  notFound: (message = "Not Found"): HttpError => new HttpError(404, message),
+  disabled: (message = "Method Not Allowed"): HttpError => new HttpError(405, message),
+  conflict: (message = "Conflict"): HttpError => new HttpError(409, message),
+  internal: (message = "Internal Server Error"): HttpError => new HttpError(500, message),
 };
 
 export default errors;
