@@ -102,7 +102,7 @@ export const app = new Howl<State>({ logger: true });
 
 app.use(staticFiles());
 app.configure(middleware);
-app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts, exposes /api/docs
+app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts
 app.fsRoutes();             // crawls client/pages/, mounts all routes
 
 export default { app };
@@ -276,7 +276,19 @@ export default defineApi({
 });
 ```
 
-OpenAPI spec is automatically exposed at `/api/docs` — query params, request body, path params, roles, and responses all appear in Scalar/Swagger UI.
+The OpenAPI spec is generated automatically. Expose it on any route you choose, with whatever auth middleware you need:
+
+```typescript
+import { getApiSpecs } from "@hushkey/howl/api";
+
+// public
+app.get("/api/docs", (ctx) => ctx.json(getApiSpecs()));
+
+// or gated behind a role
+app.get("/api/docs", requireRole("admin"), (ctx) => ctx.json(getApiSpecs()));
+```
+
+`getApiSpecs()` returns `null` before the server starts, and the fully typed `OpenAPIV3_1.Document` once routes are registered — query params, request body, path params, roles, and responses all included.
 
 ---
 
@@ -335,7 +347,7 @@ export default function ToastIsland() {
 | Static files | `static/` |
 | Config | `howl.config.ts` |
 | Build output | `dist/` |
-| OpenAPI docs | `/api/docs` |
+| OpenAPI spec | `getApiSpecs()` from `@hushkey/howl/api` |
 | Client runtime import | `@hushkey/howl/runtime` → `shared.ts` |
 
 ---
