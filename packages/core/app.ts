@@ -402,7 +402,6 @@ export class Howl<State = any> {
   /**
    * Enable API routes from the apis/ directory.
    * HowlBuilder crawls apis/ at startup and registers all .api.ts files.
-   * Automatically exposes OpenAPI spec at /api/docs.
    *
    * Convention: place API definitions in apis/**\/*.api.ts
    *

@@ -1007,10 +1007,12 @@
       "examples/backend": {
         "dependencies": [
           "jsr:@std/path@1",
+          "npm:@radix-ui/react-tooltip@^1.2.8",
+          "npm:daisyui@5.5.18",
           "npm:preact@^10.25.0",
           "npm:react-hot-toast@^2.6.0",
           "npm:sonner@^2.0.7",
-          "npm:tailwindcss@4",
+          "npm:tailwindcss@4.1.18",
           "npm:zod@4.3.6"
         ]
       },

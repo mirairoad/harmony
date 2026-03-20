@@ -450,7 +450,9 @@ export async function writeCompiledEntry(outDir: string) {
     `import fetcher from "./server.js";
 
 Deno.serve(
-  { port: Deno.env.get("PORT"), hostname: Deno.env.get("HOSTNAME") },
+  { port: Deno.env.get("DENO_PORT"), hostname: Deno.env.get("DENO_HOSTNAME"), 
+   onListen: ({hostname, port})=>{
+   console.log('Server is running on http://'+hostname+':'+port)}},
   fetcher.fetch
 );`,
   );

@@ -1,4 +1,5 @@
 import type { AnyApiDefinition } from "./types.ts";
+import { resolvePath } from "./resolve-path.ts";
 import { z } from "zod";
 import type { OpenAPIV3_1 } from "openapi-types";
 
@@ -50,10 +51,11 @@ export function generateOpenApiSpec(
 
   for (const api of apis) {
     const method = api.method.toLowerCase() as Lowercase<typeof api.method>;
-    const apiPaths = Array.isArray(api.path) ? api.path : [api.path];
+    const resolved = resolvePath(api);
+    const apiPaths = Array.isArray(resolved) ? resolved : [resolved];
 
     for (const rawPath of apiPaths) {
-      const openApiPath = rawPath?.replace(/:([^/]+)/g, "{$1}") ?? "";
+      const openApiPath = rawPath.replace(/:([^/]+)/g, "{$1}");
       if (!paths[openApiPath]) paths[openApiPath] = {};
 
       const isProtected = api.roles?.length > 0;

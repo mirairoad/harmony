@@ -4,42 +4,24 @@ import { asyncHandler } from "./async-handler.ts";
 import { preAsyncHandler } from "./pre-async-handler.ts";
 import { memoryCache } from "./cache/memory.ts";
 import { generateOpenApiSpec } from "./generate-openapi.ts";
+import { setApiSpec } from "./api-specs.ts";
+import { resolvePath } from "./resolve-path.ts";
+
+export { resolvePath };
 
 type Method = "get" | "post" | "put" | "patch" | "delete";
 
 /**
- * Convert a string to kebab-case.
- * "Find Nearby POIs" → "find-nearby-pois"
- */
-function toKebabCase(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-/**
- * Resolve the path for an API definition.
- * If path is explicitly set, use it.
- * Otherwise auto-generate from directory + name in kebab-case.
- *
- * @example
- * // directory: "public/search", name: "Find Nearby POIs"
- * // → /api/public/search/find-nearby-pois
- *
- * // path: "/webhooks/stripe" → /webhooks/stripe (override)
- */
-export function resolvePath(api: AnyApiDefinition): string | string[] {
-  if (api.path) return api.path;
-  const dir = api.directory.replace(/\\/g, "/");
-  const name = toKebabCase(api.name);
-  return `/api/${dir}/${name}`;
-}
-
-/**
  * Register all API definitions on the Howl app.
  * Called internally by HowlBuilder when apis/ is crawled.
- * Automatically exposes OpenAPI spec at /api/docs.
+ *
+ * The generated OpenAPI spec is stored in a module singleton accessible via
+ * `getApiSpecs()` — expose it on whatever route you choose, with whatever
+ * auth middleware you need.
+ *
+ * @example
+ * import { getApiSpecs } from "@hushkey/howl/api";
+ * app.get("/api/docs", requireRole("admin"), (ctx) => ctx.json(getApiSpecs()));
  */
 export function apiHandler<State, Role extends string>(
   app: Howl<State>,
@@ -47,14 +29,11 @@ export function apiHandler<State, Role extends string>(
   // deno-lint-ignore no-explicit-any
   howlConfig: HowlApiConfig<State, Role> | null = null,
   options: {
-    /** OpenAPI spec endpoint. Default: /api/docs */
-    specPath?: string;
     title?: string;
     version?: string;
   } = {},
 ): void {
   const cache = howlConfig?.cache ?? memoryCache();
-  const specPath = options.specPath ?? "/api/docs";
 
   // Sort by specificity — fewer params + more literals = register first
   // Prevents shadowing e.g. /api/v1/admin/:table/restore vs /:table/:id
@@ -88,14 +67,11 @@ export function apiHandler<State, Role extends string>(
     }
   }
 
-  // Auto-expose OpenAPI spec
-  const spec = generateOpenApiSpec(apis, {
+  setApiSpec(generateOpenApiSpec(apis, {
     title: options.title,
     version: options.version,
-  });
-
-  app.get(specPath, (ctx) => ctx.json(spec));
+  }));
 
   // deno-lint-ignore no-console
-  console.info(`[howl] ${apis.length} APIs registered → docs at ${specPath}`);
+  console.info(`[howl] ${apis.length} APIs registered`);
 }
