@@ -10,6 +10,10 @@
         "name": "Leo Termine",
         "email": "leotermine@hushkey.app"
     },
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "preact"
+    },
     "publish": {
         "exclude": [
             "core/test_utils copy.ts",
