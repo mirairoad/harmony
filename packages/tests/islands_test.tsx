@@ -32,7 +32,7 @@ const islandGroupCache = await buildProd({ root: ISLAND_GROUP_DIR });
 function testApp(config?: ResolvedHowlConfig): App<unknown> {
   const app = new App(config)
     .use(staticFiles())
-    .fsRoutes();
+    .fsClientRoutes();
 
   allIslandCache(app);
 
@@ -42,7 +42,7 @@ function testApp(config?: ResolvedHowlConfig): App<unknown> {
 function testGroupApp(config?: ResolvedHowlConfig): App<unknown> {
   const app = new App(config)
     .use(staticFiles())
-    .fsRoutes();
+    .fsClientRoutes();
 
   islandGroupCache(app);
 

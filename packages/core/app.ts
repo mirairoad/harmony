@@ -202,7 +202,7 @@ export interface HowlOptions extends HowlConfig {
  * const app = new Howl({ mode: "production", logger: true });
  *
  * app.get("/api/ping", (ctx) => ctx.json({ ok: true }));
- * app.fsRoutes();
+ * app.fsClientRoutes();
  *
  * export default { fetch: app.handler() };
  * ```
@@ -383,9 +383,9 @@ export class Howl<State = any> {
    * Insert file-system routes collected by the Builder.
    *
    * @example
-   * app.fsRoutes();
+   * app.fsClientRoutes();
    */
-  fsRoutes(pattern = "*"): this {
+  fsClientRoutes(pattern = "*"): this {
     this.#commands.push({
       type: CommandType.FsRoute,
       pattern,

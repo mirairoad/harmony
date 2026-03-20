@@ -27,7 +27,7 @@ async function createServer<T>(
   });
 
   const app = new App<T>()
-    .fsRoutes(mountPath);
+    .fsClientRoutes(mountPath);
 
   const buildCache = new MockBuildCache<T>(fsFiles, "development");
   setBuildCache<T>(app, buildCache, "development");

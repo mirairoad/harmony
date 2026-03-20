@@ -22,7 +22,8 @@
     "sonner": "npm:sonner@^2.0.7",
     "tailwindcss": "npm:tailwindcss@4.1.18",
     "zod": "npm:zod@4.3.6",
-    "daisyui": "npm:daisyui@5.5.18"
+    "daisyui": "npm:daisyui@5.5.18",
+    "ioredis": "npm:ioredis@^5.10.0"
   },
   "compilerOptions": {
     "jsx": "react-jsx",

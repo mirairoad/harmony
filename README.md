@@ -63,7 +63,10 @@ my-app/
 
 **`howl.config.ts`**
 ```typescript
-import { defineConfig } from "@hushkey/howl/api";
+import { defineConfig, memoryCache, redisCache, tryCache } from "@hushkey/howl/api";
+import { Redis } from "ioredis";
+
+const redis = new Redis(Deno.env.get("REDIS_URL") ?? "redis://localhost:6379");
 
 export interface State {
   userContext?: UserContext;
@@ -80,6 +83,8 @@ export type Role = typeof roles[number];
 // so you don't need explicit <State, Role> type params everywhere.
 export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
   roles,
+  // memory-first, Redis fallback — swap primary/fallback freely
+  cache: tryCache(memoryCache({ maxSize: 1000 }), redisCache(redis)),
   checkPermissionStrategy: (ctx, allowedRoles) => {
     const user = ctx.state.userContext?.user;
     if (!user) return ctx.json({ message: "Unauthorized" }, { status: 401 });
@@ -103,7 +108,7 @@ export const app = new Howl<State>({ logger: true });
 app.use(staticFiles());
 app.configure(middleware);
 app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts
-app.fsRoutes();             // crawls client/pages/, mounts all routes
+app.fsClientRoutes();      // crawls client/pages/, mounts all routes
 
 export default { app };
 ```
@@ -289,6 +294,38 @@ app.get("/api/docs", requireRole("admin"), (ctx) => ctx.json(getApiSpecs()));
 ```
 
 `getApiSpecs()` returns `null` before the server starts, and the fully typed `OpenAPIV3_1.Document` once routes are registered — query params, request body, path params, roles, and responses all included.
+
+---
+
+## Caching
+
+Response caching is configured once in `howl.config.ts` and applied per-endpoint via `caching: { ttl }`.
+
+Three adapters ship out of the box:
+
+| Adapter | Use case |
+|---|---|
+| `memoryCache()` | Default. In-process LRU, zero deps |
+| `redisCache(client)` | Shared cache across instances. Accepts any ioredis-compatible client |
+| `tryCache(primary, fallback)` | Tries primary first, falls back on miss or error |
+
+```typescript
+import { memoryCache, redisCache, tryCache } from "@hushkey/howl/api";
+import { Redis } from "ioredis";
+
+const redis = new Redis(Deno.env.get("REDIS_URL"));
+
+// Redis-first, memory fallback
+cache: tryCache(redisCache(redis), memoryCache({ maxSize: 1000 }))
+
+// with timeout — falls back if primary doesn't respond within 150ms
+cache: tryCache(redisCache(redis), memoryCache(), { timeoutMs: 150 })
+
+// two Redis nodes (e.g. regional primary + global fallback)
+cache: tryCache(redisCache(redisSG), redisCache(redisUS))
+```
+
+`redisCache` attaches an error listener automatically so ioredis reconnection events don't become unhandled crashes — errors are logged via `console.warn` so they remain visible. Implement `CacheAdapter` to plug in any other backend.
 
 ---
 

@@ -1,4 +1,13 @@
-import { defineConfig } from "@hushkey/howl/api";
+import { defineConfig, memoryCache } from "@hushkey/howl/api";
+// import { redisCache, tryCache } from "@hushkey/howl/api";
+
+// import { Redis } from "ioredis";
+
+// const redis = new Redis(Deno.env.get("REDIS_URL") ?? "redis://localhost:6379");
+
+// redis.on("error", () => {
+//   console.log("hello");
+// });
 
 type User = {
   id: string;
@@ -24,6 +33,8 @@ export type Role = typeof roles[number];
 
 export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
   roles,
+  // cache: tryCache(redisCache(redis), memoryCache({ maxSize: 1000 })),
+  cache: memoryCache({ maxSize: 1000 }),
   checkPermissionStrategy: (ctx, allowedRoles) => {
     // const user = ctx.state.userContext?.user;
     const user = { roles: ["PUBLISHER"] };

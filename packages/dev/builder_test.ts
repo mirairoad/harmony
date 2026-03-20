@@ -324,7 +324,7 @@ Deno.test({
     await writeFiles(tmp, {
       "routes/foo/index.ts": `export const handler = () => new Response("ok")`,
       "main.ts": `import { App } from "fresh";
-export const app = new App().fsRoutes()`,
+export const app = new App().fsClientRoutes()`,
     });
 
     const builder = new Builder({
@@ -361,7 +361,7 @@ Deno.test({
       "routes/index.tsx": `import Foo from "../other/Foo.tsx";
       export default () => <Foo />;`,
       "main.ts": `import { App } from "fresh";
-export const app = new App().fsRoutes()`,
+export const app = new App().fsClientRoutes()`,
     });
 
     const builder = new Builder({
@@ -615,7 +615,7 @@ Deno.test({
       "routes/index.tsx": `import Foo from "foo-island";
       export default () => <Foo />;`,
       "main.ts": `import { App } from "fresh";
-export const app = new App().fsRoutes()`,
+export const app = new App().fsClientRoutes()`,
       "deno.json": JSON.stringify({
         imports: { "foo-island": "other/Foo.tsx" },
       }),
@@ -656,7 +656,7 @@ Deno.test({
       "islands/Foo.tsx": `export const Foo = () => <h1>hello</h1>`,
       "routes/index.ts": `export const handler = () => new Response("ok")`,
       "main.ts": `import { App } from "fresh";
-export const app = new App().fsRoutes()`,
+export const app = new App().fsClientRoutes()`,
     });
 
     const builder = new Builder({
@@ -728,7 +728,7 @@ Deno.test({
       "main.ts": `import { App, staticFiles } from "fresh";
 export const app = new App()
   .use(staticFiles())
-  .fsRoutes();`,
+  .fsClientRoutes();`,
     });
 
     const builder = new Builder({
@@ -811,7 +811,7 @@ export const Foo = () => {
       "main.ts": `import { App, staticFiles } from "fresh";
 export const app = new App()
   .use(staticFiles())
-  .fsRoutes();`,
+  .fsClientRoutes();`,
     });
 
     const builder = new Builder({
@@ -905,7 +905,7 @@ export default function Map() {
       "routes/index.tsx": `import Map from "../islands/Map.tsx";
 export default () => <Map />;`,
       "main.ts": `import { App } from "fresh";
-export const app = new App().fsRoutes();`,
+export const app = new App().fsClientRoutes();`,
     });
 
     const builder = new Builder({

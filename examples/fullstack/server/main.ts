@@ -11,6 +11,7 @@ export const app = new Howl<State>({
 app.use(staticFiles());
 app.configure(middleware);
 app.fsApiRoutes(apiConfig);
-app.fsRoutes();
+// app.fsServiceRoutes();
+app.fsClientRoutes();
 
 export default { app };

@@ -8,6 +8,8 @@ export { getApiSpecs } from "./api-specs.ts";
 export { generateOpenApiSpec } from "./generate-openapi.ts";
 export { default as errors, HttpError } from "./errors.ts";
 export { memoryCache } from "./cache/memory.ts";
+export { redisCache } from "./cache/redis.ts";
+export { tryCache } from "./cache/tiered.ts";
 export type {
   AnyApiDefinition,
   ApiDefinition,

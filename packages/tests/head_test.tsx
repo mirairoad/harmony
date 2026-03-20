@@ -156,7 +156,7 @@ Deno.test({
 
     const app = new App({})
       .use(staticFiles())
-      .fsRoutes();
+      .fsClientRoutes();
 
     applyCache(app);
 
@@ -186,7 +186,7 @@ Deno.test({
 
     const app = new App({})
       .use(staticFiles())
-      .fsRoutes();
+      .fsClientRoutes();
 
     applyCache(app);
 
@@ -231,7 +231,7 @@ Deno.test({
 
     const app = new App({})
       .use(staticFiles())
-      .fsRoutes();
+      .fsClientRoutes();
 
     applyCache(app);
 
@@ -276,7 +276,7 @@ Deno.test({
 
     const app = new App({})
       .use(staticFiles())
-      .fsRoutes();
+      .fsClientRoutes();
 
     applyCache(app);
 
