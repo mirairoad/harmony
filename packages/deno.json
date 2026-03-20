@@ -12,7 +12,7 @@
     },
     "exports": {
         ".": "./core/mod.ts",
-        "./runtime": "./core/runtime/client/mod.ts",
+        "./runtime": "./core/runtime/shared.ts",
         "./dev": "./dev/mod.ts",
         "./plugins": "./plugins/mod.ts",
         "./api": "./api/mod.ts",
