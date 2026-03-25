@@ -84,7 +84,8 @@ export function asyncHandler<State, Role extends string>(
               return key !== undefined ? q[key] : q;
             };
           }
-          return (target as any)[prop];
+          const value = (target as any)[prop];
+          return typeof value === "function" ? value.bind(target) : value;
         },
       });
 
