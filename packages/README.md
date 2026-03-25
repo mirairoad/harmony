@@ -29,6 +29,7 @@ Howl solves all of these natively.
 | `@hushkey/howl/dev` | Build pipeline — esbuild, HMR |
 | `@hushkey/howl/plugins` | Official plugins — Tailwind v4, CSS Modules |
 | `@hushkey/howl/api` | Endpoint contracts — defineApi, Zod validation, OpenAPI |
+| `@hushkey/howl/middleware` | Built-in middlewares — cors, csrf, csp, trailingSlashes, staticFiles |
 
 ---
 
@@ -48,8 +49,12 @@ my-app/
 │   ├── middleware/
 │   │   └── _index.middleware.ts
 │   └── apis/
-│       └── public/
-│           └── ping.api.ts
+│       ├── public/
+│       │   └── ping.api.ts
+│       └── admin/
+│           └── [table]/
+│               ├── index.api.ts   ← /api/admin/:table
+│               └── [id].api.ts    ← /api/admin/:table/:id
 ├── static/
 │   └── style.css
 ├── howl.config.ts          ← State type + defineApi factory
@@ -98,7 +103,8 @@ export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
 
 **`server/main.ts`**
 ```typescript
-import { Howl, staticFiles } from "@hushkey/howl";
+import { Howl } from "@hushkey/howl";
+import { staticFiles } from "@hushkey/howl/middleware";
 import type { State } from "../howl.config.ts";
 import { apiConfig } from "../howl.config.ts";
 import { middleware } from "./middleware/_index.middleware.ts";
@@ -199,6 +205,27 @@ export default function Index(ctx: Context<State>) {
 
 ---
 
+## Middleware
+
+Built-in middlewares are available via `@hushkey/howl/middleware` (barrel) or individual subpath imports for tree-shaking.
+
+```typescript
+import { cors, csrf, csp, trailingSlashes, staticFiles } from "@hushkey/howl/middleware";
+// or individually:
+import { cors } from "@hushkey/howl/middleware/cors";
+import { csrf } from "@hushkey/howl/middleware/csrf";
+```
+
+```typescript
+app.use(staticFiles());
+app.use(cors({ origin: "https://myapp.example.com", credentials: true }));
+app.use(csrf());
+app.use(csp({ reportOnly: false, reportTo: "/api/csp-reports" }));
+app.use(trailingSlashes("never"));
+```
+
+---
+
 ## Endpoint contracts
 
 Each `.api.ts` file is a self-contained, typed endpoint contract: method, roles, Zod-validated query params / request body / responses, optional caching. No wiring needed — drop the file and it's live.
@@ -253,6 +280,49 @@ export default defineApi({
   }),
 });
 ```
+
+**File-system route parameters**
+
+Place `[param]` brackets in the file or folder name and the route is inferred automatically — no `path` field needed.
+
+```
+server/apis/
+├── public/
+│   └── ping.api.ts                   → /api/public/ping
+└── admin/
+    └── [table]/
+        ├── index.api.ts              → /api/admin/:table
+        ├── [id].api.ts               → /api/admin/:table/:id
+        └── restore.api.ts            → /api/admin/:table/restore
+```
+
+```typescript
+// server/apis/admin/[table]/[id].api.ts
+export default defineApi({
+  name: "Get Row",
+  directory: "admin",   // used for OpenAPI tag only
+  method: "GET",
+  roles: ["admin"],
+  params: z.object({
+    table: z.string(),
+    id: z.string(),
+  }),
+  responses: {
+    200: z.object({ row: z.any() }),
+  },
+  handler: (ctx) => {
+    const { table, id } = ctx.params; // typed: { table: string; id: string }
+    return { statusCode: 200, row: null };
+  },
+});
+```
+
+Rules:
+- Brackets in the path trigger FS inference — files without brackets are unaffected
+- An explicit `path` field in the definition always wins over inference
+- `params` Zod schema is still required for validation and OpenAPI typing
+
+---
 
 **With typed request body:**
 ```typescript

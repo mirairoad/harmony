@@ -1,0 +1,407 @@
+# Howl — LLM context file
+
+Howl is a Deno-native full-stack framework (`@hushkey/howl` on JSR) built on top of Fresh 2.x.
+It adds a typed API layer, native cookie/header APIs on ctx, React ecosystem compatibility,
+built-in middlewares, and a production build pipeline on top of Fresh's routing/SSR/islands.
+
+Root: `packages/` (single JSR package, multiple sub-entries).
+
+---
+
+## Package exports
+
+| Import path | Source | Description |
+|---|---|---|
+| `@hushkey/howl` | `core/mod.ts` | Runtime — App, Context, routing, islands, SSR |
+| `@hushkey/howl/dev` | `dev/mod.ts` | Build pipeline — HowlBuilder, esbuild, HMR |
+| `@hushkey/howl/plugins` | `plugins/mod.ts` | Tailwind v4, CSS Modules |
+| `@hushkey/howl/api` | `api/mod.ts` | defineApi, defineConfig, caching, OpenAPI |
+| `@hushkey/howl/api/errors` | `api/errors.ts` | API error types |
+| `@hushkey/howl/api/cache` | `api/cache/mod.ts` | memoryCache, redisCache, tryCache |
+| `@hushkey/howl/middleware` | `core/middlewares/mod.ts` | All built-in middlewares (barrel) |
+| `@hushkey/howl/middleware/cors` | `core/middlewares/cors.ts` | CORS middleware |
+| `@hushkey/howl/middleware/csrf` | `core/middlewares/csrf.ts` | CSRF middleware |
+| `@hushkey/howl/middleware/csp` | `core/middlewares/csp.ts` | Content-Security-Policy middleware |
+| `@hushkey/howl/middleware/trailing-slashes` | `core/middlewares/trailing_slashes.ts` | Trailing slash middleware |
+| `@hushkey/howl/middleware/static-files` | `core/middlewares/static_files.ts` | Static file serving |
+| `@hushkey/howl/runtime` | `core/runtime/shared.ts` | Client-safe runtime (Partial, IS_BROWSER, asset, Head) |
+
+---
+
+## Project file conventions
+
+| Item | Location | Pattern |
+|---|---|---|
+| App root | `client/pages/_app.tsx` | Root HTML shell — receives `{ Component }` |
+| Layout | `client/pages/_layout.tsx` | Shared UI layout — receives `{ Component }` |
+| Pages | `client/pages/**/*.tsx` | Receives `Context<State>` directly as param |
+| Islands | `client/islands/**/*.island.tsx` | Hydrated on client; `export const howl = { ssr: false }` skips SSR |
+| Endpoint contracts | `server/apis/**/*.api.ts` | Type-safe endpoints — auto-crawled |
+| Middleware | `server/middleware/**/*.middleware.ts` | Runs before routes |
+| Static files | `static/**/*` | Served as-is |
+| Config | `howl.config.ts` | State interface, roles, defineApi factory |
+| Dev entrypoint | `dev.ts` | HowlBuilder setup |
+| Server entrypoint | `server/main.ts` | App + middleware setup |
+| Build output | `dist/` | Production build |
+
+---
+
+## App setup
+
+```typescript
+// howl.config.ts
+import { defineConfig, memoryCache, redisCache, tryCache } from "@hushkey/howl/api";
+
+export interface State {
+  userContext?: { user?: { id: string; roles: Role[] } };
+}
+export const roles = ["user", "admin"] as const;
+export type Role = typeof roles[number];
+
+export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
+  roles,
+  cache: tryCache(memoryCache({ maxSize: 1000 }), redisCache(redis)),
+  checkPermissionStrategy: (ctx, allowedRoles) => {
+    const user = ctx.state.userContext?.user;
+    if (!user) return ctx.json({ message: "Unauthorized" }, { status: 401 });
+    if (!allowedRoles.some((r) => user.roles.includes(r))) {
+      return ctx.json({ message: "Forbidden" }, { status: 403 });
+    }
+    // return nothing = allow
+  },
+});
+```
+
+```typescript
+// server/main.ts
+import { Howl } from "@hushkey/howl";
+import { staticFiles } from "@hushkey/howl/middleware";
+import { apiConfig } from "../howl.config.ts";
+
+export const app = new Howl<State>({ logger: true });
+
+app.use(staticFiles());
+app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts
+app.fsClientRoutes();       // crawls client/pages/, mounts all routes
+
+export default { app };
+```
+
+```typescript
+// dev.ts
+import { HowlBuilder } from "@hushkey/howl/dev";
+import { tailwindPlugin } from "@hushkey/howl/plugins";
+import { app } from "./server/main.ts";
+
+const builder = new HowlBuilder(app, {
+  root: import.meta.dirname ?? "",
+  importApp: () => app,
+  outDir: "dist",
+  serverEntry: "./server/main.ts",
+});
+
+tailwindPlugin(builder.getBuilder("default")!);
+
+if (Deno.args.includes("build")) {
+  await builder.build();
+} else {
+  await builder.listen();
+}
+```
+
+---
+
+## Context API
+
+`Context<State>` is created fresh per request — fully volatile, never shared across requests.
+
+```typescript
+// Properties
+ctx.req        // Request
+ctx.url        // URL
+ctx.params     // Record<string, string> — path params
+ctx.state      // State — shared mutable object, reset per request
+ctx.route      // string | null — matched pattern
+ctx.error      // unknown | null
+ctx.isPartial  // boolean — Fresh partial request
+ctx.info       // Deno.ServeHandlerInfo
+
+// Response helpers (all merge ctx.headers automatically)
+ctx.json(data, init?)
+ctx.text(content, init?)
+ctx.html(content, init?)
+ctx.render(<JSX />, init?, layoutConfig?)
+ctx.redirect(path, status?)
+ctx.stream(iterable, init?)
+
+// Query params
+ctx.query()        // Record<string, string> — all params
+ctx.query("key")   // string | undefined — single param
+
+// Cookies
+ctx.cookies.get("name")
+ctx.cookies.set("name", value, { httpOnly: true, sameSite: "Strict" })
+ctx.cookies.delete("name")
+
+// Response headers (auto-merged into every response including renders)
+ctx.headers.set("X-Request-Id", crypto.randomUUID())
+
+// Middleware chain
+ctx.next()
+```
+
+---
+
+## Pages
+
+```typescript
+// client/pages/index.tsx
+// Pages receive Context<State> directly as param (not a props object)
+export default function Index(ctx: Context<State>) {
+  return <h1>Hello {ctx.state.userContext?.user?.id}</h1>;
+}
+
+// With handler returning data
+export const handler = (ctx: Context<State>) => page({ user: "leo" });
+
+export default function Index({ data }: PageProps<{ user: string }, State>) {
+  return <h1>Hello {data.user}</h1>;
+}
+```
+
+---
+
+## Islands
+
+```typescript
+// client/islands/counter.island.tsx
+import { useState } from "preact/hooks";
+
+export const howl = { ssr: false }; // optional — skip SSR
+
+export default function Counter() {
+  const [n, setN] = useState(0);
+  return <button onClick={() => setN(n + 1)}>{n}</button>;
+}
+```
+
+React libs (sonner, react-query, etc.) work transparently via preact/compat alias — no config needed.
+
+---
+
+## Endpoint contracts
+
+Each `.api.ts` file is a self-contained typed endpoint. Drop the file, it's live — no wiring.
+
+```typescript
+// server/apis/public/ping.api.ts
+import { defineApi } from "../../../howl.config.ts";
+import { z } from "zod";
+
+export default defineApi({
+  name: "Ping",
+  directory: "public",       // OpenAPI tag; auto-path: /api/public/ping
+  method: "GET",
+  roles: [],                 // [] = public; ["admin"] = role-gated
+  caching: { ttl: 5 },       // seconds
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string(),
+  }),
+  responses: {
+    200: z.object({ ok: z.boolean(), message: z.string() }),
+  },
+  handler: (ctx) => {
+    const { limit } = ctx.query(); // typed
+    return { statusCode: 200, ok: true, message: `pong — limit ${limit}` };
+  },
+});
+```
+
+```typescript
+// With request body
+export default defineApi({
+  name: "Sign In",
+  directory: "authentication",
+  method: "POST",
+  roles: [],
+  requestBody: z.object({ email: z.string().email(), password: z.string().min(8) }),
+  responses: {
+    200: z.object({ data: z.object({ token: z.string() }) }),
+    401: z.object({ message: z.string() }),
+  },
+  handler: async (ctx) => {
+    const { email, password } = ctx.req.body; // fully typed
+    return { statusCode: 200, data: { token: "jwt..." } };
+  },
+});
+```
+
+**Auto-path:** `directory + name` → `/api/{directory}/{kebab-case-name}`
+**Explicit path:** `path: "/api/v1/public/ping"` or `path: ["/a", "/b"]` overrides auto-path.
+
+**Handler return shape:** `{ statusCode, ...fields }` → response body: `{ ok: true, data: { ...fields } }`
+Raw `Response` return is also supported for full control.
+
+---
+
+## File-system route parameters
+
+Place `[param]` brackets in folder/file names — path is inferred automatically.
+Only triggers if at least one bracket is present; explicit `path` always wins.
+
+```
+server/apis/
+├── public/ping.api.ts                   → /api/public/ping     (no brackets, definition-driven)
+└── admin/
+    └── [table]/
+        ├── index.api.ts                 → /api/admin/:table
+        ├── [id].api.ts                  → /api/admin/:table/:id
+        └── restore.api.ts               → /api/admin/:table/restore
+```
+
+```typescript
+// server/apis/admin/[table]/[id].api.ts
+export default defineApi({
+  name: "Get Row",
+  directory: "admin",
+  method: "GET",
+  roles: ["admin"],
+  params: z.object({ table: z.string(), id: z.string() }), // required for validation + OpenAPI
+  responses: { 200: z.object({ row: z.any() }) },
+  handler: (ctx) => {
+    const { table, id } = ctx.params; // typed
+    return { statusCode: 200, row: null };
+  },
+});
+```
+
+---
+
+## OpenAPI
+
+Auto-generated from all registered `.api.ts` files. Expose wherever you want:
+
+```typescript
+import { getApiSpecs } from "@hushkey/howl/api";
+
+app.get("/api/docs", (ctx) => ctx.json(getApiSpecs()));
+// or gated:
+app.get("/api/docs", requireRole("admin"), (ctx) => ctx.json(getApiSpecs()));
+```
+
+Returns `null` before routes are registered, `OpenAPIV3_1.Document` after.
+
+---
+
+## Built-in middleware
+
+```typescript
+import { cors, csrf, csp, trailingSlashes, staticFiles } from "@hushkey/howl/middleware";
+
+app.use(staticFiles());
+app.use(cors({ origin: "https://myapp.com", credentials: true }));
+app.use(csrf());                                          // blocks cross-origin state-mutating requests
+app.use(csp({ reportOnly: false, reportTo: "/api/csp" })); // sensible defaults + overrides
+app.use(trailingSlashes("never"));                        // "always" | "never"
+```
+
+---
+
+## Caching
+
+```typescript
+import { memoryCache, redisCache, tryCache } from "@hushkey/howl/api/cache";
+
+memoryCache({ maxSize: 1000 })          // in-process LRU, zero deps
+redisCache(redisClient)                 // any ioredis-compatible client
+tryCache(primary, fallback)             // primary first, fallback on miss/error
+tryCache(primary, fallback, { timeoutMs: 150 }) // fallback if primary slow
+```
+
+Cache key: `{method}:{url}:{userId}` — per-user automatically when authenticated.
+
+---
+
+## Error handling
+
+```typescript
+import { HttpError } from "@hushkey/howl";
+
+throw new HttpError(404, "Not found");
+throw new HttpError(401);
+throw new HttpError(403, "Forbidden");
+```
+
+Auto-caught and returned as JSON with the correct HTTP status.
+
+---
+
+## Time constants
+
+```typescript
+import { SECOND, MINUTE, HOUR, DAY, WEEK } from "@hushkey/howl";
+// Values in milliseconds
+```
+
+---
+
+## Howl class
+
+```typescript
+const app = new Howl<State>({
+  logger: true,   // timestamps + PID on all console output
+  debug: true,    // enables console.debug
+});
+
+// Middleware
+app.use(...middlewares);
+
+// Manual routes
+app.get("/path", handler);
+app.post("/path", middleware, handler);
+app.put("/path", handler);
+app.patch("/path", handler);
+app.delete("/path", handler);
+
+// FS route discovery
+app.fsClientRoutes();        // crawls client/pages/
+app.fsApiRoutes(apiConfig);  // crawls server/apis/
+
+// Grouped middleware
+app.configure(middlewareFn);
+```
+
+---
+
+## HowlBuilder
+
+```typescript
+const builder = new HowlBuilder(app, {
+  root?: string,               // project root (default: Deno.cwd())
+  outDir?: string,             // output dir (default: "_howl")
+  serverEntry?: string,        // relative path to server main.ts
+  importApp?: () => app | { app },
+  alias?: Record<string, string>,
+  plugins?: EsbuildPlugin[],
+});
+
+await builder.listen(options?);  // dev server with HMR
+await builder.build();           // production build
+
+builder.getBuilder("default");   // access inner Builder for plugin setup
+builder.getApis();               // all discovered AnyApiDefinition[]
+builder.registerIsland(specifier);
+```
+
+---
+
+## Stack
+
+- Deno 2.x
+- Fresh 2.x (vendored + extended)
+- Preact 10.x + preact/compat (React transparency)
+- Zod 4.x for all validation
+- esbuild 0.25.x for bundling
+- Tailwind CSS v4 via PostCSS
+- OpenTelemetry API for tracing

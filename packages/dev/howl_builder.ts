@@ -111,16 +111,18 @@ export class HowlBuilder<State = any> {
     }
   }
 
-  async #walkApis(dir: string): Promise<void> {
+  async #walkApis(dir: string, root = dir): Promise<void> {
     for await (const entry of Deno.readDir(dir)) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory) {
-        await this.#walkApis(fullPath);
+        await this.#walkApis(fullPath, root);
       } else if (entry.name.endsWith(".api.ts")) {
         try {
           const mod = await import(path.toFileUrl(fullPath).href);
           if (mod.default) {
-            this.#apis.push(mod.default as AnyApiDefinition);
+            const api = mod.default as AnyApiDefinition;
+            const fsPath = this.#inferFsPath(fullPath, root);
+            this.#apis.push(fsPath && !api.path ? { ...api, path: fsPath } : api);
           }
         } catch (err) {
           // deno-lint-ignore no-console
@@ -128,6 +130,35 @@ export class HowlBuilder<State = any> {
         }
       }
     }
+  }
+
+  /**
+   * Infer a route path from the file system path when it contains `[param]`
+   * bracket segments. Returns null if no brackets are present (let the
+   * definition's own directory+name or explicit path take over).
+   *
+   * @example
+   * apis/admin/[table]/index.api.ts   → /api/admin/:table
+   * apis/admin/[table]/[id].api.ts    → /api/admin/:table/:id
+   * apis/admin/[table]/restore.api.ts → /api/admin/:table/restore
+   * apis/public/ping.api.ts           → null (no brackets)
+   */
+  #inferFsPath(fullPath: string, apisDir: string): string | null {
+    const rel = path.relative(apisDir, fullPath).replace(/\\/g, "/");
+    const segments = rel.split("/");
+
+    // Strip .api.ts from last segment; drop if it's "index"
+    const last = segments[segments.length - 1].replace(/\.api\.ts$/, "");
+    if (last === "index") {
+      segments.pop();
+    } else {
+      segments[segments.length - 1] = last;
+    }
+
+    if (!segments.some((s) => /^\[.+\]$/.test(s))) return null;
+
+    const converted = segments.map((s) => s.replace(/^\[(.+)\]$/, ":$1"));
+    return `/api/${converted.join("/")}`;
   }
 
   #registerApis(app: Howl<State>): void {
