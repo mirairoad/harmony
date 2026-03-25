@@ -112,7 +112,20 @@ export class HowlBuilder<State = any> {
   }
 
   async #walkApis(dir: string, root = dir): Promise<void> {
+    const entries: Deno.DirEntry[] = [];
     for await (const entry of Deno.readDir(dir)) {
+      entries.push(entry);
+    }
+
+    // Static files (no brackets) before dynamic files ([param]), directories last
+    entries.sort((a, b) => {
+      const isDynA = a.isDirectory || /\[.+\]/.test(a.name);
+      const isDynB = b.isDirectory || /\[.+\]/.test(b.name);
+      if (isDynA === isDynB) return a.name.localeCompare(b.name);
+      return isDynA ? 1 : -1;
+    });
+
+    for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory) {
         await this.#walkApis(fullPath, root);
@@ -133,15 +146,18 @@ export class HowlBuilder<State = any> {
   }
 
   /**
-   * Infer a route path from the file system path when it contains `[param]`
-   * bracket segments. Returns null if no brackets are present (let the
-   * definition's own directory+name or explicit path take over).
+   * Infer a route path from the file system path.
+   * The filesystem is the authoritative source — explicit `path` in the
+   * definition always wins; `directory + name` auto-generation is bypassed.
+   *
+   * `[param]` segments become `:param`; `index.api.ts` maps to the folder.
    *
    * @example
    * apis/admin/[table]/index.api.ts   → /api/admin/:table
    * apis/admin/[table]/[id].api.ts    → /api/admin/:table/:id
    * apis/admin/[table]/restore.api.ts → /api/admin/:table/restore
-   * apis/public/ping.api.ts           → null (no brackets)
+   * apis/public/ping.api.ts           → /api/public/ping
+   * apis/authentication/oauth/callback.api.ts → /api/authentication/oauth/callback
    */
   #inferFsPath(fullPath: string, apisDir: string): string | null {
     const rel = path.relative(apisDir, fullPath).replace(/\\/g, "/");
@@ -154,8 +170,6 @@ export class HowlBuilder<State = any> {
     } else {
       segments[segments.length - 1] = last;
     }
-
-    if (!segments.some((s) => /^\[.+\]$/.test(s))) return null;
 
     const converted = segments.map((s) => s.replace(/^\[(.+)\]$/, ":$1"));
     return `/api/${converted.join("/")}`;

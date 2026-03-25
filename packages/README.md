@@ -281,19 +281,23 @@ export default defineApi({
 });
 ```
 
-**File-system route parameters**
+**File-system routing**
 
-Place `[param]` brackets in the file or folder name and the route is inferred automatically — no `path` field needed.
+The filesystem is the authoritative source for all API paths — no `path` field needed. `[param]` brackets become `:param`. Within each folder, static files (no brackets) are always registered before dynamic ones (`[param]`), so literal routes always match first. Explicit `path` in the definition overrides.
 
 ```
 server/apis/
 ├── public/
-│   └── ping.api.ts                   → /api/public/ping
-└── admin/
-    └── [table]/
-        ├── index.api.ts              → /api/admin/:table
-        ├── [id].api.ts               → /api/admin/:table/:id
-        └── restore.api.ts            → /api/admin/:table/restore
+│   └── ping.api.ts                        → /api/public/ping
+├── admin/
+│   └── [table]/
+│       ├── index.api.ts                   → /api/admin/:table
+│       ├── [id].api.ts                    → /api/admin/:table/:id
+│       └── restore.api.ts                 → /api/admin/:table/restore
+└── authentication/
+    └── oauth/
+        ├── callback.api.ts                → /api/authentication/oauth/callback  ← registered first (static)
+        └── [provider].api.ts              → /api/authentication/oauth/:provider ← registered after (dynamic)
 ```
 
 ```typescript
@@ -318,8 +322,9 @@ export default defineApi({
 ```
 
 Rules:
-- Brackets in the path trigger FS inference — files without brackets are unaffected
-- An explicit `path` field in the definition always wins over inference
+- All files get their path from the filesystem — `directory + name` is bypassed
+- Within each folder: static files load before `[param]` files, directories last
+- Explicit `path` in the definition always wins over FS inference
 - `params` Zod schema is still required for validation and OpenAPI typing
 
 ---

@@ -245,19 +245,24 @@ Raw `Response` return is also supported for full control.
 
 ---
 
-## File-system route parameters
+## File-system routing
 
-Place `[param]` brackets in folder/file names — path is inferred automatically.
-Only triggers if at least one bracket is present; explicit `path` always wins.
+The filesystem is the authoritative source for all API paths. Explicit `path` in the definition overrides; `directory + name` auto-generation is bypassed. `[param]` brackets become `:param`.
+
+Within each folder the crawler sorts entries before loading: static files (no brackets) first, `[param]` files last, directories after files. This guarantees static routes are always registered before dynamic ones. The router also independently checks the static map before iterating dynamic patterns, so literal paths can never be shadowed by a param segment.
 
 ```
 server/apis/
-├── public/ping.api.ts                   → /api/public/ping     (no brackets, definition-driven)
-└── admin/
-    └── [table]/
-        ├── index.api.ts                 → /api/admin/:table
-        ├── [id].api.ts                  → /api/admin/:table/:id
-        └── restore.api.ts               → /api/admin/:table/restore
+├── public/ping.api.ts                        → /api/public/ping
+├── admin/
+│   └── [table]/
+│       ├── index.api.ts                      → /api/admin/:table
+│       ├── [id].api.ts                       → /api/admin/:table/:id
+│       └── restore.api.ts                    → /api/admin/:table/restore
+└── authentication/
+    └── oauth/
+        ├── callback.api.ts                   → /api/authentication/oauth/callback  (static — registered first)
+        └── [provider].api.ts                 → /api/authentication/oauth/:provider (dynamic — registered after)
 ```
 
 ```typescript
