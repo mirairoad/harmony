@@ -38,7 +38,15 @@ export function preAsyncHandler<State>(
         return ctx.next();
       }
 
-      // Parse raw body
+      // Only consume + JSON.parse the body when the request is actually JSON.
+      // This leaves the body stream unconsumed for multipart, binary, etc.
+      const contentType = ctx.req.headers.get("content-type") ?? "";
+      const isJson = contentType.includes("application/json");
+
+      if (!isJson && !requestBodySchema) {
+        return ctx.next();
+      }
+
       let data: unknown = {};
       const raw = await ctx.req.text();
       if (raw.trim() !== "") {
@@ -52,12 +60,10 @@ export function preAsyncHandler<State>(
         }
       }
 
-      // Validate against schema if provided
       if (requestBodySchema) {
         data = requestBodySchema.parse(data);
       }
 
-      // Store on state for handler access via ctx.req.body proxy
       // deno-lint-ignore no-explicit-any
       (ctx.state as any).__body = data;
       return ctx.next();

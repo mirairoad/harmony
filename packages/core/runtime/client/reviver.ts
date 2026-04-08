@@ -171,7 +171,15 @@ export function boot(
     );
 
     if (root.kind === RootKind.Island) {
-      const props = allProps[root.propsIdx].props;
+      const propsEntry = allProps[root.propsIdx];
+      if (propsEntry === undefined) {
+        // deno-lint-ignore no-console
+        console.warn(
+          `Island "${root.name}" references propsIdx=${root.propsIdx} but allProps only has ${allProps.length} entries. Skipping hydration.`,
+        );
+        continue;
+      }
+      const props = propsEntry.props;
       const component = ISLAND_REGISTRY.get(root.name)!;
 
       revive(props, component, container, ctx.slots, allProps);
@@ -383,7 +391,16 @@ export function domToVNode(
             throw new Error(`Encountered unknown island: ${name}`);
           }
 
-          const props = allProps[+propsIdx].props;
+          const propsEntry = allProps[+propsIdx];
+          if (propsEntry === undefined) {
+            // deno-lint-ignore no-console
+            console.warn(
+              `Island "${name}" references propsIdx=${propsIdx} but allProps only has ${allProps.length} entries. Skipping hydration.`,
+            );
+            vnodeStack.push(h(island, { key: key === "" ? undefined : key }));
+            continue;
+          }
+          const props = propsEntry.props;
           props.key = key === "" ? undefined : key;
 
           // deno-lint-ignore no-explicit-any
