@@ -15,6 +15,9 @@ export {
 // --- Request context ---
 export { Context, type FreshContext } from "./context.ts";
 
+// --- Page props ---
+export type { PageProps } from "./render.ts";
+
 // --- Cookies ---
 export { CookieManager, type CookieOptions } from "./cookies.ts";
 

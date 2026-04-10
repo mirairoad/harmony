@@ -20,6 +20,7 @@ import {
   type TransformFn,
 } from "./file_transformer.ts";
 import {
+  type ApiEntry,
   type DevBuildCache,
   DiskBuildCache,
   type FsRoute,
@@ -222,6 +223,7 @@ export class Builder<State = any> {
     options?: {
       mode?: ResolvedBuildConfig["mode"];
       snapshot?: "disk" | "memory";
+      apiEntries?: ApiEntry[];
     },
   ): Promise<(app: App<State>) => void> {
     this.config.mode = options?.mode ?? "production";
@@ -231,6 +233,10 @@ export class Builder<State = any> {
     const buildCache = options?.snapshot === "memory"
       ? new MemoryBuildCache(this.config, this.#fsRoutes, this.#transformer)
       : new DiskBuildCache(this.config, this.#fsRoutes, this.#transformer);
+
+    if (options?.apiEntries) {
+      buildCache.setApiEntries(options.apiEntries);
+    }
 
     await this.#build(buildCache, this.config.mode === "development");
     await buildCache.prepare();

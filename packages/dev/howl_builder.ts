@@ -4,6 +4,7 @@ import { cssModulesPlugin } from "./plugins/css_modules.ts";
 import * as path from "@std/path";
 import type { AnyApiDefinition } from "../api/types.ts";
 import { apiHandler } from "../api/api-handler.ts";
+import type { ApiEntry } from "./dev_build_cache.ts";
 
 export interface HowlDevOptions<State = any>
   extends Omit<BuildOptions, "routeDir" | "islandDir" | "staticDir"> {
@@ -22,6 +23,7 @@ export class HowlBuilder<State = any> {
   #options: HowlDevOptions<State>;
   #builders: Map<string, Builder<State>> = new Map();
   #apis: AnyApiDefinition[] = [];
+  #apiEntries: ApiEntry[] = [];
 
   constructor(howl: Howl<State>, options: HowlDevOptions<State> = {}) {
     this.#howl = howl;
@@ -135,7 +137,12 @@ export class HowlBuilder<State = any> {
           if (mod.default) {
             const api = mod.default as AnyApiDefinition;
             const fsPath = this.#inferFsPath(fullPath, root);
-            this.#apis.push(fsPath && !api.path ? { ...api, path: fsPath } : api);
+            const needsOverride = !!(fsPath && !api.path);
+            this.#apis.push(needsOverride ? { ...api, path: fsPath } : api);
+            this.#apiEntries.push({
+              filePath: fullPath,
+              overridePath: needsOverride ? fsPath : null,
+            });
           }
         } catch (err) {
           // deno-lint-ignore no-console
@@ -239,7 +246,7 @@ export class HowlBuilder<State = any> {
 
     await Promise.all(
       Array.from(this.#builders.entries()).map(async ([name, builder]) => {
-        const applySnapshot = await builder.build({ mode: "production" });
+        const applySnapshot = await builder.build({ mode: "production", apiEntries: this.#apiEntries });
         applySnapshot(app);
         // deno-lint-ignore no-console
         console.log(`[howl] Built client: ${name}`);

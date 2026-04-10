@@ -36,12 +36,21 @@ export interface FsRoute<State> {
   files: FsRouteFileNoMod<State>[];
 }
 
+/** Tracks an API module discovered during build so it can be imported in the production snapshot. */
+export interface ApiEntry {
+  /** Absolute path to the .api.ts file */
+  filePath: string;
+  /** Non-null when the API module has no explicit `path` — holds the fs-inferred route */
+  overridePath: string | null;
+}
+
 export interface DevBuildCache<State> extends BuildCache<State> {
   islandModNameToChunk: Map<string, IslandModChunk>;
   /** Registry of API definitions keyed by METHOD:path */
   apiRegistry: Map<string, unknown>;
   getApiRoutes(): unknown[];
   setApiRoutes(apis: unknown[]): void;
+  setApiEntries(entries: ApiEntry[]): void;
   addUnprocessedFile(pathname: string, dir: string): void;
   addProcessedFile(
     pathname: string,
@@ -107,6 +116,10 @@ export class MemoryBuildCache<State> implements DevBuildCache<State> {
         this.apiRegistry.set(`${a.method}:${p}`, api);
       }
     }
+  }
+
+  setApiEntries(_entries: ApiEntry[]): void {
+    // No-op in dev mode — APIs are registered directly via apiHandler
   }
 
   async readFile(pathname: string): Promise<StaticFile | null> {
@@ -260,6 +273,7 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
   #transformer: FileTransformer;
   #config: ResolvedBuildConfig;
   #apis: unknown[] = [];
+  #apiEntries: ApiEntry[] = [];
   islandModNameToChunk = new Map<string, IslandModChunk>();
   apiRegistry: Map<string, unknown> = new Map();
   #fsRoutes: FsRoute<State>;
@@ -304,6 +318,10 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
         this.apiRegistry.set(`${a.method}:${p}`, api);
       }
     }
+  }
+
+  setApiEntries(entries: ApiEntry[]): void {
+    this.#apiEntries = entries;
   }
 
   addUnprocessedFile(pathname: string, dir: string): void {
@@ -399,6 +417,7 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
         writeSpecifier: (filePath) => pathToSpec(outDir, filePath),
         fsRoutesFiles: this.#fsRoutes.files,
         apiRoutes: this.#apis,
+        apiEntries: this.#apiEntries,
         outDir: root,
         entryAssets: [],
       }),
@@ -411,6 +430,7 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
         root: appPath,
         serverEntry: pathToSpec(outDir, this.#config.serverEntry),
         snapshotSpecifier: "./snapshot.js",
+        hasApiRoutes: this.#apiEntries.length > 0,
       }),
     );
 
@@ -467,6 +487,7 @@ export async function generateSnapshotServer(
     // deno-lint-ignore no-explicit-any
     fsRoutesFiles: FsRouteFileNoMod<any>[];
     apiRoutes: unknown[];
+    apiEntries: ApiEntry[];
     staticFiles: PendingStaticFile[];
     entryAssets: string[];
     writeSpecifier: (filePath: string) => string;
@@ -523,16 +544,31 @@ export async function generateSnapshotServer(
   const entryAssets = options.entryAssets.map((url) => JSON.stringify(url))
     .join(",\n");
 
-  // Serialize API routes — strip handler functions, keep metadata only
-  const serializedApiRoutes = options.apiRoutes.map((api) => {
-    // deno-lint-ignore no-explicit-any
-    const { handler: _h, ...meta } = api as any;
-    return JSON.stringify(meta);
-  }).join(",\n");
+  // Generate imports for API modules so handlers survive into the compiled binary
+  const apiImports = options.apiEntries
+    .map((entry, i) => {
+      const spec = writeSpecifier(entry.filePath);
+      return `import _api_${i} from "${spec}";`;
+    })
+    .join("\n");
+
+  const serializedApiRoutes = options.apiEntries.length > 0
+    ? options.apiEntries.map((entry, i) => {
+      if (entry.overridePath) {
+        return `  { ..._api_${i}, path: ${JSON.stringify(entry.overridePath)} }`;
+      }
+      return `  _api_${i}`;
+    }).join(",\n")
+    : options.apiRoutes.map((api) => {
+      // deno-lint-ignore no-explicit-any
+      const { handler: _h, ...meta } = api as any;
+      return JSON.stringify(meta);
+    }).join(",\n");
 
   return `${EDIT_WARNING}
 import { IslandPreparer } from "@hushkey/howl";
 ${islandImports}
+${apiImports}
 ${fsRouteImports}
 
 export const clientEntry = ${JSON.stringify(options.clientEntry)}
@@ -579,6 +615,7 @@ export function generateServerEntry(
     root: string;
     serverEntry: string;
     snapshotSpecifier: string;
+    hasApiRoutes: boolean;
   },
 ): string {
   let rootPath = `path.join(import.meta.dirname, ${JSON.stringify(options.root)})`;
@@ -588,15 +625,28 @@ export function generateServerEntry(
     rootPath = JSON.stringify(options.root);
   }
 
+  const apiImport = options.hasApiRoutes
+    ? `import { apiHandler } from "@hushkey/howl/api";`
+    : "";
+
+  const apiRegistration = options.hasApiRoutes
+    ? `
+if (snapshot.apiRoutes.length > 0 && app.isApiRoutesEnabled()) {
+  apiHandler(app, snapshot.apiRoutes, app.getApiConfig());
+}
+`
+    : "";
+
   return `${EDIT_WARNING}
 import { setBuildCache, ProdBuildCache } from "@hushkey/howl";
 import * as path from "@std/path";
 import * as snapshot from "${options.snapshotSpecifier}";
 import { app } from "${options.serverEntry}";
+${apiImport}
 
 const root = ${rootPath};
 setBuildCache(app, new ProdBuildCache(root, snapshot), "production");
-
+${apiRegistration}
 export default {
   fetch: app.handler()
 };
