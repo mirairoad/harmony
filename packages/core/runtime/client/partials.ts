@@ -292,6 +292,7 @@ async function fetchPartials(
 
   if (res.redirected) {
     const nextUrl = new URL(res.url);
+    nextUrl.searchParams.delete(PARTIAL_SEARCH_PARAM);
     if (nextUrl.origin === actualUrl.origin) {
       actualUrl = nextUrl;
     }
