@@ -27,7 +27,7 @@ export interface TailwindPluginOptions extends PluginOptions {
 }
 
 /**
- * Tailwind CSS v4 plugin for Harmony.
+ * Tailwind CSS v4 plugin for howl.
  * Processes CSS files through PostCSS + Tailwind at build time.
  * Optimization is automatically enabled in production mode.
  *
@@ -35,7 +35,7 @@ export interface TailwindPluginOptions extends PluginOptions {
  * // In dev.ts:
  * import { tailwindPlugin } from "@howl/plugins/tailwind";
  *
- * const builder = new HarmonyBuilder(harmony, {
+ * const builder = new howlBuilder(howl, {
  *   root: import.meta.dirname,
  *   importApp: async () => (await import("./main.ts")).app.getApp(),
  * });
@@ -56,7 +56,7 @@ export function tailwindPlugin(
   );
 
   builder.onTransformStaticFile(
-    { pluginName: "harmony-tailwind", filter: /\.css$/, exclude },
+    { pluginName: "howl-tailwind", filter: /\.css$/, exclude },
     async (args) => {
       const res = await instance.process(args.text, {
         from: args.path,

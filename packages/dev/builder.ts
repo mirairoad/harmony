@@ -46,7 +46,7 @@ export interface BuildOptions {
   root?: string;
   /**
    * Output directory for production builds.
-   * @default "_harmony"
+   * @default "_howl"
    */
   outDir?: string;
   /**
@@ -126,16 +126,12 @@ export class Builder<State = any> {
   constructor(options?: BuildOptions) {
     const root = parseDirPath(options?.root ?? ".", Deno.cwd());
     const serverEntry = parseDirPath(options?.serverEntry ?? "main.ts", root);
-    const clientEntry = options?.clientEntry
-      ? parseDirPath(options.clientEntry, root)
-      : undefined;
+    const clientEntry = options?.clientEntry ? parseDirPath(options.clientEntry, root) : undefined;
     // When clientEntry is provided (e.g. ./client/pages/_app.ts) derive the
     // client root as its grandparent (./client/), so pages/islands resolve
     // there instead of project root.
-    const clientBase = clientEntry
-      ? path.dirname(path.dirname(clientEntry))
-      : root;
-    const outDir = parseDirPath(options?.outDir ?? "_harmony", root);
+    const clientBase = clientEntry ? path.dirname(path.dirname(clientEntry)) : root;
+    const outDir = parseDirPath(options?.outDir ?? "_howl", root);
     const staticDir = parseDirPath(options?.staticDir ?? "static", root);
     const islandDir = parseDirPath(options?.islandDir ?? "islands", clientBase);
     const routeDir = parseDirPath(options?.routeDir ?? "routes", clientBase);

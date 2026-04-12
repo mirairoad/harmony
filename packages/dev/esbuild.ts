@@ -9,27 +9,27 @@ import * as path from "@std/path";
  */
 function reactCompatPlugin(cwd: string): EsbuildPlugin {
   return {
-    name: "harmony-react-compat",
+    name: "howl-react-compat",
     setup(build) {
       build.onResolve({ filter: /^react$/ }, () => ({
         path: "react",
-        namespace: "harmony-react-compat",
+        namespace: "howl-react-compat",
       }));
       build.onResolve({ filter: /^react-dom$/ }, () => ({
         path: "react-dom",
-        namespace: "harmony-react-compat",
+        namespace: "howl-react-compat",
       }));
       build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({
         path: "react/jsx-runtime",
-        namespace: "harmony-react-compat",
+        namespace: "howl-react-compat",
       }));
       build.onResolve({ filter: /^react\/jsx-dev-runtime$/ }, () => ({
         path: "react/jsx-dev-runtime",
-        namespace: "harmony-react-compat",
+        namespace: "howl-react-compat",
       }));
 
       build.onLoad(
-        { filter: /^react$/, namespace: "harmony-react-compat" },
+        { filter: /^react$/, namespace: "howl-react-compat" },
         () => ({
           contents: `export * from "preact/compat"; export { default } from "preact/compat";`,
           loader: "js",
@@ -37,7 +37,7 @@ function reactCompatPlugin(cwd: string): EsbuildPlugin {
         }),
       );
       build.onLoad(
-        { filter: /^react-dom$/, namespace: "harmony-react-compat" },
+        { filter: /^react-dom$/, namespace: "howl-react-compat" },
         () => ({
           contents: `export * from "preact/compat"; export { default } from "preact/compat";`,
           loader: "js",
@@ -45,7 +45,7 @@ function reactCompatPlugin(cwd: string): EsbuildPlugin {
         }),
       );
       build.onLoad(
-        { filter: /^react\/jsx-runtime$/, namespace: "harmony-react-compat" },
+        { filter: /^react\/jsx-runtime$/, namespace: "howl-react-compat" },
         () => ({
           contents:
             `export * from "preact/jsx-runtime"; export { default } from "preact/jsx-runtime";`,
@@ -54,7 +54,7 @@ function reactCompatPlugin(cwd: string): EsbuildPlugin {
         }),
       );
       build.onLoad(
-        { filter: /^react\/jsx-dev-runtime$/, namespace: "harmony-react-compat" },
+        { filter: /^react\/jsx-dev-runtime$/, namespace: "howl-react-compat" },
         () => ({
           contents:
             `export * from "preact/jsx-dev-runtime"; export { default } from "preact/jsx-dev-runtime";`,
@@ -163,7 +163,7 @@ export async function bundleJs(
       denoPlugin({
         preserveJsx: true,
         debug: false,
-        publicEnvVarPrefix: "HARMONY_PUBLIC_",
+        publicEnvVarPrefix: "howl_PUBLIC_",
       }),
     ],
   });
@@ -203,7 +203,7 @@ export async function bundleJs(
         .map(({ path }) => path);
       dependencies.set(entryPath, imports);
 
-      if (entryPath !== "harmony-runtime.js" && entry.entryPoint !== undefined) {
+      if (entryPath !== "howl-runtime.js" && entry.entryPoint !== undefined) {
         const basename = path.basename(entryPath, path.extname(entryPath));
         const filePath = options.entryPoints[basename];
         const name = entryToName.get(filePath)!;
@@ -222,7 +222,7 @@ export async function bundleJs(
 let initialized = false;
 
 export async function startEsbuild() {
-  esbuild = Deno.env.get("HARMONY_ESBUILD_LOADER") === "portable"
+  esbuild = Deno.env.get("howl_ESBUILD_LOADER") === "portable"
     ? await import("esbuild-wasm")
     : await import("esbuild");
 
@@ -268,7 +268,7 @@ function toPreactModPath(mod: string): string {
 
 function preactDebugger(preactPath: string | undefined): EsbuildPlugin {
   return {
-    name: "harmony-preact-debugger",
+    name: "howl-preact-debugger",
     setup(build) {
       if (preactPath === undefined) return;
       build.onResolve({ filter: /^preact/ }, (args) => ({
@@ -280,7 +280,7 @@ function preactDebugger(preactPath: string | undefined): EsbuildPlugin {
 
 function windowsPathFixer(): EsbuildPlugin {
   return {
-    name: "harmony-fix-windows",
+    name: "howl-fix-windows",
     setup(build) {
       if (Deno.build.os !== "windows") return;
       build.onResolve({ filter: /\.*/ }, (args) => {

@@ -1,7 +1,7 @@
 export const INTERNAL_PREFIX = "/_howl";
 export const DEV_ERROR_OVERLAY_URL: string = `${INTERNAL_PREFIX}/error_overlay`;
 export const ALIVE_URL: string = `${INTERNAL_PREFIX}/alive`;
-export const PARTIAL_SEARCH_PARAM = "harmony-partial";
+export const PARTIAL_SEARCH_PARAM = "howl-partial";
 
 export const SECOND = 1000;
 export const MINUTE = SECOND * 60;

@@ -119,11 +119,9 @@ export class IslandPreparer {
     modName: string,
     css: string[],
   ) {
-    // Read the howl directive if exported
+    // Also support legacy "howl" directive
     const howlDirective = mod["howl"] as { ssr?: boolean } | undefined;
-    // Also support legacy "harmony" directive
-    const harmonyDirective = mod["harmony"] as { ssr?: boolean } | undefined;
-    const directive = howlDirective ?? harmonyDirective;
+    const directive = howlDirective ?? howlDirective;
     const ssr = directive?.ssr !== false; // default true
 
     for (const [name, value] of Object.entries(mod)) {

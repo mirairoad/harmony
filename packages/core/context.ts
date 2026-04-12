@@ -33,7 +33,7 @@ export interface Island {
   exportName: string;
   fn: ComponentType;
   css: string[];
-  /** Skip SSR for this island. Set via `export const harmony = { ssr: false }` in the island file. */
+  /** Skip SSR for this island. Set via `export const howl = { ssr: false }` in the island file. */
   ssr: boolean;
 }
 
@@ -205,12 +205,42 @@ export class Context<State> {
       location = `${pathname.replaceAll(/\/+/g, "/")}${search}`;
     }
 
-    return new Response(null, {
-      status,
-      headers: {
-        location,
-      },
+    const headers = new Headers({ location });
+
+    // Merge ctx.headers into redirect response — cookies and headers set in
+    // middleware are automatically included (same behaviour as ctx.render())
+    this.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") {
+        headers.append(key, value);
+      } else {
+        headers.set(key, value);
+      }
     });
+
+    return new Response(null, { status, headers });
+  }
+
+  /**
+   * Redirect the user, automatically preserving the partial navigation
+   * search parameter when the current request is a partial request.
+   *
+   * Use this in middleware guards instead of manually threading
+   * `?howl-partial=true` — it handles that for you.
+   *
+   * ```ts
+   * // Before
+   * return ctx.redirect(`/sign-in${ctx.isPartial ? '?howl-partial=true' : ''}`);
+   *
+   * // After
+   * return ctx.partialRedirect('/sign-in');
+   * ```
+   */
+  partialRedirect(pathOrUrl: string, status = 302): Response {
+    if (this.isPartial) {
+      const hasQuery = pathOrUrl.includes("?");
+      pathOrUrl = `${pathOrUrl}${hasQuery ? "&" : "?"}${PARTIAL_SEARCH_PARAM}=true`;
+    }
+    return this.redirect(pathOrUrl, status);
   }
 
   /**

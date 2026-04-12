@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Base Tailwind config for Harmony apps.
+ * Base Tailwind config for howl apps.
  * Extend this in your app's tailwind.config.ts.
  *
  * @example

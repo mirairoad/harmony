@@ -92,7 +92,7 @@ function transformCssModules(
  * The scoped CSS is injected as a side-effect import.
  *
  * @example
- * // In your dev.ts or harmony config:
+ * // In your dev.ts or howl config:
  * import { cssModulesPlugin } from "@howl/dev/plugins/css_modules";
  *
  * const builder = new Builder({
@@ -112,23 +112,21 @@ export function cssModulesPlugin(
   };
 
   return {
-    name: "harmony-css-modules",
+    name: "howl-css-modules",
     setup(build) {
       // Resolve .module.css imports to our virtual namespace
       build.onResolve({ filter: /\.module\.css$/ }, (args) => {
-        const resolved = args.resolveDir
-          ? path.resolve(args.resolveDir, args.path)
-          : args.path;
+        const resolved = args.resolveDir ? path.resolve(args.resolveDir, args.path) : args.path;
 
         return {
           path: resolved,
-          namespace: "harmony-css-modules",
+          namespace: "howl-css-modules",
         };
       });
 
       // Load the .module.css file and return a JS classmap module
       build.onLoad(
-        { filter: /\.module\.css$/, namespace: "harmony-css-modules" },
+        { filter: /\.module\.css$/, namespace: "howl-css-modules" },
         async (args) => {
           let css: string;
           try {
@@ -163,9 +161,7 @@ import ${JSON.stringify(cssVirtualPath)};
 ${exports}
 const styles = {${
             Object.entries(classMap)
-              .map(([local, scoped]) =>
-                `${JSON.stringify(local)}: ${JSON.stringify(scoped)}`
-              )
+              .map(([local, scoped]) => `${JSON.stringify(local)}: ${JSON.stringify(scoped)}`)
               .join(", ")
           }};
 export default styles;
