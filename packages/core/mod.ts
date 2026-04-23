@@ -23,6 +23,7 @@ export { CookieManager, type CookieOptions } from "./cookies.ts";
 
 // --- Middleware ---
 export { staticFiles } from "./middlewares/static_files.ts";
+export { coalesceRequests } from "./middlewares/coalesce.ts";
 export type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";
 
 // --- Client-only utility ---

@@ -429,6 +429,11 @@ export class Context<State> {
           }`;
           linkParts.push(`<${encodeURI(specifier)}>; rel="modulepreload"; as="script"`);
         });
+        // CSS preloads: browser fetches island stylesheets from HTTP headers,
+        // before it has parsed the <link> tags in the HTML body.
+        state.islandAssets.forEach((css) => {
+          linkParts.push(`<${encodeURI(css)}>; rel="preload"; as="style"`);
+        });
         headers.append("Link", linkParts.join(", "));
 
         state.clear();
