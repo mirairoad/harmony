@@ -288,7 +288,7 @@ export class Context<State> {
       vnode = result;
     }
 
-    let appChild = vnode;
+    const appChild = vnode;
     // deno-lint-ignore no-explicit-any
     let appVNode: VNode<any>;
 
