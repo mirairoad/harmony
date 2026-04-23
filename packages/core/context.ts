@@ -27,6 +27,14 @@ import { CookieManager } from "./cookies.ts";
 
 const ENCODER = new TextEncoder();
 
+export interface SSEEvent {
+  data: unknown;
+  event?: string;
+  id?: string | number;
+  /** Reconnection delay hint in milliseconds. */
+  retry?: number;
+}
+
 export interface Island {
   file: string;
   name: string;
@@ -356,14 +364,13 @@ export class Context<State> {
       try {
         setRenderState(state);
 
+        // Single-pass: render the full tree (app + layouts + page) in one call.
+        // appVNode captures appChild by closure reference; since appChild = vnode
+        // and is never reassigned, Preact walks the entire tree once and island
+        // detection runs correctly before FreshScripts renders at end of <body>.
         let html = renderToString(
-          vnode ?? h(Fragment, null),
+          hasApp ? appVNode : (vnode ?? h(Fragment, null)),
         );
-
-        if (hasApp) {
-          appChild = jsxTemplate([html]);
-          html = renderToString(appVNode);
-        }
 
         if (
           !state.renderedHtmlBody || !state.renderedHtmlHead ||
@@ -413,17 +420,16 @@ export class Context<State> {
         const runtimeUrl = state.buildCache.clientEntry.startsWith(".")
           ? state.buildCache.clientEntry.slice(1)
           : state.buildCache.clientEntry;
-        let link = `<${encodeURI(`${basePath}${runtimeUrl}`)}>; rel="modulepreload"; as="script"`;
+        const linkParts: string[] = [
+          `<${encodeURI(`${basePath}${runtimeUrl}`)}>; rel="modulepreload"; as="script"`,
+        ];
         state.islands.forEach((island) => {
           const specifier = `${basePath}${
             island.file.startsWith(".") ? island.file.slice(1) : island.file
           }`;
-          link += `, <${encodeURI(specifier)}>; rel="modulepreload"; as="script"`;
+          linkParts.push(`<${encodeURI(specifier)}>; rel="modulepreload"; as="script"`);
         });
-
-        if (link !== "") {
-          headers.append("Link", link);
-        }
+        headers.append("Link", linkParts.join(", "));
 
         state.clear();
         setRenderState(null);
@@ -469,6 +475,53 @@ export class Context<State> {
     const headers = new Headers(merged.headers);
     headers.set("Content-Type", "text/html; charset=utf-8");
     return new Response(content, { ...merged, headers });
+  }
+
+  /**
+   * Stream Server-Sent Events.
+   * Automatically sets `Content-Type: text/event-stream` and merges ctx.headers.
+   *
+   * ```ts
+   * app.get("/events", (ctx) =>
+   *   ctx.sse(async function* () {
+   *     while (true) {
+   *       yield { data: { time: Date.now() }, event: "tick" };
+   *       await new Promise((r) => setTimeout(r, 1000));
+   *     }
+   *   })
+   * );
+   * ```
+   */
+  sse(
+    stream:
+      | AsyncIterable<SSEEvent>
+      | (() => AsyncIterable<SSEEvent>),
+    init?: ResponseInit,
+  ): Response {
+    const raw = typeof stream === "function" ? stream() : stream;
+
+    const body = ReadableStream.from(raw).pipeThrough(
+      new TransformStream<SSEEvent, Uint8Array>({
+        transform(event, controller) {
+          let msg = "";
+          if (event.id !== undefined) msg += `id: ${event.id}\n`;
+          if (event.event !== undefined) msg += `event: ${event.event}\n`;
+          if (event.retry !== undefined) msg += `retry: ${event.retry}\n`;
+          const data = typeof event.data === "string"
+            ? event.data
+            : JSON.stringify(event.data);
+          msg += `data: ${data}\n\n`;
+          controller.enqueue(ENCODER.encode(msg));
+        },
+      }),
+    );
+
+    const merged = this.#mergeHeaders(init);
+    const headers = new Headers(merged.headers);
+    headers.set("Content-Type", "text/event-stream");
+    headers.set("Cache-Control", "no-cache");
+    headers.set("Connection", "keep-alive");
+    return new Response(body, { ...merged, headers });
   }
 
   /**
@@ -521,7 +574,7 @@ export class Context<State> {
         }),
       );
 
-    return new Response(body, init);
+    return new Response(body, this.#mergeHeaders(init));
   }
   /**
    * Get query parameters from the request URL.

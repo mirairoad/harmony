@@ -12,6 +12,23 @@ export interface CacheAdapter {
   delete(key: string): Promise<void>;
 }
 
+export interface RateLimitConfig {
+  /** Max requests allowed in the window. */
+  max: number;
+  /** Window duration in milliseconds. */
+  windowMs: number;
+  /**
+   * How long to lock out the identifier after hitting the limit.
+   * Defaults to the remaining window time when omitted.
+   * Use for sensitive endpoints (login, OTP, password reset) where
+   * you want a lockout longer than the counting window.
+   *
+   * @example { max: 5, windowMs: 60_000, blockDurationMs: 3_600_000 }
+   * // 5 attempts per minute → blocked for 1 hour if exceeded
+   */
+  blockDurationMs?: number;
+}
+
 /**
  * Howl API configuration — passed to app.fsApiRoutes().
  */
@@ -21,6 +38,12 @@ export interface HowlApiConfig<
 > {
   /** Valid roles for this app — typed from your Role union */
   roles: readonly Role[];
+  /**
+   * Default rate limit applied to every endpoint.
+   * Override per-route via `rateLimit` in defineApi.
+   * Set `rateLimit: false` on a route to disable it entirely.
+   */
+  defaultRateLimit?: RateLimitConfig;
   /**
    * Auth middleware called before every role-protected endpoint.
    * Return a Response to deny access, return nothing to allow.
@@ -39,9 +62,18 @@ export interface HowlApiConfig<
     allowedRoles: Role[],
   ) => Response | void | Promise<Response | void>;
   /**
-   * Cache adapter. Defaults to in-memory LRU.
+   * Cache adapter for API response caching. Defaults to in-memory LRU.
+   * Per-instance caching is fine here — responses are idempotent.
    */
   cache?: CacheAdapter;
+  /**
+   * Cache adapter used exclusively for rate limit counters.
+   * Must be a shared backend (Redis, Deno KV) when running multiple instances
+   * behind a load balancer — otherwise each instance has its own counter and
+   * the effective limit becomes max × instance count.
+   * Defaults to the same adapter as `cache`.
+   */
+  rateLimitCache?: CacheAdapter;
 }
 
 export type ResponsesMap = Record<number, z.ZodTypeAny>;
@@ -155,10 +187,14 @@ export interface ApiDefinition<
     ttl: number;
   };
   /**
-   * Redirect URL on auth failure.
-   * null = return 401/403 JSON response.
+   * Per-route rate limit. Overrides `defaultRateLimit` from config.
+   * Set to `false` to disable rate limiting for this route entirely.
+   *
+   * @example
+   * rateLimit: { max: 5, windowMs: 60_000 }  // 5 req/min
+   * rateLimit: false                           // no limit
    */
-  redirectOnFailure?: string | null;
+  rateLimit?: RateLimitConfig | false;
   responses: R;
   requestBody?: B;
   /** Query params Zod schema — parsed, validated, and typed on ctx.query() */

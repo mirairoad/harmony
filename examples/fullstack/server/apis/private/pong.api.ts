@@ -6,6 +6,7 @@ export default defineApi({
   directory: "private",
   method: "POST",
   roles: ["PUBLISHER"],
+  rateLimit: { max: 5, windowMs: 3_000 },
   caching: {
     ttl: 5,
   },
@@ -24,7 +25,6 @@ export default defineApi({
     console.log(ctx.req.body.name); // typesafe
 
     return {
-      statusCode: 200,
       ok: true,
       message: `pong from howl 🐺 — ${new Date().toISOString()}`,
     };

@@ -3,7 +3,7 @@ import { Builder, type BuildOptions } from "./builder.ts";
 import { cssModulesPlugin } from "./plugins/css_modules.ts";
 import * as path from "@std/path";
 import type { AnyApiDefinition } from "../api/types.ts";
-import { apiHandler } from "../api/api-handler.ts";
+import { buildApiCommands } from "../api/api-handler.ts";
 import type { ApiEntry } from "./dev_build_cache.ts";
 
 export interface HowlDevOptions<State = any>
@@ -186,7 +186,8 @@ export class HowlBuilder<State = any> {
     if (!this.#howl.isApiRoutesEnabled()) return;
     if (this.#apis.length === 0) return;
 
-    apiHandler(app, this.#apis, app.getApiConfig() ?? null);
+    const commands = buildApiCommands(app, this.#apis, app.getApiConfig() ?? null);
+    app.setApiRouteItems(commands);
   }
 
   // --- Public API ---

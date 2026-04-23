@@ -6,6 +6,7 @@ export default defineApi({
   directory: "public",
   method: "GET",
   roles: [],
+  rateLimit: { max: 5, windowMs: 3_000, blockDurationMs: 10_000 },
   caching: {
     ttl: 5,
   },

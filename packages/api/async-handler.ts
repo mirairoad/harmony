@@ -1,8 +1,65 @@
 // deno-lint-ignore-file no-explicit-any
 import type { Context } from "../core/context.ts";
 import type { Howl } from "../core/app.ts";
-import type { AnyApiDefinition, CacheAdapter, HowlApiConfig } from "./types.ts";
+import type { AnyApiDefinition, CacheAdapter, HowlApiConfig, RateLimitConfig } from "./types.ts";
 import { HttpError } from "./errors.ts";
+import { getApiRequestState } from "./_request_state.ts";
+
+function getClientIp(ctx: Context<any>): string {
+  return ctx.req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+    ?? ctx.req.headers.get("x-real-ip")
+    ?? (ctx.info.remoteAddr as Deno.NetAddr).hostname
+    ?? "unknown";
+}
+
+async function checkRateLimit(
+  ctx: Context<any>,
+  cache: CacheAdapter,
+  rl: RateLimitConfig,
+): Promise<Response | null> {
+  const userId = (ctx.state as any)?.userContext?.id;
+  const identifier = userId ?? getClientIp(ctx);
+  const key = `ratelimit:${identifier}:${ctx.req.method}:${ctx.url.pathname}`;
+  const now = Date.now();
+
+  const raw = await cache.get(key);
+  const stored: { count: number; resetAt: number; blockedUntil?: number } | null = raw
+    ? JSON.parse(raw)
+    : null;
+  // Keep entry if window is active OR an extended block is still in effect
+  const current = stored &&
+      (stored.resetAt > now || (stored.blockedUntil && stored.blockedUntil > now))
+    ? stored
+    : null;
+
+  if (current && current.count >= rl.max) {
+    let blockedUntil = current.blockedUntil;
+    // First time hitting the limit with a configured block duration — persist the extended lockout
+    if (!blockedUntil && rl.blockDurationMs) {
+      blockedUntil = now + rl.blockDurationMs;
+      await cache.set(
+        key,
+        JSON.stringify({ ...current, blockedUntil }),
+        Math.ceil(rl.blockDurationMs / 1000),
+      );
+    }
+    const expiresAt = blockedUntil ?? current.resetAt;
+    const retryAfter = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+    ctx.headers.set("Retry-After", String(retryAfter));
+    ctx.headers.set("X-RateLimit-Limit", String(rl.max));
+    ctx.headers.set("X-RateLimit-Remaining", "0");
+    return ctx.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const newCount = (current?.count ?? 0) + 1;
+  const resetAt = current?.resetAt ?? now + rl.windowMs;
+  const ttlMs = Math.max(0, resetAt - now);
+  await cache.set(key, JSON.stringify({ count: newCount, resetAt }), Math.ceil(ttlMs / 1000));
+
+  ctx.headers.set("X-RateLimit-Limit", String(rl.max));
+  ctx.headers.set("X-RateLimit-Remaining", String(Math.max(0, rl.max - newCount)));
+  return null;
+}
 
 function redactPasswords(obj: any): any {
   if (obj === null || obj === undefined) return obj;
@@ -33,9 +90,10 @@ export function asyncHandler<State, Role extends string>(
   api: AnyApiDefinition,
   howlConfig: HowlApiConfig<State, Role> | null,
   cache: CacheAdapter,
+  rateLimitCache: CacheAdapter,
 ) {
   return async (ctx: Context<State>): Promise<Response> => {
-    const { name, directory, handler, roles, caching, redirectOnFailure } = api;
+    const { name, directory, handler, roles, caching } = api;
     const ttl = caching?.ttl ?? 0;
     const protectedRoute = roles.length > 0;
 
@@ -53,9 +111,18 @@ export function asyncHandler<State, Role extends string>(
         }
       }
 
+      // --- Rate limit ---
+      if (api.rateLimit !== false) {
+        const rl = api.rateLimit ?? howlConfig?.defaultRateLimit;
+        if (rl) {
+          const limited = await checkRateLimit(ctx, rateLimitCache, rl);
+          if (limited) return limited;
+        }
+      }
+
       // --- Cache read ---
-      if (ttl > 0) {
-        const cacheKey = buildCacheKey(ctx, protectedRoute);
+      const cacheKey = ttl > 0 ? buildCacheKey(ctx, protectedRoute) : null;
+      if (cacheKey) {
         const cached = await cache.get(cacheKey);
         if (cached) {
           return ctx.json(
@@ -72,17 +139,17 @@ export function asyncHandler<State, Role extends string>(
             return new Proxy(target.req, {
               get(reqTarget, reqProp) {
                 if (reqProp === "body") {
-                  return (target.state as any).__body ?? null;
+                  return getApiRequestState(target).body ?? null;
                 }
                 return (reqTarget as any)[reqProp];
               },
             });
           }
-          if (prop === "query" && (target.state as any).__query !== undefined) {
-            return (key?: string) => {
-              const q = (target.state as any).__query;
-              return key !== undefined ? q[key] : q;
-            };
+          if (prop === "query") {
+            const q = getApiRequestState(target).query;
+            if (q !== undefined) {
+              return (key?: string) => key !== undefined ? (q as any)[key] : q;
+            }
           }
           const value = (target as any)[prop];
           return typeof value === "function" ? value.bind(target) : value;
@@ -121,8 +188,7 @@ export function asyncHandler<State, Role extends string>(
       data = redactPasswords(data);
 
       // --- Cache write ---
-      if (ttl > 0) {
-        const cacheKey = buildCacheKey(ctx, protectedRoute);
+      if (cacheKey) {
         await cache.set(cacheKey, JSON.stringify(data), ttl);
       }
 
@@ -144,10 +210,6 @@ export function asyncHandler<State, Role extends string>(
         { status: statusCode },
       );
     } catch (err: any) {
-      if (redirectOnFailure) {
-        return ctx.redirect(redirectOnFailure, 302);
-      }
-
       const statusCode = err?.statusCode ?? err?.status ?? 500;
       const errorMessage = typeof err?.message === "string"
         ? err.message

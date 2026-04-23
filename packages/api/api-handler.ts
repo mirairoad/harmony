@@ -1,15 +1,17 @@
 import type { Howl } from "../core/app.ts";
-import type { AnyApiDefinition, HowlApiConfig } from "./types.ts";
+import type { AnyApiDefinition, CacheAdapter, HowlApiConfig } from "./types.ts";
 import { asyncHandler } from "./async-handler.ts";
 import { preAsyncHandler } from "./pre-async-handler.ts";
 import { memoryCache } from "./cache/memory.ts";
 import { generateOpenApiSpec } from "./generate-openapi.ts";
 import { setApiSpec } from "./api-specs.ts";
 import { resolvePath } from "./resolve-path.ts";
+import { type HandlerCommand, newHandlerCmd } from "../core/commands.ts";
+import type { Method } from "../core/router.ts";
 
 export { resolvePath };
 
-type Method = "get" | "post" | "put" | "patch" | "delete";
+type AppMethod = "get" | "post" | "put" | "patch" | "delete";
 
 /**
  * Register all API definitions on the Howl app.
@@ -23,55 +25,86 @@ type Method = "get" | "post" | "put" | "patch" | "delete";
  * import { getApiSpecs } from "@hushkey/howl/api";
  * app.get("/api/docs", requireRole("admin"), (ctx) => ctx.json(getApiSpecs()));
  */
-export function apiHandler<State, Role extends string>(
-  app: Howl<State>,
-  apis: AnyApiDefinition[],
-  // deno-lint-ignore no-explicit-any
-  howlConfig: HowlApiConfig<State, Role> | null = null,
-  options: {
-    title?: string;
-    version?: string;
-  } = {},
-): void {
-  const cache = howlConfig?.cache ?? memoryCache();
-
-  // Sort by specificity — fewer params + more literals = register first
-  // Prevents shadowing e.g. /api/v1/admin/:table/restore vs /:table/:id
-  const sorted = [...apis].sort((a, b) => {
-    const score = (api: AnyApiDefinition): number => {
-      const resolved = resolvePath(api);
-      const paths = Array.isArray(resolved) ? resolved : [resolved];
-      return Math.min(
+function sortApis(apis: AnyApiDefinition[]): AnyApiDefinition[] {
+  const scores = new Map<AnyApiDefinition, number>();
+  for (const api of apis) {
+    const resolved = resolvePath(api);
+    const paths = Array.isArray(resolved) ? resolved : [resolved];
+    scores.set(
+      api,
+      Math.min(
         ...paths.map((p) => {
           const paramCount = (p.match(/:[^/]+/g) ?? []).length;
           const literalCount = p.split("/").filter((s) => s && !s.startsWith(":")).length;
           return paramCount * 1000 - literalCount;
         }),
-      );
-    };
-    return score(a) - score(b);
-  });
+      ),
+    );
+  }
+  return [...apis].sort((a, b) => scores.get(a)! - scores.get(b)!);
+}
 
-  // Register each API
+function buildHandlerCommands<State, Role extends string>(
+  app: Howl<State>,
+  sorted: AnyApiDefinition[],
+  howlConfig: HowlApiConfig<State, Role> | null,
+  cache: CacheAdapter,
+  rateLimitCache: CacheAdapter,
+): HandlerCommand<State>[] {
+  const commands: HandlerCommand<State>[] = [];
   for (const api of sorted) {
-    const method = api.method.toLowerCase() as Method;
     const resolved = resolvePath(api);
     const paths = Array.isArray(resolved) ? resolved : [resolved];
-
     for (const path of paths) {
-      app[method](
-        path,
-        preAsyncHandler(api.params, api.requestBody, api.query),
-        asyncHandler(app, api, howlConfig, cache),
+      commands.push(
+        newHandlerCmd(api.method as Method, path, [
+          preAsyncHandler(api.params, api.requestBody, api.query),
+          asyncHandler(app, api, howlConfig, cache, rateLimitCache),
+        ], false),
       );
     }
   }
+  return commands;
+}
 
-  setApiSpec(generateOpenApiSpec(apis, {
-    title: options.title,
-    version: options.version,
-  }));
-
+function finalizeApiRegistration(apis: AnyApiDefinition[], options: { title?: string; version?: string }): void {
+  setApiSpec(generateOpenApiSpec(apis, options));
   // deno-lint-ignore no-console
   console.info(`[howl] ${apis.length} APIs registered`);
+}
+
+/**
+ * Build handler commands for all APIs without registering them on the app.
+ * Used by HowlBuilder to populate the ApiRouteCommand at its registered position,
+ * preserving middleware ordering relative to app.fsApiRoutes().
+ */
+function resolveCaches(howlConfig: { cache?: CacheAdapter; rateLimitCache?: CacheAdapter } | null): { cache: CacheAdapter; rateLimitCache: CacheAdapter } {
+  const cache = howlConfig?.cache ?? memoryCache();
+  const rateLimitCache = howlConfig?.rateLimitCache ?? cache;
+  return { cache, rateLimitCache };
+}
+
+export function buildApiCommands<State, Role extends string>(
+  app: Howl<State>,
+  apis: AnyApiDefinition[],
+  howlConfig: HowlApiConfig<State, Role> | null = null,
+  options: { title?: string; version?: string } = {},
+): HandlerCommand<State>[] {
+  const { cache, rateLimitCache } = resolveCaches(howlConfig);
+  const commands = buildHandlerCommands(app, sortApis(apis), howlConfig, cache, rateLimitCache);
+  finalizeApiRegistration(apis, options);
+  return commands;
+}
+
+export function apiHandler<State, Role extends string>(
+  app: Howl<State>,
+  apis: AnyApiDefinition[],
+  howlConfig: HowlApiConfig<State, Role> | null = null,
+  options: { title?: string; version?: string } = {},
+): void {
+  const { cache, rateLimitCache } = resolveCaches(howlConfig);
+  for (const cmd of buildHandlerCommands(app, sortApis(apis), howlConfig, cache, rateLimitCache)) {
+    app[cmd.method.toLowerCase() as AppMethod](cmd.pattern, ...cmd.fns);
+  }
+  finalizeApiRegistration(apis, options);
 }

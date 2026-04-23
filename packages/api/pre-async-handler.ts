@@ -1,6 +1,7 @@
 import type { Context } from "../core/context.ts";
 import { z, ZodError } from "zod";
 import type { RequestBodySchema } from "./types.ts";
+import { setApiRequestState } from "./_request_state.ts";
 
 /**
  * Pre-handler middleware — runs before every API handler.
@@ -25,8 +26,7 @@ export function preAsyncHandler<State>(
         ctx.url.searchParams.forEach((val, key) => {
           raw[key] = val;
         });
-        // deno-lint-ignore no-explicit-any
-        (ctx.state as any).__query = querySchema.parse(raw);
+        setApiRequestState(ctx, { query: querySchema.parse(raw) });
       }
 
       // Skip body parsing for read-only methods
@@ -39,11 +39,19 @@ export function preAsyncHandler<State>(
       }
 
       // Only consume + JSON.parse the body when the request is actually JSON.
-      // This leaves the body stream unconsumed for multipart, binary, etc.
+      // Leave multipart/form-data and url-encoded streams unconsumed so
+      // handlers can call ctx.req.formData() directly.
       const contentType = ctx.req.headers.get("content-type") ?? "";
       const isJson = contentType.includes("application/json");
+      const isMultipart = contentType.includes("multipart/form-data") ||
+        contentType.includes("application/x-www-form-urlencoded");
 
       if (!isJson && !requestBodySchema) {
+        // Store raw body only for non-streaming content types (e.g. webhook text/plain).
+        // Multipart streams must remain unconsumed for formData() to work.
+        if (!isMultipart) {
+          setApiRequestState(ctx, { rawBody: await ctx.req.text() });
+        }
         return ctx.next();
       }
 
@@ -64,8 +72,7 @@ export function preAsyncHandler<State>(
         data = requestBodySchema.parse(data);
       }
 
-      // deno-lint-ignore no-explicit-any
-      (ctx.state as any).__body = data;
+      setApiRequestState(ctx, { rawBody: raw, body: data });
       return ctx.next();
     } catch (err) {
       if (err instanceof ZodError) {

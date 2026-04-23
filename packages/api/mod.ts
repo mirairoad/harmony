@@ -10,12 +10,14 @@ export { default as errors, HttpError } from "./errors.ts";
 export { memoryCache } from "./cache/memory.ts";
 export { redisCache } from "./cache/redis.ts";
 export { tryCache } from "./cache/tiered.ts";
+export { kvCache } from "./cache/kv.ts";
 export type {
   AnyApiDefinition,
   ApiDefinition,
   CacheAdapter,
   ContextWithBody,
   HowlApiConfig,
+  RateLimitConfig,
   RequestBodySchema,
   ResponseReturnType,
   ResponsesMap,

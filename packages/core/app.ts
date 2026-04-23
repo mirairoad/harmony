@@ -11,6 +11,7 @@ import type { LayoutConfig, MaybeLazy, Route, RouteConfig } from "./types.ts";
 import type { RouteComponent } from "./segments.ts";
 import {
   applyCommands,
+  type ApiRouteCommand,
   type Command,
   CommandType,
   DEFAULT_NOT_ALLOWED_METHOD,
@@ -217,6 +218,7 @@ export class Howl<State = any> {
   #apiRoutesEnabled = false;
   // deno-lint-ignore no-explicit-any
   #apiConfig: any = null;
+  #apiRouteCmd: ApiRouteCommand<State> | null = null;
 
   static {
     getBuildCache = (app) => app.#getBuildCache();
@@ -413,6 +415,9 @@ export class Howl<State = any> {
   fsApiRoutes(config?: any): this {
     this.#apiRoutesEnabled = true;
     if (config !== undefined) this.#apiConfig = config;
+    const cmd: ApiRouteCommand<State> = { type: CommandType.ApiRoute, getItems: () => [] };
+    this.#apiRouteCmd = cmd;
+    this.#commands.push(cmd);
     return this;
   }
 
@@ -427,13 +432,24 @@ export class Howl<State = any> {
     return this.#apiConfig;
   }
 
+  /** @internal — used by HowlBuilder to populate the ApiRouteCommand at its registered position */
+  setApiRouteItems(items: Command<State>[]): void {
+    if (this.#apiRouteCmd !== null) {
+      this.#apiRouteCmd.getItems = () => items;
+    }
+  }
+
   /**
    * Merge another Howl instance into this app at the specified path.
    */
   mountApp(path: string, app: Howl<State>): this {
     for (let i = 0; i < app.#commands.length; i++) {
       const cmd = app.#commands[i];
-      if (cmd.type !== CommandType.App && cmd.type !== CommandType.NotFound) {
+      if (
+        cmd.type !== CommandType.App &&
+        cmd.type !== CommandType.NotFound &&
+        cmd.type !== CommandType.ApiRoute
+      ) {
         let effectivePattern = cmd.pattern;
         if (app.config.basePath) {
           effectivePattern = mergePath(app.config.basePath, cmd.pattern, false);

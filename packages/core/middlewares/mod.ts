@@ -3,6 +3,7 @@ import type { App as _App } from "../app.ts";
 import type { Define as _Define } from "../define.ts";
 import { recordSpanError, tracer } from "../otel.ts";
 // --- Built-in middleware implementations ---
+export { compression } from "./compression.ts";
 export { cors, type CORSOptions } from "./cors.ts";
 export { csrf, type CsrfOptions } from "./csrf.ts";
 export { csp, type CSPOptions } from "./csp.ts";

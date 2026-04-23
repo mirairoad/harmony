@@ -192,6 +192,11 @@ export interface FsRouteCommand<State> {
   includeLastSegment: boolean;
 }
 
+export interface ApiRouteCommand<State> {
+  type: CommandType.ApiRoute;
+  getItems: () => Command<State>[];
+}
+
 export type Command<State> =
   | ErrorCmd<State>
   | AppCommand<State>
@@ -200,7 +205,8 @@ export type Command<State> =
   | MiddlewareCmd<State>
   | RouteCommand<State>
   | HandlerCommand<State>
-  | FsRouteCommand<State>;
+  | FsRouteCommand<State>
+  | ApiRouteCommand<State>;
 
 export function applyCommands<State>(
   router: Router<MaybeLazyMiddleware<State>>,
@@ -360,6 +366,10 @@ function applyCommandsInner<State>(
         const items = cmd.getItems();
         const base = mergePath(basePath, cmd.pattern, true);
         applyCommandsInner(root, router, items, base);
+        break;
+      }
+      case CommandType.ApiRoute: {
+        applyCommandsInner(root, router, cmd.getItems(), basePath);
         break;
       }
       default:
