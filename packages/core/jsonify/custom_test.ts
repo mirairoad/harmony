@@ -12,8 +12,7 @@ Deno.test("custom parse - Point", () => {
   }
 
   const str = stringify(new Point(30, 40), {
-    Point: (value) =>
-      value instanceof Point ? { value: [value.x, value.y] } : undefined,
+    Point: (value) => value instanceof Point ? { value: [value.x, value.y] } : undefined,
   });
 
   expect(str).toEqual('[["Point",1],[2,3],30,40]');

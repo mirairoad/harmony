@@ -512,9 +512,7 @@ export class Context<State> {
           if (event.id !== undefined) msg += `id: ${event.id}\n`;
           if (event.event !== undefined) msg += `event: ${event.event}\n`;
           if (event.retry !== undefined) msg += `retry: ${event.retry}\n`;
-          const data = typeof event.data === "string"
-            ? event.data
-            : JSON.stringify(event.data);
+          const data = typeof event.data === "string" ? event.data : JSON.stringify(event.data);
           msg += `data: ${data}\n\n`;
           controller.enqueue(ENCODER.encode(msg));
         },

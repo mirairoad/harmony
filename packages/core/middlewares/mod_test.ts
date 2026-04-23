@@ -24,9 +24,7 @@ Deno.test("runMiddleware", async () => {
     },
   ];
 
-  const server = serveMiddleware<{ text: string }>((ctx) =>
-    runMiddlewares(middlewares, ctx)
-  );
+  const server = serveMiddleware<{ text: string }>((ctx) => runMiddlewares(middlewares, ctx));
 
   const res = await server.get("/");
   expect(await res.text()).toEqual("AB");
@@ -125,9 +123,7 @@ Deno.test("runMiddleware - throws errors", async () => {
     },
   ];
 
-  const server = serveMiddleware<{ text: string }>((ctx) =>
-    runMiddlewares(middlewares, ctx)
-  );
+  const server = serveMiddleware<{ text: string }>((ctx) => runMiddlewares(middlewares, ctx));
 
   try {
     await server.get("/");
@@ -164,9 +160,7 @@ Deno.test("runMiddleware - lazy middlewares", async () => {
     },
   ];
 
-  const server = serveMiddleware<{ text: string }>((ctx) =>
-    runMiddlewares(middlewares, ctx)
-  );
+  const server = serveMiddleware<{ text: string }>((ctx) => runMiddlewares(middlewares, ctx));
 
   let res = await server.get("/");
   expect(await res.text()).toEqual("A_lazy_B");

@@ -10,8 +10,8 @@ import { HttpError } from "./error.ts";
 import type { LayoutConfig, MaybeLazy, Route, RouteConfig } from "./types.ts";
 import type { RouteComponent } from "./segments.ts";
 import {
-  applyCommands,
   type ApiRouteCommand,
+  applyCommands,
   type Command,
   CommandType,
   DEFAULT_NOT_ALLOWED_METHOD,

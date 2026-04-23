@@ -67,7 +67,10 @@ function buildHandlerCommands<State, Role extends string>(
   return commands;
 }
 
-function finalizeApiRegistration(apis: AnyApiDefinition[], options: { title?: string; version?: string }): void {
+function finalizeApiRegistration(
+  apis: AnyApiDefinition[],
+  options: { title?: string; version?: string },
+): void {
   setApiSpec(generateOpenApiSpec(apis, options));
   // deno-lint-ignore no-console
   console.info(`[howl] ${apis.length} APIs registered`);
@@ -78,7 +81,9 @@ function finalizeApiRegistration(apis: AnyApiDefinition[], options: { title?: st
  * Used by HowlBuilder to populate the ApiRouteCommand at its registered position,
  * preserving middleware ordering relative to app.fsApiRoutes().
  */
-function resolveCaches(howlConfig: { cache?: CacheAdapter; rateLimitCache?: CacheAdapter } | null): { cache: CacheAdapter; rateLimitCache: CacheAdapter } {
+function resolveCaches(
+  howlConfig: { cache?: CacheAdapter; rateLimitCache?: CacheAdapter } | null,
+): { cache: CacheAdapter; rateLimitCache: CacheAdapter } {
   const cache = howlConfig?.cache ?? memoryCache();
   const rateLimitCache = howlConfig?.rateLimitCache ?? cache;
   return { cache, rateLimitCache };

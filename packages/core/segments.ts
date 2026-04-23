@@ -5,11 +5,7 @@ import type { LayoutConfig, Route } from "./types.ts";
 import { type Context, getInternals } from "./context.ts";
 import { recordSpanError, tracer } from "./otel.ts";
 import { type HandlerFn, isHandlerByMethod } from "./handlers.ts";
-import {
-  type AsyncAnyComponent,
-  type PageProps,
-  renderRouteComponent,
-} from "./render.ts";
+import { type AsyncAnyComponent, type PageProps, renderRouteComponent } from "./render.ts";
 import { HttpError } from "./error.ts";
 
 export type RouteComponent<State> =

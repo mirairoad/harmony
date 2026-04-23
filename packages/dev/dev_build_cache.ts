@@ -625,9 +625,7 @@ export function generateServerEntry(
     rootPath = JSON.stringify(options.root);
   }
 
-  const apiImport = options.hasApiRoutes
-    ? `import { apiHandler } from "@hushkey/howl/api";`
-    : "";
+  const apiImport = options.hasApiRoutes ? `import { apiHandler } from "@hushkey/howl/api";` : "";
 
   const apiRegistration = options.hasApiRoutes
     ? `

@@ -1,12 +1,4 @@
-import {
-  HOLE,
-  INFINITY_NEG,
-  INFINITY_POS,
-  NAN,
-  NULL,
-  UNDEFINED,
-  ZERO_NEG,
-} from "./constants.ts";
+import { HOLE, INFINITY_NEG, INFINITY_POS, NAN, NULL, UNDEFINED, ZERO_NEG } from "./constants.ts";
 
 export type Stringifiers = Record<
   string,

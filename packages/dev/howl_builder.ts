@@ -247,7 +247,10 @@ export class HowlBuilder<State = any> {
 
     await Promise.all(
       Array.from(this.#builders.entries()).map(async ([name, builder]) => {
-        const applySnapshot = await builder.build({ mode: "production", apiEntries: this.#apiEntries });
+        const applySnapshot = await builder.build({
+          mode: "production",
+          apiEntries: this.#apiEntries,
+        });
         applySnapshot(app);
         // deno-lint-ignore no-console
         console.log(`[howl] Built client: ${name}`);

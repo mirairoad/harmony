@@ -1,4 +1,10 @@
-import type { ApiDefinition, HowlApiConfig, QuerySchema, RequestBodySchema, ResponsesMap } from "./types.ts";
+import type {
+  ApiDefinition,
+  HowlApiConfig,
+  QuerySchema,
+  RequestBodySchema,
+  ResponsesMap,
+} from "./types.ts";
 import { memoryCache } from "./cache/memory.ts";
 
 /**

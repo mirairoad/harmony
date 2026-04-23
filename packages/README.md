@@ -2,13 +2,16 @@
 
 > The full-stack Deno framework powering [Hushkey](https://hushkey.app)
 
-Howl is a backend-first, Deno-native full-stack framework built on top of [Fresh](https://fresh.deno.dev). It was created to power Hushkey — a multi-vertical platform for foreigners living in Japan — and is open-sourced under MIT for others to use.
+Howl is a backend-first, Deno-native full-stack framework built on top of
+[Fresh](https://fresh.deno.dev). It was created to power Hushkey — a multi-vertical platform for
+foreigners living in Japan — and is open-sourced under MIT for others to use.
 
 ---
 
 ## Why Howl
 
-Fresh is excellent. But building a production platform on top of it revealed gaps that required workarounds:
+Fresh is excellent. But building a production platform on top of it revealed gaps that required
+workarounds:
 
 - No native cookie API on `ctx`
 - Response headers set in middleware didn't propagate to page renders
@@ -23,12 +26,12 @@ Howl solves all of these natively.
 
 ## Packages
 
-| Import | Description |
-|---|---|
-| `@hushkey/howl` | Core runtime — routing, context, islands, SSR |
-| `@hushkey/howl/dev` | Build pipeline — esbuild, HMR |
-| `@hushkey/howl/plugins` | Official plugins — Tailwind v4, CSS Modules |
-| `@hushkey/howl/api` | Endpoint contracts — defineApi, Zod validation, OpenAPI |
+| Import                     | Description                                                          |
+| -------------------------- | -------------------------------------------------------------------- |
+| `@hushkey/howl`            | Core runtime — routing, context, islands, SSR                        |
+| `@hushkey/howl/dev`        | Build pipeline — esbuild, HMR                                        |
+| `@hushkey/howl/plugins`    | Official plugins — Tailwind v4, CSS Modules                          |
+| `@hushkey/howl/api`        | Endpoint contracts — defineApi, Zod validation, OpenAPI              |
 | `@hushkey/howl/middleware` | Built-in middlewares — cors, csrf, csp, trailingSlashes, staticFiles |
 
 ---
@@ -67,6 +70,7 @@ my-app/
 ## Quick start
 
 **`howl.config.ts`**
+
 ```typescript
 import { defineConfig, memoryCache, redisCache, tryCache } from "@hushkey/howl/api";
 import { Redis } from "ioredis";
@@ -102,6 +106,7 @@ export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
 ```
 
 **`server/main.ts`**
+
 ```typescript
 import { Howl } from "@hushkey/howl";
 import { staticFiles } from "@hushkey/howl/middleware";
@@ -114,12 +119,13 @@ export const app = new Howl<State>({ logger: true });
 app.use(staticFiles());
 app.configure(middleware);
 app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts
-app.fsClientRoutes();      // crawls client/pages/, mounts all routes
+app.fsClientRoutes(); // crawls client/pages/, mounts all routes
 
 export default { app };
 ```
 
 **`dev.ts`**
+
 ```typescript
 import { HowlBuilder } from "@hushkey/howl/dev";
 import { tailwindPlugin } from "@hushkey/howl/plugins";
@@ -144,6 +150,7 @@ if (Deno.args.includes("build")) {
 ```
 
 **`client/pages/_app.tsx`** — root HTML shell
+
 ```tsx
 import type { RouteConfig } from "@hushkey/howl";
 import type { FunctionComponent, JSX } from "preact";
@@ -166,6 +173,7 @@ export default function App({ Component }: { Component: FunctionComponent }): JS
 ```
 
 **`client/pages/_layout.tsx`** — shared UI layout (nav, sidebar, etc.)
+
 ```tsx
 import type { FunctionComponent, JSX } from "preact";
 
@@ -189,11 +197,13 @@ export default function ({ Component }: { Component: FunctionComponent }): JSX.E
 }
 ```
 
-> **Note:** `@hushkey/howl/runtime` must point to `shared.ts`, not `client/mod.ts`.
-> `client/mod.ts` imports `partials.ts` which calls `document.addEventListener` at module level — it crashes server-side.
-> `shared.ts` exports `Partial`, `IS_BROWSER`, `asset`, and `Head` safely for both server and client.
+> **Note:** `@hushkey/howl/runtime` must point to `shared.ts`, not `client/mod.ts`. `client/mod.ts`
+> imports `partials.ts` which calls `document.addEventListener` at module level — it crashes
+> server-side. `shared.ts` exports `Partial`, `IS_BROWSER`, `asset`, and `Head` safely for both
+> server and client.
 
 **`client/pages/index.tsx`**
+
 ```tsx
 import type { Context } from "@hushkey/howl";
 import type { State } from "../../howl.config.ts";
@@ -207,10 +217,11 @@ export default function Index(ctx: Context<State>) {
 
 ## Middleware
 
-Built-in middlewares are available via `@hushkey/howl/middleware` (barrel) or individual subpath imports for tree-shaking.
+Built-in middlewares are available via `@hushkey/howl/middleware` (barrel) or individual subpath
+imports for tree-shaking.
 
 ```typescript
-import { cors, csrf, csp, trailingSlashes, staticFiles } from "@hushkey/howl/middleware";
+import { cors, csp, csrf, staticFiles, trailingSlashes } from "@hushkey/howl/middleware";
 // or individually:
 import { cors } from "@hushkey/howl/middleware/cors";
 import { csrf } from "@hushkey/howl/middleware/csrf";
@@ -228,9 +239,11 @@ app.use(trailingSlashes("never"));
 
 ## Endpoint contracts
 
-Each `.api.ts` file is a self-contained, typed endpoint contract: method, roles, Zod-validated query params / request body / responses, optional caching. No wiring needed — drop the file and it's live.
+Each `.api.ts` file is a self-contained, typed endpoint contract: method, roles, Zod-validated query
+params / request body / responses, optional caching. No wiring needed — drop the file and it's live.
 
 **`server/apis/public/ping.api.ts`**
+
 ```typescript
 import { defineApi } from "../../../howl.config.ts"; // pre-typed, no <State, Role> needed
 import { z } from "zod";
@@ -250,7 +263,7 @@ export default defineApi({
     200: z.object({ ok: z.boolean(), message: z.string() }),
   },
   handler: (ctx) => {
-    const { limit } = ctx.query();  // typed: { page?: string; limit: string }
+    const { limit } = ctx.query(); // typed: { page?: string; limit: string }
     const page = ctx.query("page"); // typed: string | undefined
     return {
       statusCode: 200,
@@ -262,6 +275,7 @@ export default defineApi({
 ```
 
 **`server/apis/private/users/get-me.api.ts`**
+
 ```typescript
 import { defineApi } from "../../../../howl.config.ts";
 import { z } from "zod";
@@ -283,7 +297,10 @@ export default defineApi({
 
 **File-system routing**
 
-The filesystem is the authoritative source for all API paths — no `path` field needed. `[param]` brackets become `:param`. Within each folder, static files (no brackets) are always registered before dynamic ones (`[param]`), so literal routes always match first. Explicit `path` in the definition overrides.
+The filesystem is the authoritative source for all API paths — no `path` field needed. `[param]`
+brackets become `:param`. Within each folder, static files (no brackets) are always registered
+before dynamic ones (`[param]`), so literal routes always match first. Explicit `path` in the
+definition overrides.
 
 ```
 server/apis/
@@ -304,7 +321,7 @@ server/apis/
 // server/apis/admin/[table]/[id].api.ts
 export default defineApi({
   name: "Get Row",
-  directory: "admin",   // used for OpenAPI tag only
+  directory: "admin", // used for OpenAPI tag only
   method: "GET",
   roles: ["admin"],
   params: z.object({
@@ -322,6 +339,7 @@ export default defineApi({
 ```
 
 Rules:
+
 - All files get their path from the filesystem — `directory + name` is bypassed
 - Within each folder: static files load before `[param]` files, directories last
 - Explicit `path` in the definition always wins over FS inference
@@ -330,6 +348,7 @@ Rules:
 ---
 
 **With typed request body:**
+
 ```typescript
 import { defineApi } from "../../../howl.config.ts";
 import { z } from "zod";
@@ -356,7 +375,8 @@ export default defineApi({
 });
 ```
 
-The OpenAPI spec is generated automatically. Expose it on any route you choose, with whatever auth middleware you need:
+The OpenAPI spec is generated automatically. Expose it on any route you choose, with whatever auth
+middleware you need:
 
 ```typescript
 import { getApiSpecs } from "@hushkey/howl/api";
@@ -368,21 +388,24 @@ app.get("/api/docs", (ctx) => ctx.json(getApiSpecs()));
 app.get("/api/docs", requireRole("admin"), (ctx) => ctx.json(getApiSpecs()));
 ```
 
-`getApiSpecs()` returns `null` before the server starts, and the fully typed `OpenAPIV3_1.Document` once routes are registered — query params, request body, path params, roles, and responses all included.
+`getApiSpecs()` returns `null` before the server starts, and the fully typed `OpenAPIV3_1.Document`
+once routes are registered — query params, request body, path params, roles, and responses all
+included.
 
 ---
 
 ## Caching
 
-Response caching is configured once in `howl.config.ts` and applied per-endpoint via `caching: { ttl }`.
+Response caching is configured once in `howl.config.ts` and applied per-endpoint via
+`caching: { ttl }`.
 
 Three adapters ship out of the box:
 
-| Adapter | Use case |
-|---|---|
-| `memoryCache()` | Default. In-process LRU, zero deps |
-| `redisCache(client)` | Shared cache across instances. Accepts any ioredis-compatible client |
-| `tryCache(primary, fallback)` | Tries primary first, falls back on miss or error |
+| Adapter                       | Use case                                                             |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `memoryCache()`               | Default. In-process LRU, zero deps                                   |
+| `redisCache(client)`          | Shared cache across instances. Accepts any ioredis-compatible client |
+| `tryCache(primary, fallback)` | Tries primary first, falls back on miss or error                     |
 
 ```typescript
 import { memoryCache, redisCache, tryCache } from "@hushkey/howl/api";
@@ -391,20 +414,23 @@ import { Redis } from "ioredis";
 const redis = new Redis(Deno.env.get("REDIS_URL"));
 
 // Redis-first, memory fallback
-cache: tryCache(redisCache(redis), memoryCache({ maxSize: 1000 }))
+cache: tryCache(redisCache(redis), memoryCache({ maxSize: 1000 }));
 
 // with timeout — falls back if primary doesn't respond within 150ms
-cache: tryCache(redisCache(redis), memoryCache(), { timeoutMs: 150 })
+cache: tryCache(redisCache(redis), memoryCache(), { timeoutMs: 150 });
 
 // two Redis nodes (e.g. regional primary + global fallback)
-cache: tryCache(redisCache(redisSG), redisCache(redisUS))
+cache: tryCache(redisCache(redisSG), redisCache(redisUS));
 ```
 
-`redisCache` attaches an error listener automatically so ioredis reconnection events don't become unhandled crashes — errors are logged via `console.warn` so they remain visible. Implement `CacheAdapter` to plug in any other backend.
+`redisCache` attaches an error listener automatically so ioredis reconnection events don't become
+unhandled crashes — errors are logged via `console.warn` so they remain visible. Implement
+`CacheAdapter` to plug in any other backend.
 
 ---
 
 ## Context extensions
+
 ```typescript
 // Cookies — first class, append semantics preserved
 ctx.cookies.set("token", jwt, { httpOnly: true, sameSite: "Strict" });
@@ -424,6 +450,7 @@ const all = ctx.query();
 ## React ecosystem
 
 React libs work transparently — no configuration needed:
+
 ```tsx
 // client/islands/ToastIsland.tsx
 import { toast, Toaster } from "sonner";
@@ -436,7 +463,12 @@ export default function ToastIsland() {
   return (
     <div>
       <Toaster />
-      <button onClick={() => { setCount(c => c + 1); toast.success(`${count + 1}`); }}>
+      <button
+        onClick={() => {
+          setCount((c) => c + 1);
+          toast.success(`${count + 1}`);
+        }}
+      >
         Click
       </button>
     </div>
@@ -448,27 +480,28 @@ export default function ToastIsland() {
 
 ## Conventions
 
-| Convention | Path |
-|---|---|
-| Root HTML shell | `client/pages/_app.tsx` |
-| Shared UI layout | `client/pages/_layout.tsx` |
-| Pages | `client/pages/` |
-| Islands | `client/islands/` |
-| Endpoint contracts | `server/apis/**/*.api.ts` |
-| Middleware | `server/middleware/` |
-| Static files | `static/` |
-| Config | `howl.config.ts` |
-| Build output | `dist/` |
-| OpenAPI spec | `getApiSpecs()` from `@hushkey/howl/api` |
-| Client runtime import | `@hushkey/howl/runtime` → `shared.ts` |
+| Convention            | Path                                     |
+| --------------------- | ---------------------------------------- |
+| Root HTML shell       | `client/pages/_app.tsx`                  |
+| Shared UI layout      | `client/pages/_layout.tsx`               |
+| Pages                 | `client/pages/`                          |
+| Islands               | `client/islands/`                        |
+| Endpoint contracts    | `server/apis/**/*.api.ts`                |
+| Middleware            | `server/middleware/`                     |
+| Static files          | `static/`                                |
+| Config                | `howl.config.ts`                         |
+| Build output          | `dist/`                                  |
+| OpenAPI spec          | `getApiSpecs()` from `@hushkey/howl/api` |
+| Client runtime import | `@hushkey/howl/runtime` → `shared.ts`    |
 
 ---
 
 ## Built-in logger
+
 ```typescript
 const app = new Howl<State>({
-  logger: true,  // timestamps + PID on all console output
-  debug: true,   // enables console.debug
+  logger: true, // timestamps + PID on all console output
+  debug: true, // enables console.debug
 });
 ```
 
@@ -476,7 +509,8 @@ const app = new Howl<State>({
 
 # Powered by Hushkey
 
-Howl is the framework behind [Hushkey](https://hushkey.app) — a platform helping foreigners navigate housing, jobs, and daily life in Japan.
+Howl is the framework behind [Hushkey](https://hushkey.app) — a platform helping foreigners navigate
+housing, jobs, and daily life in Japan.
 
 Every feature was built to solve a real production problem.
 

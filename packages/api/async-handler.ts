@@ -6,10 +6,10 @@ import { HttpError } from "./errors.ts";
 import { getApiRequestState } from "./_request_state.ts";
 
 function getClientIp(ctx: Context<any>): string {
-  return ctx.req.headers.get("x-forwarded-for")?.split(",")[0].trim()
-    ?? ctx.req.headers.get("x-real-ip")
-    ?? (ctx.info.remoteAddr as Deno.NetAddr).hostname
-    ?? "unknown";
+  return ctx.req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    ctx.req.headers.get("x-real-ip") ??
+    (ctx.info.remoteAddr as Deno.NetAddr).hostname ??
+    "unknown";
 }
 
 async function checkRateLimit(
@@ -103,7 +103,9 @@ export function asyncHandler<State, Role extends string>(
         if (!howlConfig?.checkPermissionStrategy) {
           // deno-lint-ignore no-console
           console.warn(
-            `🐺 "${name}" requires roles ${JSON.stringify(roles)} but no checkPermissionStrategy is configured. Pass checkPermissionStrategy to app.fsApiRoutes(). Request will proceed without auth.`,
+            `🐺 "${name}" requires roles ${
+              JSON.stringify(roles)
+            } but no checkPermissionStrategy is configured. Pass checkPermissionStrategy to app.fsApiRoutes(). Request will proceed without auth.`,
           );
         } else {
           const result = await howlConfig.checkPermissionStrategy(ctx, roles as Role[]);

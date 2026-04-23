@@ -204,9 +204,9 @@ export interface ApiDefinition<
   handler: B extends RequestBodySchema
     ? Q extends QuerySchema
       ? (ctx: ContextWithBodyAndQuery<B, Q, State>, app: Howl<State>) => HandlerReturn<R>
-      : (ctx: ContextWithBody<B, State>, app: Howl<State>) => HandlerReturn<R>
+    : (ctx: ContextWithBody<B, State>, app: Howl<State>) => HandlerReturn<R>
     : Q extends QuerySchema
-    ? (ctx: ContextWithQuery<Q, State>, app: Howl<State>) => HandlerReturn<R>
+      ? (ctx: ContextWithQuery<Q, State>, app: Howl<State>) => HandlerReturn<R>
     : (ctx: Context<State>, app: Howl<State>) => HandlerReturn<R>;
 }
 

@@ -25,7 +25,10 @@ export function redisCache(client: RedisLike): CacheAdapter {
   // outside any promise chain and crash if no listener is attached.
   client.on?.("error", (err) => {
     // deno-lint-ignore no-console
-    console.warn("[howl] redisCache: connection error (operations will fall back if tryCache is used) —", err);
+    console.warn(
+      "[howl] redisCache: connection error (operations will fall back if tryCache is used) —",
+      err,
+    );
   });
 
   return {
