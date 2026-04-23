@@ -1,0 +1,61 @@
+{
+  "slug": "rate-limiting",
+  "title": "Rate Limiting",
+  "description": "Per-route and global rate limiting with extended lockout support",
+  "sections": [
+    {
+      "id": "overview",
+      "heading": "Overview",
+      "blocks": [
+        { "type": "p", "text": "Rate limiting in Howl is built into the API pipeline. Every API route can have its own limit, fall back to a global default, or opt out entirely." },
+        { "type": "p", "text": "Limits are tracked per user ID (authenticated) or IP address (anonymous), using the cache adapter you configure." }
+      ]
+    },
+    {
+      "id": "default-limit",
+      "heading": "Global default",
+      "blocks": [
+        { "type": "p", "text": "Set defaultRateLimit in defineConfig to apply a limit to every endpoint unless overridden." },
+        { "type": "code", "lang": "ts", "text": "defineConfig({\n  defaultRateLimit: {\n    max: 100,       // 100 requests\n    windowMs: 60_000, // per minute\n  },\n});" }
+      ]
+    },
+    {
+      "id": "per-route",
+      "heading": "Per-route override",
+      "blocks": [
+        { "type": "p", "text": "Override the limit on any individual route. A stricter or looser limit replaces the default entirely for that route." },
+        { "type": "code", "lang": "ts", "text": "// Stricter limit for a sensitive endpoint\nexport default defineApi({\n  rateLimit: { max: 10, windowMs: 60_000 },\n  // ...\n});\n\n// Disable rate limiting for this route\nexport default defineApi({\n  rateLimit: false,\n  // ...\n});" }
+      ]
+    },
+    {
+      "id": "block-duration",
+      "heading": "Extended lockout (blockDurationMs)",
+      "blocks": [
+        { "type": "p", "text": "By default, a blocked client is locked out for the remaining window time. For sensitive endpoints like login or OTP verification, use blockDurationMs to extend the lockout beyond the window." },
+        { "type": "code", "lang": "ts", "text": "// Login endpoint: 5 attempts per minute, locked out for 1 hour\nexport default defineApi({\n  rateLimit: {\n    max: 5,\n    windowMs: 60_000,\n    blockDurationMs: 3_600_000, // 1 hour lockout\n  },\n  // ...\n});\n\n// OTP endpoint: 3 attempts per 5 min, locked out for 24 hours\nexport default defineApi({\n  rateLimit: {\n    max: 3,\n    windowMs: 300_000,\n    blockDurationMs: 86_400_000,\n  },\n  // ...\n});" },
+        { "type": "p", "text": "When a client exceeds the limit, responses include Retry-After, X-RateLimit-Limit, and X-RateLimit-Remaining headers." }
+      ]
+    },
+    {
+      "id": "multi-instance",
+      "heading": "Multi-instance deployments",
+      "blocks": [
+        { "type": "p", "text": "With multiple instances behind a load balancer, rate limit counters must be stored in a shared backend — otherwise each instance counts independently and the effective limit is max × N instances." },
+        { "type": "code", "lang": "ts", "text": "import { redisCache, memoryCache } from \"@hushkey/howl/api/cache\";\n\nconst redis = new Redis(Deno.env.get(\"REDIS_URL\"));\n\ndefineConfig({\n  // Response cache — per-instance is fine (responses are idempotent)\n  cache: memoryCache({ maxSize: 1000 }),\n  // Rate limit counters — must be shared across all instances\n  rateLimitCache: redisCache(redis),\n});" },
+        { "type": "warning", "text": "If you only set cache (not rateLimitCache), the same adapter is used for both. With memoryCache(), rate limits are per-instance and not enforced globally." }
+      ]
+    },
+    {
+      "id": "headers",
+      "heading": "Response headers",
+      "blocks": [
+        { "type": "p", "text": "Howl automatically sets standard rate limit headers on every API response:" },
+        { "type": "table", "headers": ["Header", "Value"], "rows": [
+          ["X-RateLimit-Limit", "Maximum requests allowed in the window"],
+          ["X-RateLimit-Remaining", "Requests remaining in the current window"],
+          ["Retry-After", "Seconds until the block expires (on 429 only)"]
+        ]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "slug": "context",
+  "title": "Context",
+  "description": "Request context, response helpers, cookies and headers",
+  "sections": [
+    {
+      "id": "overview",
+      "heading": "Overview",
+      "blocks": [
+        { "type": "p", "text": "Context is created fresh for every request. It carries the request, matched route, state, and all response helpers. Every middleware, layout, and page handler receives one." },
+        { "type": "code", "lang": "ts", "text": "import type { Context } from \"@hushkey/howl\";\n\n// Key properties\nctx.url        // URL object\nctx.req        // Request\nctx.params     // { [key: string]: string }\nctx.state      // your State type\nctx.headers    // mutable response Headers\nctx.cookies    // CookieManager\nctx.isPartial  // true if SPA nav request\nctx.route      // matched route pattern\nctx.info       // Deno.ServeHandlerInfo (remote addr)" }
+      ]
+    },
+    {
+      "id": "response-helpers",
+      "heading": "Response helpers",
+      "blocks": [
+        { "type": "p", "text": "All response helpers automatically merge ctx.headers, so any cookies or headers you set in middleware will be present in the response." },
+        { "type": "code", "lang": "ts", "text": "// JSON response\nreturn ctx.json({ ok: true, data: user });\nreturn ctx.json({ error: \"not found\" }, { status: 404 });\n\n// HTML response\nreturn ctx.html(\"<h1>Hello</h1>\");\n\n// Plain text\nreturn ctx.text(\"OK\");\n\n// SSR render — renders a JSX VNode\nreturn ctx.render(<MyPage data={data} />);\n\n// Redirect\nreturn ctx.redirect(\"/login\");\nreturn ctx.redirect(\"/dashboard\", 301);\n\n// Partial-aware redirect — preserves SPA nav state\nreturn ctx.partialRedirect(\"/login\");" }
+      ]
+    },
+    {
+      "id": "headers-cookies",
+      "heading": "Headers and cookies",
+      "blocks": [
+        { "type": "p", "text": "Set response headers via ctx.headers. These are merged into every response the current request produces." },
+        { "type": "code", "lang": "ts", "text": "// Response headers\nctx.headers.set(\"X-Request-Id\", crypto.randomUUID());\nctx.headers.append(\"Vary\", \"Accept-Encoding\");\n\n// Cookies\nctx.cookies.set(\"session\", token, { httpOnly: true, maxAge: 3600 });\nconst session = ctx.cookies.get(\"session\");\nctx.cookies.delete(\"session\");\nconst all = ctx.cookies.all(); // Record<string, string>" },
+        { "type": "tip", "text": "Default cookie options are httpOnly: true, sameSite: Strict, path: /. Override any of these per cookie." }
+      ]
+    },
+    {
+      "id": "streaming",
+      "heading": "Streaming",
+      "blocks": [
+        { "type": "p", "text": "ctx.stream() returns a raw streaming Response. Use it when you need full control over a byte stream." },
+        { "type": "code", "lang": "ts", "text": "return ctx.stream(async (write) => {\n  for await (const chunk of fileStream) {\n    await write(chunk);\n  }\n}, { headers: { \"Content-Type\": \"application/octet-stream\" } });" },
+        { "type": "p", "text": "For Server-Sent Events, use ctx.sse() — it handles framing, content-type, and keep-alive automatically. See the SSE section for details." }
+      ]
+    },
+    {
+      "id": "next",
+      "heading": "ctx.next()",
+      "blocks": [
+        { "type": "p", "text": "In middleware, call ctx.next() to invoke the next handler in the chain. Awaiting it lets you run code both before and after the downstream response." },
+        { "type": "code", "lang": "ts", "text": "app.use(async (ctx) => {\n  const start = Date.now();\n  const response = await ctx.next();\n  const ms = Date.now() - start;\n  response.headers.set(\"X-Response-Time\", `${ms}ms`);\n  return response;\n});" }
+      ]
+    }
+  ]
+}

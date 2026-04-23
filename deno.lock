@@ -1056,11 +1056,12 @@
       "npm:preact@*"
     ],
     "members": {
-      "examples/backend": {
+      "examples/fullstack": {
         "dependencies": [
           "jsr:@std/path@1",
           "npm:@radix-ui/react-tooltip@^1.2.8",
           "npm:daisyui@5.5.18",
+          "npm:ioredis@^5.10.0",
           "npm:preact@^10.25.0",
           "npm:react-hot-toast@^2.6.0",
           "npm:sonner@^2.0.7",
@@ -1068,12 +1069,11 @@
           "npm:zod@4.3.6"
         ]
       },
-      "examples/fullstack": {
+      "examples/www": {
         "dependencies": [
           "jsr:@std/path@1",
           "npm:@radix-ui/react-tooltip@^1.2.8",
           "npm:daisyui@5.5.18",
-          "npm:ioredis@^5.10.0",
           "npm:preact@^10.25.0",
           "npm:react-hot-toast@^2.6.0",
           "npm:sonner@^2.0.7",

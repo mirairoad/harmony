@@ -1,0 +1,60 @@
+{
+  "slug": "getting-started",
+  "title": "Getting Started",
+  "description": "Install Howl and create your first full-stack app",
+  "sections": [
+    {
+      "id": "requirements",
+      "heading": "Requirements",
+      "blocks": [
+        { "type": "p", "text": "Howl requires Deno 2.x. No Node.js or npm needed." },
+        { "type": "list", "items": ["Deno 2.x", "A terminal"] }
+      ]
+    },
+    {
+      "id": "installation",
+      "heading": "Installation",
+      "blocks": [
+        { "type": "p", "text": "Add Howl to your project using the JSR package registry." },
+        { "type": "code", "lang": "sh", "text": "deno add jsr:@hushkey/howl" },
+        { "type": "p", "text": "This adds the package to your deno.json imports. You will also want the dev tools:" },
+        { "type": "code", "lang": "sh", "text": "deno add jsr:@hushkey/howl/dev jsr:@hushkey/howl/api" }
+      ]
+    },
+    {
+      "id": "project-structure",
+      "heading": "Project structure",
+      "blocks": [
+        { "type": "p", "text": "Howl uses a file-system convention. A typical project looks like:" },
+        { "type": "code", "lang": "text", "text": "my-app/\n  server/\n    main.ts          ← Howl app entry\n    apis/\n      public/\n        ping.api.ts  ← API route\n  client/\n    pages/\n      _app.tsx       ← HTML shell\n      _layout.tsx    ← shared layout\n      index.tsx      ← home page\n    islands/\n      counter.island.tsx\n  static/\n    style.css\n  howl.config.ts     ← shared config & types\n  dev.ts             ← dev server entry" },
+        { "type": "tip", "text": "The server/ and client/ split is recommended but not required. You can keep everything flat for smaller apps." }
+      ]
+    },
+    {
+      "id": "config",
+      "heading": "howl.config.ts",
+      "blocks": [
+        { "type": "p", "text": "The config file defines your State type, roles, and exports a typed defineApi helper." },
+        { "type": "code", "lang": "ts", "text": "import { defineConfig, memoryCache } from \"@hushkey/howl/api\";\n\nexport interface State {\n  userContext?: { id: string; roles: Role[] };\n}\n\nexport const roles = [\"USER\", \"ADMIN\"] as const;\nexport type Role = typeof roles[number];\n\nexport const { defineApi, config: apiConfig } = defineConfig<State, Role>({\n  roles,\n  cache: memoryCache({ maxSize: 500 }),\n  defaultRateLimit: { max: 100, windowMs: 60_000 },\n  checkPermissionStrategy: (ctx, allowedRoles) => {\n    const user = ctx.state.userContext;\n    if (!user) return ctx.json({ error: \"Unauthorized\" }, { status: 401 });\n    if (!allowedRoles.some(r => user.roles.includes(r))) {\n      return ctx.json({ error: \"Forbidden\" }, { status: 403 });\n    }\n  },\n});" }
+      ]
+    },
+    {
+      "id": "server",
+      "heading": "server/main.ts",
+      "blocks": [
+        { "type": "p", "text": "Create the Howl app, wire middleware, register API routes, then serve client pages." },
+        { "type": "code", "lang": "ts", "text": "import { Howl, staticFiles } from \"@hushkey/howl\";\nimport { compression, coalesceRequests } from \"@hushkey/howl/middleware\";\nimport { apiConfig } from \"../howl.config.ts\";\n\nexport const app = new Howl({\n  logger: true,\n});\n\napp.use(staticFiles());\napp.use(compression());\napp.use(coalesceRequests());\napp.fsApiRoutes(apiConfig);\napp.fsClientRoutes();\n\nexport default { app };" }
+      ]
+    },
+    {
+      "id": "dev-server",
+      "heading": "Running the dev server",
+      "blocks": [
+        { "type": "p", "text": "Create dev.ts to start the HowlBuilder, which handles esbuild, CSS, and hot reload." },
+        { "type": "code", "lang": "ts", "text": "import { HowlBuilder } from \"@hushkey/howl/dev\";\nimport { tailwindPlugin } from \"@hushkey/howl/plugins\";\nimport { app } from \"./server/main.ts\";\n\nconst builder = new HowlBuilder(app, {\n  root: import.meta.dirname ?? \"\",\n  importApp: () => app,\n  serverEntry: \"./server/main.ts\",\n  clientEntry: \"./client/pages/_app.ts\",\n});\n\ntailwindPlugin(builder.getBuilder(\"default\")!);\n\nif (Deno.args.includes(\"build\")) {\n  await builder.build();\n} else {\n  await builder.listen();\n}" },
+        { "type": "code", "lang": "sh", "text": "deno run -A dev.ts" },
+        { "type": "tip", "text": "Add --watch to dev.ts to enable auto-restart on server file changes." }
+      ]
+    }
+  ]
+}

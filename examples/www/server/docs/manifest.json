@@ -1,0 +1,12 @@
+[
+  { "slug": "getting-started", "title": "Getting Started", "description": "Install Howl and create your first full-stack app", "order": 1 },
+  { "slug": "routing", "title": "Routing", "description": "File-based routing, layouts, and SPA navigation", "order": 2 },
+  { "slug": "context", "title": "Context", "description": "Request context, response helpers, cookies and headers", "order": 3 },
+  { "slug": "api-routes", "title": "API Routes", "description": "Type-safe API routes with Zod validation and OpenAPI generation", "order": 4 },
+  { "slug": "rate-limiting", "title": "Rate Limiting", "description": "Per-route and global rate limiting with extended lockout support", "order": 5 },
+  { "slug": "middlewares", "title": "Middlewares", "description": "Built-in middleware and writing your own", "order": 6 },
+  { "slug": "islands", "title": "Islands", "description": "Interactive client components with selective hydration", "order": 7 },
+  { "slug": "sse", "title": "Server-Sent Events", "description": "Real-time streaming with ctx.sse()", "order": 8 },
+  { "slug": "cache-adapters", "title": "Cache Adapters", "description": "Memory, Redis, Deno KV, and tiered caching", "order": 9 },
+  { "slug": "configuration", "title": "Configuration", "description": "HowlOptions, defineConfig, and builder setup", "order": 10 }
+]
