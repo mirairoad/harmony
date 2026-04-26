@@ -56,7 +56,7 @@ export default async function Layout(
           {isHome ? "Docs" : "Home"}
         </a>
         <a
-          href="https://github.com/hushkey/howl"
+          href="https://github.com/mirairoad/howl"
           target="_blank"
           class="btn btn-ghost btn-md rounded-xl text-base text-base-content/50 hover:text-base-content hover:bg-primary/30 gap-2"
         >
@@ -126,7 +126,7 @@ export default async function Layout(
           <span class="font-mono text-[11px] font-bold">Docs</span>
         </a>
         <a
-          href="https://github.com/hushkey/howl"
+          href="https://github.com/mirairoad/howl"
           target="_blank"
           class="flex flex-col items-center justify-center gap-1 flex-1 py-2 text-base-content/50 transition-colors"
         >

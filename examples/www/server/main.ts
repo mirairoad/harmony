@@ -24,7 +24,7 @@ app.use(staticFiles());
 // app.use(coalesceRequests());
 
 app.get("/docs", (ctx) => {
-  return ctx.partialRedirect("/docs/getting-started");
+  return ctx.redirect("/docs/getting-started");
 });
 
 // fs endpoints

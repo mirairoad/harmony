@@ -14,9 +14,15 @@ export default function DocsIndex(
     <>
       <Head>
         <title>{title} — Documentation</title>
-        <meta name="description" content={`Guides and API reference for ${title}, the full-stack Deno framework.`} />
+        <meta
+          name="description"
+          content={`Guides and API reference for ${title}, the full-stack Deno framework.`}
+        />
         <meta property="og:title" content={`${title} — Documentation`} />
-        <meta property="og:description" content={`Guides and API reference for ${title}, the full-stack Deno framework.`} />
+        <meta
+          property="og:description"
+          content={`Guides and API reference for ${title}, the full-stack Deno framework.`}
+        />
         <meta property="og:image" content="https://howl.hushkey.dev/og-image.png" />
         <meta property="og:url" content="https://howl.hushkey.dev/docs" />
         <meta property="og:type" content="website" />
@@ -25,7 +31,6 @@ export default function DocsIndex(
 
       {/* Mobile: px-0 full-bleed. Desktop: centered with padding. */}
       <div class="sm:max-w-3xl sm:mx-auto sm:px-6 py-6 sm:py-12">
-
         {/* Hero */}
         <div class="mb-8 sm:mb-10 px-0">
           <p class="font-mono text-xs uppercase tracking-widest text-base-content/50 mb-2">
@@ -35,8 +40,8 @@ export default function DocsIndex(
             {title} Docs
           </h1>
           <p class="text-base sm:text-lg text-base-content/70 sm:text-base-content/60 leading-relaxed">
-            Backend-first, Deno-native full-stack framework. Typed endpoints, SSR islands,
-            built-in RBAC, and middleware that propagates to every response.
+            Backend-first, Deno-native full-stack framework. Typed endpoints, SSR islands, built-in
+            RBAC, and middleware that propagates to every response.
           </p>
           <div class="flex gap-2 mt-4 flex-wrap">
             {["Deno 2.x", "Fresh 2.x", "Preact 10", "TypeScript"].map((t) => (
@@ -52,7 +57,7 @@ export default function DocsIndex(
           </p>
           <div class="font-mono text-sm overflow-x-auto whitespace-nowrap">
             <span class="text-primary/60 select-none mr-1">$</span>
-            <span class="text-base-content/70">deno add </span>
+            <span class="text-base-content/70">deno add</span>
             <span class="text-primary font-semibold">jsr:@hushkey/howl</span>
           </div>
         </div>
@@ -84,10 +89,18 @@ export default function DocsIndex(
 
         {/* Footer */}
         <div class="mt-12 pt-6 border-t border-base-300 flex gap-6 text-sm text-base-content/40 font-mono px-0">
-          <a href="https://jsr.io/@hushkey/howl" class="hover:text-base-content transition-colors" target="_blank">
+          <a
+            href="https://jsr.io/@hushkey/howl"
+            class="hover:text-base-content transition-colors"
+            target="_blank"
+          >
             JSR ↗
           </a>
-          <a href="https://github.com/hushkey/howl" class="hover:text-base-content transition-colors" target="_blank">
+          <a
+            href="https://github.com/mirairoad/howl"
+            class="hover:text-base-content transition-colors"
+            target="_blank"
+          >
             GitHub ↗
           </a>
         </div>
