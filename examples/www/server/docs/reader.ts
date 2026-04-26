@@ -9,6 +9,8 @@ import sse from "./sse.json" with { type: "json" };
 import cacheAdapters from "./cache-adapters.json" with { type: "json" };
 import rateLimiting from "./rate-limiting.json" with { type: "json" };
 import configuration from "./configuration.json" with { type: "json" };
+import websockets from "./websockets.json" with { type: "json" };
+import performance from "./performance.json" with { type: "json" };
 
 export type BlockType =
   | { type: "p"; text: string }
@@ -41,6 +43,7 @@ export interface ManifestItem {
 
 const DOC_REGISTRY: Record<string, DocPage> = {
   "getting-started": gettingStarted as unknown as DocPage,
+  "configuration": configuration as unknown as DocPage,
   "routing": routing as unknown as DocPage,
   "api-routes": apiRoutes as unknown as DocPage,
   "context": context as unknown as DocPage,
@@ -49,7 +52,8 @@ const DOC_REGISTRY: Record<string, DocPage> = {
   "sse": sse as unknown as DocPage,
   "cache-adapters": cacheAdapters as unknown as DocPage,
   "rate-limiting": rateLimiting as unknown as DocPage,
-  "configuration": configuration as unknown as DocPage,
+  "websockets": websockets as unknown as DocPage,
+  "performance": performance as unknown as DocPage,
 };
 
 export function readManifest(): ManifestItem[] {

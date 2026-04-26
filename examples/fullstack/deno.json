@@ -2,6 +2,9 @@
   "name": "@howl/fullstack",
   "version": "0.0.0",
   "exports": "./server/main.ts",
+  "tasks": {
+    "dev": "deno run -A --env-file='../../.env' --watch --watch-exclude=dist/,node_modules/ dev.ts"
+  },
   "imports": {
     "@hushkey/howl": "../../packages/core/mod.ts",
     "@hushkey/howl/api": "../../packages/api/mod.ts",

@@ -1,12 +1,13 @@
 import { trace } from "@opentelemetry/api";
 import { DENO_DEPLOYMENT_ID } from "../utils/build-id.ts";
 import * as colors from "@std/fmt/colors";
-import { type MaybeLazyMiddleware, type Middleware, runMiddlewares } from "./middlewares/mod.ts";
+import type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";
 import { Context } from "./context.ts";
 import { mergePath, type Method, UrlPatternRouter } from "./router.ts";
 import type { HowlConfig, ResolvedHowlConfig } from "./config.ts";
 import type { BuildCache } from "./build_cache.ts";
 import { HttpError } from "./error.ts";
+import { STATUS_TEXT } from "@std/http/status";
 import type { LayoutConfig, MaybeLazy, Route, RouteConfig } from "./types.ts";
 import type { RouteComponent } from "./segments.ts";
 import {
@@ -51,6 +52,51 @@ export interface ApiConfig {
   spec?: boolean;
 }
 
+/**
+ * Lifecycle handlers registered on a WebSocket endpoint via {@linkcode Howl.ws}.
+ * Each callback receives the upgraded {@linkcode WebSocket} plus the
+ * {@linkcode Context} from the upgrading request, so middleware-set state
+ * (auth, request id, etc.) is available without re-parsing.
+ */
+export interface WebSocketHandlers<State> {
+  /** Fires once the connection is open. */
+  open?(socket: WebSocket, ctx: Context<State>): void;
+  /** Fires on every inbound frame. */
+  message?(socket: WebSocket, event: MessageEvent, ctx: Context<State>): void;
+  /** Fires when the connection closes (clean or unclean). */
+  close?(
+    socket: WebSocket,
+    code: number,
+    reason: string,
+    ctx: Context<State>,
+  ): void;
+  /** Fires on protocol/transport errors. */
+  error?(socket: WebSocket, event: Event, ctx: Context<State>): void;
+}
+
+/**
+ * Options accepted by {@linkcode Howl.ws}. Extends Deno's
+ * {@linkcode Deno.UpgradeWebSocketOptions} with a `port` for binding the
+ * endpoint to a separate `Deno.serve` listener.
+ */
+export interface WebSocketUpgradeOptions extends Deno.UpgradeWebSocketOptions {
+  /**
+   * If set, the WS endpoint is exposed **only** on this port — not on the
+   * main app port. {@linkcode Howl.listen} automatically spawns a second
+   * `Deno.serve` for it, sharing the same middleware pipeline so auth and
+   * `ctx.state` work identically. Non-WS routes return 404 on this port.
+   *
+   * Useful when the WS endpoint should scale or terminate TLS independently
+   * from the rest of the HTTP surface.
+   */
+  port?: number;
+  /**
+   * Optional hostname for the secondary listener. Defaults to the main app's
+   * hostname (or `0.0.0.0`).
+   */
+  hostname?: string;
+}
+
 // deno-lint-ignore no-explicit-any
 export const DEFAULT_CONN_INFO: any = {
   localAddr: { transport: "tcp", hostname: "localhost", port: 8080 },
@@ -75,7 +121,9 @@ const DEFAULT_ERROR_HANDLER = async <State>(ctx: Context<State>) => {
       // deno-lint-ignore no-console
       console.error(error);
     }
-    return new Response(error.message, { status: error.status });
+    return new Response(error.message || STATUS_TEXT[error.status], {
+      status: error.status,
+    });
   }
   // deno-lint-ignore no-console
   console.error(error);
@@ -244,6 +292,8 @@ export class Howl<State = any> {
   #clients: ClientConfig[] = [];
   #getBuildCache: () => BuildCache<State> | null = () => null;
   #commands: Command<State>[] = [];
+  /** Maps a port to the set of WS paths bound to it (port-isolated). */
+  #wsPortRoutes: Map<number, { hostname?: string; paths: Set<string> }> = new Map();
   #onError: (err: unknown) => void = NOOP;
   #logger: HowlLogger | null = null;
   #apiRoutesEnabled = false;
@@ -376,49 +426,134 @@ export class Howl<State = any> {
     route: MaybeLazy<Route<State>>,
     config?: RouteConfig,
   ): this {
-    this.#commands.push(newRouteCmd(path, route, config, false));
+    // includeLastSegment: true so programmatic routes attach to the deepest
+    // segment in the segment tree — that's where matching `app.layout()`
+    // entries live. Without this, `app.route("/foo", …)` would only see
+    // layouts registered on the root and miss the `/foo` layout itself.
+    this.#commands.push(newRouteCmd(path, route, config, true));
     return this;
   }
 
   /** Add a GET handler. */
   get(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("GET", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("GET", path, middlewares, true));
     return this;
   }
 
   /** Add a POST handler. */
   post(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("POST", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("POST", path, middlewares, true));
     return this;
   }
 
   /** Add a PATCH handler. */
   patch(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("PATCH", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("PATCH", path, middlewares, true));
     return this;
   }
 
   /** Add a PUT handler. */
   put(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("PUT", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("PUT", path, middlewares, true));
     return this;
   }
 
   /** Add a DELETE handler. */
   delete(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("DELETE", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("DELETE", path, middlewares, true));
     return this;
   }
 
   /** Add a HEAD handler. */
   head(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("HEAD", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("HEAD", path, middlewares, true));
     return this;
   }
 
   /** Add a handler for all HTTP verbs. */
   all(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
-    this.#commands.push(newHandlerCmd("ALL", path, middlewares, false));
+    this.#commands.push(newHandlerCmd("ALL", path, middlewares, true));
+    return this;
+  }
+
+  /**
+   * Register a WebSocket endpoint at `path`. Mirrors the API of Fresh's
+   * `app.ws()` — handlers receive the upgraded `WebSocket` and the request
+   * `Context`, so middleware-set state (auth, request id, …) is available
+   * before the first frame.
+   *
+   * Always uses managed mode: Howl performs the `Upgrade` check, calls
+   * `Deno.upgradeWebSocket`, wires your handlers as event listeners, and
+   * returns the upgrade response. Non-WS requests get a 426.
+   *
+   * @example
+   * ```ts
+   * app.ws("/ws", {
+   *   open: (socket, ctx) => {
+   *     const userId = ctx.state.userContext?.user.id;
+   *     if (!userId) { socket.close(1008, "Unauthorized"); return; }
+   *     hub.subscribe(`user:${userId}`, socket);
+   *   },
+   *   message: (socket, e) => socket.send(`echo: ${e.data}`),
+   *   close: (socket) => hub.unsubscribe(socket),
+   * }, { idleTimeout: 30 });
+   * ```
+   */
+  ws(
+    path: string,
+    handlers: WebSocketHandlers<State>,
+    options?: WebSocketUpgradeOptions,
+  ): this {
+    const wsPort = options?.port;
+    const wsHost = options?.hostname;
+    if (wsPort !== undefined) {
+      const entry = this.#wsPortRoutes.get(wsPort) ??
+        { hostname: wsHost, paths: new Set<string>() };
+      entry.paths.add(path);
+      this.#wsPortRoutes.set(wsPort, entry);
+    }
+
+    // Only the upgrade-relevant subset is forwarded to Deno.upgradeWebSocket.
+    const upgradeOptions: Deno.UpgradeWebSocketOptions | undefined = options
+      ? { protocol: options.protocol, idleTimeout: options.idleTimeout }
+      : undefined;
+
+    const middleware: Middleware<State> = (ctx) => {
+      if (ctx.req.headers.get("upgrade") !== "websocket") {
+        return new Response("WebSocket upgrade required", { status: 426 });
+      }
+
+      const { socket, response } = Deno.upgradeWebSocket(ctx.req, upgradeOptions);
+
+      if (handlers.open) {
+        socket.addEventListener(
+          "open",
+          () => handlers.open!(socket, ctx),
+        );
+      }
+      if (handlers.message) {
+        socket.addEventListener(
+          "message",
+          (event) => handlers.message!(socket, event, ctx),
+        );
+      }
+      if (handlers.close) {
+        socket.addEventListener(
+          "close",
+          (event) => handlers.close!(socket, event.code, event.reason, ctx),
+        );
+      }
+      if (handlers.error) {
+        socket.addEventListener(
+          "error",
+          (event) => handlers.error!(socket, event, ctx),
+        );
+      }
+
+      return response;
+    };
+
+    this.#commands.push(newHandlerCmd("GET", path, [middleware], true));
     return this;
   }
 
@@ -514,8 +649,13 @@ export class Howl<State = any> {
 
   /**
    * Create a handler function for `Deno.serve` or testing.
+   *
+   * Pass `boundPort` when building a handler for a secondary listener that
+   * should only serve the WS routes bound to that port (everything else 404s).
+   * Omit it for the main listener — port-bound WS paths are then 404'd from
+   * the main port instead. {@linkcode Howl.listen} wires this automatically.
    */
-  handler(): (
+  handler(boundPort?: number): (
     request: Request,
     info?: Deno.ServeHandlerInfo,
   ) => Promise<Response> {
@@ -530,12 +670,25 @@ export class Howl<State = any> {
       }
     }
 
-    const router = new UrlPatternRouter<MaybeLazyMiddleware<State>>();
-    const { rootMiddlewares } = applyCommands(
+    const router = new UrlPatternRouter<Middleware<State>>();
+    const { rootHandler } = applyCommands(
       router,
       this.#commands,
       this.config.basePath,
+      this.#onError,
     );
+
+    // Pre-compute which paths this listener should accept.
+    // - Secondary (boundPort set): only the WS paths bound to that port.
+    // - Main (boundPort undefined): everything except paths bound to a WS port.
+    const wsPortRoutes = this.#wsPortRoutes;
+    const allWsPortPaths = new Set<string>();
+    for (const entry of wsPortRoutes.values()) {
+      for (const p of entry.paths) allWsPortPaths.add(p);
+    }
+    const allowedWsPaths = boundPort !== undefined
+      ? wsPortRoutes.get(boundPort)?.paths ?? new Set<string>()
+      : null;
 
     return async (
       req: Request,
@@ -544,9 +697,20 @@ export class Howl<State = any> {
       const url = new URL(req.url);
       url.pathname = url.pathname.replace(/\/+/g, "/");
 
+      // Port-isolated WS routing.
+      if (allowedWsPaths !== null) {
+        // Secondary listener: only its bound WS paths are reachable.
+        if (!allowedWsPaths.has(url.pathname)) {
+          return new Response("Not Found", { status: 404 });
+        }
+      } else if (allWsPortPaths.has(url.pathname)) {
+        // Main listener: hide WS paths that belong to a secondary port.
+        return new Response("Not Found", { status: 404 });
+      }
+
       const method = req.method.toUpperCase() as Method;
       const matched = router.match(method, url);
-      let { params, pattern, handlers, methodMatch } = matched;
+      let { params, pattern, item: handler, methodMatch } = matched;
 
       const span = trace.getActiveSpan();
       if (span && pattern) {
@@ -556,7 +720,7 @@ export class Howl<State = any> {
 
       let next: () => Promise<Response>;
       if (pattern === null || !methodMatch) {
-        handlers = rootMiddlewares;
+        handler = rootHandler;
       }
 
       if (matched.pattern !== null && !methodMatch) {
@@ -583,8 +747,7 @@ export class Howl<State = any> {
       );
 
       try {
-        if (handlers.length === 0) return await next();
-        const result = await runMiddlewares(handlers, ctx, this.#onError);
+        const result = await (handler !== null ? handler(ctx) : next());
         if (!(result instanceof Response)) {
           throw new Error(
             `Expected a "Response" instance, but got: ${result}`,
@@ -609,12 +772,33 @@ export class Howl<State = any> {
     if (!options.onListen) {
       options.onListen = createOnListen(this.config.basePath, options);
     }
-    const handler = this.handler();
+    const mainHandler = this.handler();
+
+    // Spawn a separate Deno.serve for each WS port — each gets a handler
+    // bound to that port so it only serves the WS paths registered there.
+    // The middleware pipeline is the same, so auth and ctx.state work
+    // identically on every listener.
+    for (const [port, entry] of this.#wsPortRoutes) {
+      const wsHandler = this.handler(port);
+      Deno.serve({
+        port,
+        hostname: entry.hostname ?? options.hostname,
+        onListen: ({ hostname, port }) => {
+          // deno-lint-ignore no-console
+          console.log(
+            `    ${colors.bold("WebSocket:")} ${
+              colors.rgb24(`ws://${hostname}:${port}`, 0x9b59b6)
+            }  ${colors.dim(`← ${[...entry.paths].join(", ")}`)}`,
+          );
+        },
+      }, wsHandler);
+    }
+
     if (options.port) {
-      Deno.serve(options, handler);
+      Deno.serve(options, mainHandler);
       return;
     }
-    listenOnFreePort(options, handler);
+    listenOnFreePort(options, mainHandler);
   }
 
   /**

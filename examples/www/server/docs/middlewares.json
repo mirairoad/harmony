@@ -7,58 +7,179 @@
       "id": "overview",
       "heading": "Overview",
       "blocks": [
-        { "type": "p", "text": "Middleware is the backbone of Howl's request pipeline. Every app.use() call adds a function that can inspect, modify, or terminate a request before it reaches a route handler." },
-        { "type": "code", "lang": "ts", "text": "import { compression, coalesceRequests } from \"@hushkey/howl/middleware\";\n\napp.use(coalesceRequests()); // recommended first\napp.use(compression());\napp.use(staticFiles());\napp.fsApiRoutes(config);\napp.fsClientRoutes();" }
+        {
+          "type": "p",
+          "text": "Middleware is the backbone of Howl's request pipeline. Every app.use() call adds a function that can inspect, modify, or terminate a request before it reaches a route handler."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import { compression, coalesceRequests } from \"@hushkey/howl/middleware\";\n\napp.use(coalesceRequests()); // recommended first\napp.use(compression());\napp.use(staticFiles());\napp.fsApiRoutes(config);\napp.fsClientRoutes();"
+        }
       ]
     },
     {
       "id": "builtin",
       "heading": "Built-in middleware",
       "blocks": [
-        { "type": "table", "headers": ["Middleware", "Import", "Purpose"], "rows": [
-          ["staticFiles()", "@hushkey/howl/middleware/static-files", "Serves the static/ directory"],
-          ["compression()", "@hushkey/howl/middleware", "Gzip/deflate for text, JSON, JS, SVG"],
-          ["coalesceRequests()", "@hushkey/howl/middleware", "Deduplicates concurrent GETs (public routes)"],
-          ["cors(options)", "@hushkey/howl/middleware/cors", "CORS headers"],
-          ["csrf(options)", "@hushkey/howl/middleware/csrf", "CSRF token validation"],
-          ["csp(options)", "@hushkey/howl/middleware/csp", "Content-Security-Policy headers"],
-          ["trailingSlashes()", "@hushkey/howl/middleware/trailing-slashes", "Normalises trailing slash"]
-        ]}
+        {
+          "type": "table",
+          "headers": ["Middleware", "Import", "Purpose"],
+          "rows": [
+            [
+              "staticFiles()",
+              "@hushkey/howl/middleware/static-files",
+              "Serves the static/ directory"
+            ],
+            ["compression()", "@hushkey/howl/middleware", "Gzip/deflate for text, JSON, JS, SVG"],
+            [
+              "coalesceRequests()",
+              "@hushkey/howl/middleware",
+              "Deduplicates concurrent GETs (public routes)"
+            ],
+            ["cors(options)", "@hushkey/howl/middleware/cors", "CORS headers"],
+            ["csrf(options)", "@hushkey/howl/middleware/csrf", "CSRF token validation"],
+            ["csp(options)", "@hushkey/howl/middleware/csp", "Content-Security-Policy headers"],
+            [
+              "trailingSlashes()",
+              "@hushkey/howl/middleware/trailing-slashes",
+              "Normalises trailing slash"
+            ]
+          ]
+        }
       ]
     },
     {
       "id": "compression",
       "heading": "compression()",
       "blocks": [
-        { "type": "p", "text": "Compresses responses with gzip or deflate based on the client's Accept-Encoding header. Skips binary content types and already-encoded responses." },
-        { "type": "code", "lang": "ts", "text": "import { compression } from \"@hushkey/howl/middleware\";\napp.use(compression());" },
-        { "type": "tip", "text": "Place compression() early so it wraps all downstream responses including static files and API routes." }
+        {
+          "type": "p",
+          "text": "Compresses responses with gzip or deflate based on the client's Accept-Encoding header. Skips binary content types and already-encoded responses."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import { compression } from \"@hushkey/howl/middleware\";\napp.use(compression());"
+        },
+        {
+          "type": "tip",
+          "text": "Place compression() early so it wraps all downstream responses including static files and API routes."
+        }
       ]
     },
     {
       "id": "coalesce",
       "heading": "coalesceRequests()",
       "blocks": [
-        { "type": "p", "text": "When many concurrent GET requests arrive for the same URL (thundering herd), only one handler runs. All others await and receive a clone of the first response." },
-        { "type": "p", "text": "Only unauthenticated requests are coalesced — any request with a Cookie or Authorization header gets its own handler execution to prevent state leakage." },
-        { "type": "code", "lang": "ts", "text": "import { coalesceRequests } from \"@hushkey/howl/middleware\";\napp.use(coalesceRequests()); // place before route handlers" }
+        {
+          "type": "p",
+          "text": "When many concurrent GET requests arrive for the same URL (thundering herd), only one handler runs. All others await and receive a clone of the first response."
+        },
+        {
+          "type": "p",
+          "text": "Only unauthenticated requests are coalesced — any request with a Cookie or Authorization header gets its own handler execution to prevent state leakage."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import { coalesceRequests } from \"@hushkey/howl/middleware\";\napp.use(coalesceRequests()); // place before route handlers"
+        }
+      ]
+    },
+    {
+      "id": "csp",
+      "heading": "csp()",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Sets a Content-Security-Policy header on every response. By default, csp() generates a fresh nonce per request and emits script-src 'nonce-…' 'strict-dynamic' 'self' — strict CSP works with no 'unsafe-inline' required. The same nonce is propagated to the bootloader <script> so it executes under the policy."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import { csp } from \"@hushkey/howl/middleware\";\n\napp.use(csp()); // nonce on by default\n\n// Read the active nonce from your own middleware\nimport { getNonce } from \"@hushkey/howl\";\napp.use((ctx) => {\n  const nonce = getNonce(ctx); // 32-char hex string per request\n  return ctx.next();\n});"
+        },
+        { "type": "p", "text": "Options:" },
+        {
+          "type": "table",
+          "headers": ["Option", "Default", "Purpose"],
+          "rows": [
+            [
+              "nonce",
+              "true",
+              "Generate a per-request nonce. Set to false to fall back to script-src 'self' 'unsafe-inline'"
+            ],
+            [
+              "reportOnly",
+              "false",
+              "Switch to Content-Security-Policy-Report-Only header (observe without enforcing)"
+            ],
+            ["reportTo", "—", "If set, adds report-to / report-uri / Reporting-Endpoints header"],
+            ["csp", "[]", "Extra directives appended to the defaults"]
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "Test in report-only mode first: csp({ reportOnly: true, reportTo: \"/api/csp-report\" }) lets you collect violations without breaking the site."
+        }
+      ]
+    },
+    {
+      "id": "trailing-slashes",
+      "heading": "trailingSlashes()",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Normalises every URL to either always or never have a trailing slash, redirecting mismatches with a 308 response."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import { trailingSlashes } from \"@hushkey/howl/middleware\";\n\napp.use(trailingSlashes(\"never\"));  // /about/ → 308 redirect to /about\napp.use(trailingSlashes(\"always\")); // /about  → 308 redirect to /about/"
+        },
+        {
+          "type": "p",
+          "text": "The router itself is now also tolerant of trailing-slash mismatches: a request to /wissen/ matches a route registered as /wissen (and vice versa) without the middleware. The middleware is only needed when you want to canonicalise URLs for SEO/analytics or force a redirect."
+        },
+        {
+          "type": "tip",
+          "text": "When two routes are registered that differ only by trailing slash (e.g. /wissen and /wissen/), exact matches take priority — the fallback only kicks in when no exact match exists."
+        }
       ]
     },
     {
       "id": "custom",
       "heading": "Custom middleware",
       "blocks": [
-        { "type": "p", "text": "A middleware is any function that takes a Context and returns a Response. Call ctx.next() to pass control downstream." },
-        { "type": "code", "lang": "ts", "text": "import type { Middleware } from \"@hushkey/howl\";\nimport type { State } from \"./howl.config.ts\";\n\nconst requestId: Middleware<State> = (ctx) => {\n  ctx.headers.set(\"X-Request-Id\", crypto.randomUUID());\n  return ctx.next();\n};\n\n// Guard: redirect unauthenticated users\nconst requireAuth: Middleware<State> = (ctx) => {\n  if (!ctx.state.userContext) {\n    return ctx.partialRedirect(\"/login\");\n  }\n  return ctx.next();\n};\n\napp.use(requestId);\napp.get(\"/dashboard\", requireAuth, (ctx) => ctx.render(<Dashboard />));" },
-        { "type": "tip", "text": "Use ctx.partialRedirect() instead of ctx.redirect() in middleware guards — it preserves the SPA partial nav state so the browser doesn't do a full reload after the redirect." }
+        {
+          "type": "p",
+          "text": "A middleware is any function that takes a Context and returns a Response. Call ctx.next() to pass control downstream."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import type { Middleware } from \"@hushkey/howl\";\nimport type { State } from \"./howl.config.ts\";\n\nconst requestId: Middleware<State> = (ctx) => {\n  ctx.headers.set(\"X-Request-Id\", crypto.randomUUID());\n  return ctx.next();\n};\n\n// Guard: redirect unauthenticated users\nconst requireAuth: Middleware<State> = (ctx) => {\n  if (!ctx.state.userContext) {\n    return ctx.partialRedirect(\"/login\");\n  }\n  return ctx.next();\n};\n\napp.use(requestId);\napp.get(\"/dashboard\", requireAuth, (ctx) => ctx.render(<Dashboard />));"
+        },
+        {
+          "type": "tip",
+          "text": "Use ctx.partialRedirect() instead of ctx.redirect() in middleware guards — it preserves the SPA partial nav state so the browser doesn't do a full reload after the redirect."
+        }
       ]
     },
     {
       "id": "file-middleware",
       "heading": "File-based middleware",
       "blocks": [
-        { "type": "p", "text": "Middleware can also be defined in files following the .middleware.ts convention. These apply to all routes within their directory segment." },
-        { "type": "code", "lang": "ts", "text": "// middleware/_index.middleware.ts\nimport type { Howl } from \"@hushkey/howl\";\nimport type { State } from \"../howl.config.ts\";\n\nexport const middleware = (app: Howl<State>) => {\n  app.use(requestId);\n  app.use(logger);\n};" }
+        {
+          "type": "p",
+          "text": "Middleware can also be defined in files following the .middleware.ts convention. These apply to all routes within their directory segment."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "// middleware/_index.middleware.ts\nimport type { Howl } from \"@hushkey/howl\";\nimport type { State } from \"../howl.config.ts\";\n\nexport const middleware = (app: Howl<State>) => {\n  app.use(requestId);\n  app.use(logger);\n};"
+        }
       ]
     }
   ]

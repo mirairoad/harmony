@@ -48,6 +48,45 @@ Deno.test("ctx.partialRedirect — adds howl-partial when isPartial", async () =
   expect(loc.includes("howl-partial=true")).toBe(true);
 });
 
+Deno.test("ctx.redirect — preserves partial param on partial requests", async () => {
+  const t = makeApp();
+  t.app.get("/auth", (ctx) => ctx.redirect("/sign-in"));
+
+  const normal = await t.fetch("/auth");
+  expect(normal.headers.get("Location")).toBe("/sign-in");
+
+  const partial = await t.fetch("/auth?howl-partial=true");
+  expect(partial.headers.get("Location")).toBe("/sign-in?howl-partial=true");
+});
+
+Deno.test("ctx.redirect — appends with & when target already has query", async () => {
+  const t = makeApp();
+  t.app.get("/r", (ctx) => ctx.redirect("/dashboard?tab=home"));
+
+  const partial = await t.fetch("/r?howl-partial=true");
+  expect(partial.headers.get("Location")).toBe(
+    "/dashboard?tab=home&howl-partial=true",
+  );
+});
+
+Deno.test("ctx.redirect — places partial param before hash fragment", async () => {
+  const t = makeApp();
+  t.app.get("/r", (ctx) => ctx.redirect("/page#section"));
+
+  const partial = await t.fetch("/r?howl-partial=true");
+  expect(partial.headers.get("Location")).toBe(
+    "/page?howl-partial=true#section",
+  );
+});
+
+Deno.test("ctx.redirect — does not double-append when target already has the param", async () => {
+  const t = makeApp();
+  t.app.get("/r", (ctx) => ctx.redirect("/page?howl-partial=true"));
+
+  const partial = await t.fetch("/r?howl-partial=true");
+  expect(partial.headers.get("Location")).toBe("/page?howl-partial=true");
+});
+
 Deno.test("ctx.query — single key and full object", async () => {
   const t = makeApp();
   t.app.get("/search", (ctx) => {

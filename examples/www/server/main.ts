@@ -1,6 +1,6 @@
 import { Howl, staticFiles } from "@hushkey/howl";
 import { apiConfig, type State } from "../howl.config.ts";
-import { coalesceRequests, compression } from "@hushkey/howl/middleware";
+// import { coalesceRequests, compression } from "@hushkey/howl/middleware";
 import denoJson from "../deno.json" with { type: "json" };
 
 const APP_NAME = Deno.env.get("APP_NAME") ?? "HOWL";
@@ -20,8 +20,8 @@ app.use((ctx) => {
   return ctx.next();
 });
 app.use(staticFiles());
-app.use(compression());
-app.use(coalesceRequests());
+// app.use(compression());
+// app.use(coalesceRequests());
 
 app.get("/docs", (ctx) => {
   return ctx.partialRedirect("/docs/getting-started");

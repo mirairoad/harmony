@@ -9,22 +9,94 @@ type TokenKind = "keyword" | "string" | "comment" | "number" | "builtin" | "plai
 type Token = { text: string; kind: TokenKind };
 
 const KW = new Set([
-  "const", "let", "var", "function", "async", "await", "return",
-  "import", "export", "from", "type", "interface", "class", "extends",
-  "implements", "new", "this", "if", "else", "for", "while", "switch",
-  "case", "break", "continue", "try", "catch", "finally", "throw",
-  "typeof", "instanceof", "void", "null", "undefined", "true", "false",
-  "default", "static", "public", "private", "protected", "readonly",
-  "as", "of", "in", "delete", "yield", "enum", "declare", "abstract",
-  "override", "satisfies", "namespace",
+  "const",
+  "let",
+  "var",
+  "function",
+  "async",
+  "await",
+  "return",
+  "import",
+  "export",
+  "from",
+  "type",
+  "interface",
+  "class",
+  "extends",
+  "implements",
+  "new",
+  "this",
+  "if",
+  "else",
+  "for",
+  "while",
+  "switch",
+  "case",
+  "break",
+  "continue",
+  "try",
+  "catch",
+  "finally",
+  "throw",
+  "typeof",
+  "instanceof",
+  "void",
+  "null",
+  "undefined",
+  "true",
+  "false",
+  "default",
+  "static",
+  "public",
+  "private",
+  "protected",
+  "readonly",
+  "as",
+  "of",
+  "in",
+  "delete",
+  "yield",
+  "enum",
+  "declare",
+  "abstract",
+  "override",
+  "satisfies",
+  "namespace",
 ]);
 
 const BUILTIN = new Set([
-  "string", "number", "boolean", "object", "symbol", "bigint", "never",
-  "unknown", "any", "Array", "Promise", "Record", "Partial", "Required",
-  "Pick", "Omit", "console", "Deno", "Date", "Set", "Map", "Error",
-  "URL", "Response", "Request", "Headers", "JSON", "Math", "Object",
-  "String", "Number", "Boolean",
+  "string",
+  "number",
+  "boolean",
+  "object",
+  "symbol",
+  "bigint",
+  "never",
+  "unknown",
+  "any",
+  "Array",
+  "Promise",
+  "Record",
+  "Partial",
+  "Required",
+  "Pick",
+  "Omit",
+  "console",
+  "Deno",
+  "Date",
+  "Set",
+  "Map",
+  "Error",
+  "URL",
+  "Response",
+  "Request",
+  "Headers",
+  "JSON",
+  "Math",
+  "Object",
+  "String",
+  "Number",
+  "Boolean",
 ]);
 
 const TOKEN_CLS: Record<TokenKind, string> = {
@@ -40,7 +112,12 @@ function tokenize(code: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
   let plain = "";
-  const flush = () => { if (plain) { tokens.push({ text: plain, kind: "plain" }); plain = ""; } };
+  const flush = () => {
+    if (plain) {
+      tokens.push({ text: plain, kind: "plain" });
+      plain = "";
+    }
+  };
 
   while (i < code.length) {
     if (code[i] === "/" && code[i + 1] === "/") {
@@ -82,7 +159,10 @@ function tokenize(code: string): Token[] {
       let j = i;
       while (j < code.length && /[\w$]/.test(code[j])) j++;
       const word = code.slice(i, j);
-      tokens.push({ text: word, kind: KW.has(word) ? "keyword" : BUILTIN.has(word) ? "builtin" : "plain" });
+      tokens.push({
+        text: word,
+        kind: KW.has(word) ? "keyword" : BUILTIN.has(word) ? "builtin" : "plain",
+      });
       i = j;
       continue;
     }
@@ -125,7 +205,9 @@ function Block({ block }: { block: BlockType }) {
   switch (block.type) {
     case "p":
       return (
-        <p class="text-base sm:text-base text-base-content/80 leading-relaxed my-3 px-0">{block.text}</p>
+        <p class="text-base sm:text-base text-base-content/80 leading-relaxed my-3 px-0">
+          {block.text}
+        </p>
       );
 
     case "code":
@@ -183,9 +265,7 @@ function Block({ block }: { block: BlockType }) {
             <tbody>
               {block.rows.map((row, i) => (
                 <tr key={i} class="hover:bg-base-200/50">
-                  {row.map((cell, j) => (
-                    <td key={j} class="font-mono text-xs py-3">{cell}</td>
-                  ))}
+                  {row.map((cell, j) => <td key={j} class="font-mono text-xs py-3">{cell}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -238,9 +318,9 @@ export default function DocPage(
   const { slug } = ctx.params;
   const [doc, manifest] = [readDoc(slug), readManifest()];
 
-  if (!doc) {
-    return ctx.redirect("/docs") as unknown as JSX.Element;
-  }
+  // if (!doc) {
+  //   return ctx.redirect("/docs") as unknown as JSX.Element;
+  // }
 
   return (
     <>

@@ -14,7 +14,7 @@ import type { Stringifiers } from "../../jsonify/stringify.ts";
 import type { PageProps } from "../../render.ts";
 import { asset, Partial, type PartialProps } from "../shared.ts";
 import { stringify } from "../../jsonify/stringify.ts";
-import type { Island } from "../../context.ts";
+import { getNonce, type Island } from "../../context.ts";
 import {
   assetHashingHook,
   CLIENT_NAV_ATTR,
@@ -79,13 +79,23 @@ export class RenderState {
   renderedHtmlHead = false;
   hasRuntimeScript = false;
 
+  /**
+   * Set to `true` whenever the page renders something that requires the
+   * client runtime: an island, a `<Partial>`, an `f-client-nav` boundary, or
+   * an `f-view-transition` body. Pages without any of these ship 0 KB of JS.
+   */
+  needsClientRuntime = false;
+
   constructor(
     // deno-lint-ignore no-explicit-any
     public ctx: PageProps<any, any>,
     public buildCache: BuildCache,
     public partialId: string,
   ) {
-    this.nonce = crypto.randomUUID().replace(/-/g, "");
+    // Reuse the CSP middleware's per-request nonce when available so the
+    // bootloader script matches the `script-src 'nonce-X'` directive.
+    const existing = getNonce(ctx as unknown as Parameters<typeof getNonce>[0]);
+    this.nonce = existing ?? crypto.randomUUID().replace(/-/g, "");
   }
 
   clear() {
@@ -108,7 +118,11 @@ options[OptionsType.VNODE] = (vnode) => {
   if (RENDER_STATE !== null) {
     RENDER_STATE.owners.set(vnode, RENDER_STATE!.ownerStack.at(-1)!);
     if (vnode.type === "a") {
-      setActiveUrl(vnode, RENDER_STATE.ctx.url.pathname);
+      setActiveUrl(
+        vnode,
+        RENDER_STATE.ctx.url.pathname,
+        RENDER_STATE.ctx.url.search,
+      );
     }
   }
   assetHashingHook(vnode, BUILD_ID);
@@ -169,10 +183,22 @@ function normalizeKey(key: unknown): string {
 const oldDiff = options[OptionsType.DIFF];
 options[OptionsType.DIFF] = (vnode) => {
   if (RENDER_STATE !== null) {
+    // Mark client-runtime triggers on string elements during render so the
+    // bootloader script + Link preload header are emitted only when needed.
+    if (typeof vnode.type === "string") {
+      const props = vnode.props as Record<string, unknown>;
+      if (vnode.type === "body" && props["f-view-transition"]) {
+        RENDER_STATE.needsClientRuntime = true;
+      }
+      if (CLIENT_NAV_ATTR in props) {
+        RENDER_STATE.needsClientRuntime = true;
+      }
+    }
     patcher: if (
       typeof vnode.type === "function" && vnode.type !== Fragment
     ) {
       if (vnode.type === Partial) {
+        RENDER_STATE.needsClientRuntime = true;
         RENDER_STATE.partialDepth++;
 
         const name = (vnode.props as PartialProps).name;
@@ -218,6 +244,7 @@ options[OptionsType.DIFF] = (vnode) => {
             islandAssets.add(island.css[i]);
           }
           islands.add(island);
+          RENDER_STATE.needsClientRuntime = true;
           const props = vnode.props ?? {};
           const propsIdx = islandProps.push({ slots: [], props }) - 1;
           const key = vnode.key ? normalizeKey(vnode.key) : "";
@@ -241,6 +268,7 @@ options[OptionsType.DIFF] = (vnode) => {
         }
 
         islands.add(island);
+        RENDER_STATE.needsClientRuntime = true;
 
         const originalType = vnode.type;
         vnode.type = (props) => {
@@ -350,6 +378,8 @@ options[OptionsType.DIFF] = (vnode) => {
                   cacheKey += String(props[key].__html);
                   continue;
                 } else if (originalType === "meta" && key === "content") {
+                  continue;
+                } else if (originalType === "link" && key === "href") {
                   continue;
                 }
 
@@ -617,6 +647,13 @@ function FreshRuntimeScript() {
       })
     );
   } else {
+    // Zero-JS default: page renders nothing that needs the client runtime
+    // (no island, no <Partial>, no f-client-nav, no f-view-transition) →
+    // skip the bootloader script entirely. The error overlay (dev-only)
+    // renders independently as an iframe and stays available.
+    if (!RENDER_STATE!.needsClientRuntime) {
+      return buildCache.features.errorOverlay ? h(ShowErrorOverlay, null) : null;
+    }
     const islandImports = islandArr.map((island) => {
       const named = island.exportName === "default"
         ? island.name

@@ -3,6 +3,13 @@ import { BUILD_ID } from "../../utils/build-id.ts";
 import { assetInternal, assetSrcSetInternal } from "./shared_internal.ts";
 
 /**
+ * Re-exported so client-side code can detect `instanceof HttpError`
+ * without pulling server-only imports. The class itself lives in
+ * `packages/core/error.ts`.
+ */
+export { HttpError } from "../error.ts";
+
+/**
  * Returns true when the current runtime is the browser and false otherwise. This is used for guard runtime-dependent code.
  * Shorthand for the following:
  * `typeof document !== "undefined"`

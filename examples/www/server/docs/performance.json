@@ -1,0 +1,75 @@
+{
+  "slug": "performance",
+  "title": "Performance & View Transitions",
+  "description": "Zero-JS by default, CSP nonces, and animated partial swaps",
+  "sections": [
+    {
+      "id": "zero-js",
+      "heading": "Zero-JS by default",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Pages that don't render an island, a <Partial>, an f-client-nav boundary, or an f-view-transition body ship 0 KB of JavaScript. The bootloader <script> tag and the Link: …; rel=\"modulepreload\" response header are both skipped automatically — no flag, no opt-in."
+        },
+        {
+          "type": "p",
+          "text": "The renderer tracks a needsClientRuntime flag during render. If anything on the page needs the runtime, the bootloader and preload header are wired in. If not, they're omitted entirely."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// Static page → no <script>, no Link header\nexport default function About() {\n  return <h1>About</h1>;\n}\n\n// Interactive page → runtime is loaded automatically\nexport default function Counter() {\n  return (\n    <body f-client-nav>\n      <CounterIsland />\n    </body>\n  );\n}"
+        },
+        {
+          "type": "table",
+          "headers": ["Marker", "Why it needs the runtime"],
+          "rows": [
+            ["Island (.island.tsx)", "Hydrates on the client"],
+            ["<Partial>", "Receives DOM swaps from partial nav"],
+            ["f-client-nav", "Intercepts links/forms for SPA-style nav"],
+            ["f-view-transition", "Wraps DOM swaps in startViewTransition()"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "csp-nonce",
+      "heading": "CSP nonce injection",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "The csp() middleware generates a fresh per-request nonce, propagates it to the bootloader <script nonce=\"…\">, and emits script-src 'nonce-…' 'strict-dynamic' 'self'. Strict CSP works with no 'unsafe-inline' required."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "import { csp } from \"@hushkey/howl/middleware\";\nimport { getNonce } from \"@hushkey/howl\";\n\napp.use(csp());                 // nonce on by default\napp.use(csp({ nonce: false })); // legacy: script-src 'self' 'unsafe-inline'\n\n// Read the active nonce in your own middleware\napp.use((ctx) => {\n  const nonce = getNonce(ctx); // 32-char hex string\n  return ctx.next();\n});"
+        }
+      ]
+    },
+    {
+      "id": "view-transitions",
+      "heading": "View Transitions",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Add f-view-transition to your <body> and partial swaps will be wrapped in document.startViewTransition() — animate between DOM states with regular CSS. The runtime falls back to a direct DOM swap on browsers that don't implement the API."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// client/pages/_app.tsx\nexport default function App({ Component }: PageProps) {\n  return (\n    <html>\n      <body f-client-nav f-view-transition>\n        <Partial name=\"main\">\n          <Component />\n        </Partial>\n      </body>\n    </html>\n  );\n}"
+        },
+        {
+          "type": "code",
+          "lang": "css",
+          "text": "/* Animate the whole document */\n@keyframes fade-in  { from { opacity: 0 } to { opacity: 1 } }\n@keyframes fade-out { from { opacity: 1 } to { opacity: 0 } }\n\n::view-transition-old(root) { animation: fade-out 0.2s ease-in;  }\n::view-transition-new(root) { animation: fade-in  0.2s ease-out; }\n\n/* Animate individual elements that should morph across pages */\n.sidebar { view-transition-name: sidebar; }"
+        },
+        {
+          "type": "tip",
+          "text": "Pair f-view-transition with f-client-nav. Without f-client-nav, browser-native page navigation will tear down the document and the transition won't run."
+        }
+      ]
+    }
+  ]
+}

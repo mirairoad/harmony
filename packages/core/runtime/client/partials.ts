@@ -236,7 +236,18 @@ document.addEventListener("submit", async (e) => {
       el.getAttribute(PARTIAL_ATTR) ?? el.action;
     const rawActionUrl = e.submitter?.getAttribute("formaction") ?? el.action;
 
-    if (rawPartialUrl !== "") {
+    // Forms inside f-client-nav are only intercepted when they explicitly
+    // opt in. Without this check, every form would be hijacked because
+    // `el.action` defaults to the current URL — there's no empty-string
+    // signal we can rely on. A form opts in by setting `f-partial`,
+    // `formaction`, or an explicit `action` attribute (or having a
+    // submitter button with one of those).
+    const hasExplicitPartial = e.submitter?.hasAttribute(PARTIAL_ATTR) ||
+      e.submitter?.hasAttribute("formaction") ||
+      el.hasAttribute(PARTIAL_ATTR) ||
+      el.hasAttribute("action");
+
+    if (hasExplicitPartial && rawPartialUrl !== "") {
       e.preventDefault();
 
       const partialUrl = new URL(rawPartialUrl, location.href);
@@ -261,7 +272,14 @@ document.addEventListener("submit", async (e) => {
 
 function updateLinks(url: URL) {
   document.querySelectorAll("a").forEach((link) => {
-    const match = matchesUrl(url.pathname, link.href);
+    // Don't touch user-set `aria-current` — only update attributes Howl
+    // marked itself (data-current / data-ancestor on the previous render).
+    const hasFreshAria = link.hasAttribute(DATA_CURRENT) ||
+      link.hasAttribute(DATA_ANCESTOR);
+    const hasUserAria = !hasFreshAria && link.hasAttribute("aria-current");
+    if (hasUserAria) return;
+
+    const match = matchesUrl(url.pathname, link.href, url.search);
 
     if (match === UrlMatchKind.Current) {
       link.setAttribute(DATA_CURRENT, "true");
@@ -403,7 +421,28 @@ export async function applyPartials(res: Response): Promise<void> {
     } else if (child.nodeName === "SCRIPT") {
       const script = child as HTMLScriptElement;
       if (script.src === `${INTERNAL_PREFIX}/howl-runtime.js`) return;
-      // TODO: What to do with script tags?
+
+      // Append data scripts (e.g. application/ld+json for SEO structured
+      // data) to the document head. Skip executable script types to
+      // avoid unintended re-execution on every partial swap.
+      const t = script.type;
+      if (
+        t !== "" && t !== "module" && t !== "text/javascript" &&
+        t !== "importmap"
+      ) {
+        const selector = script.id
+          ? `script[type="${t}"][id="${script.id}"]`
+          : `script[type="${t}"]`;
+        const existing = Array.from(
+          document.head.querySelectorAll<HTMLScriptElement>(selector),
+        ).find((el) => script.id ? true : el.textContent === script.textContent);
+
+        if (existing === undefined) {
+          document.head.appendChild(script);
+        } else if (existing.textContent !== script.textContent) {
+          existing.textContent = script.textContent;
+        }
+      }
     } else if (child.nodeName === "STYLE") {
       const style = child as HTMLStyleElement;
       // TODO: Do we need a smarter merging strategy?
@@ -414,7 +453,21 @@ export async function applyPartials(res: Response): Promise<void> {
     }
   });
 
-  revivePartials(ctx, allProps, doc.body);
+  // View Transitions: when either the current or incoming <body> opts in via
+  // `f-view-transition`, wrap the partial swap in `document.startViewTransition`
+  // so browsers can animate between DOM states. Falls back to a direct swap
+  // when the API isn't available.
+  const wantsTransition = document.body.hasAttribute("f-view-transition") ||
+    doc.body.hasAttribute("f-view-transition");
+  // deno-lint-ignore no-explicit-any
+  const startViewTransition = (document as any).startViewTransition?.bind(document);
+  if (wantsTransition && typeof startViewTransition === "function") {
+    await startViewTransition(() => {
+      revivePartials(ctx, allProps, doc.body);
+    }).finished;
+  } else {
+    revivePartials(ctx, allProps, doc.body);
+  }
 
   if (ctx.foundPartials === 0) {
     throw new NoPartialsError(

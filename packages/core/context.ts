@@ -94,6 +94,25 @@ export let getInternals: <T>(ctx: Context<T>) => UiTree<unknown, T>;
 /** @internal Attaches additional CSS asset URLs that should be preloaded for the response. */
 export let setAdditionalStyles: <T>(ctx: Context<T>, css: string[]) => void;
 
+const NONCES = new WeakMap<object, string>();
+
+/**
+ * Set a per-request CSP nonce on the context. The renderer will use this
+ * nonce on the bootloader `<script>` tag, allowing strict CSP without
+ * `'unsafe-inline'`. Typically set by the {@linkcode csp} middleware.
+ */
+export function setNonce<T>(ctx: Context<T>, nonce: string): void {
+  NONCES.set(ctx, nonce);
+}
+
+/**
+ * Read the per-request CSP nonce previously stored via {@linkcode setNonce}.
+ * Returns `undefined` if no middleware set one.
+ */
+export function getNonce<T>(ctx: Context<T>): string | undefined {
+  return NONCES.get(ctx);
+}
+
 /**
  * The context passed to every middleware. It is unique for every request.
  */
@@ -252,6 +271,19 @@ export class Context<State> {
       location = `${pathname.replaceAll(/\/+/g, "/")}${search}`;
     }
 
+    // Preserve the partial search param through redirects so the redirected
+    // page renders in partial mode and the SPA stays in partial-nav flow.
+    // Inserts the param before any hash fragment.
+    if (this.isPartial) {
+      const hashIdx = location.indexOf("#");
+      const base = hashIdx > -1 ? location.slice(0, hashIdx) : location;
+      const hash = hashIdx > -1 ? location.slice(hashIdx) : "";
+      if (!base.includes(`${PARTIAL_SEARCH_PARAM}=`)) {
+        const separator = base.includes("?") ? "&" : "?";
+        location = `${base}${separator}${PARTIAL_SEARCH_PARAM}=true${hash}`;
+      }
+    }
+
     const headers = new Headers({ location });
 
     // Merge ctx.headers into redirect response — cookies and headers set in
@@ -268,25 +300,20 @@ export class Context<State> {
   }
 
   /**
-   * Redirect the user, automatically preserving the partial navigation
-   * search parameter when the current request is a partial request.
-   *
-   * Use this in middleware guards instead of manually threading
-   * `?howl-partial=true` — it handles that for you.
+   * Redirect the user. Equivalent to {@linkcode redirect} now that
+   * `redirect()` automatically preserves the partial nav param for
+   * partial requests — kept as an alias so existing callers don't break.
    *
    * ```ts
-   * // Before
-   * return ctx.redirect(`/sign-in${ctx.isPartial ? '?howl-partial=true' : ''}`);
-   *
-   * // After
-   * return ctx.partialRedirect('/sign-in');
+   * return ctx.partialRedirect("/sign-in");
+   * // identical to:
+   * return ctx.redirect("/sign-in");
    * ```
+   *
+   * @deprecated Use {@linkcode redirect} — it now handles partial nav
+   * preservation automatically.
    */
   partialRedirect(pathOrUrl: string, status = 302): Response {
-    if (this.isPartial) {
-      const hasQuery = pathOrUrl.includes("?");
-      pathOrUrl = `${pathOrUrl}${hasQuery ? "&" : "?"}${PARTIAL_SEARCH_PARAM}=true`;
-    }
     return this.redirect(pathOrUrl, status);
   }
 
@@ -454,26 +481,34 @@ export class Context<State> {
         }
         throw err;
       } finally {
-        // Add preload headers
+        // Zero-JS default: nothing on the page needs the client runtime
+        // (no island, no <Partial>, no f-client-nav, no f-view-transition)
+        // → skip the modulepreload Link header entirely. Pages with only CSS
+        // still preload styles below.
         const basePath = this.config.basePath;
-        const runtimeUrl = state.buildCache.clientEntry.startsWith(".")
-          ? state.buildCache.clientEntry.slice(1)
-          : state.buildCache.clientEntry;
-        const linkParts: string[] = [
-          `<${encodeURI(`${basePath}${runtimeUrl}`)}>; rel="modulepreload"; as="script"`,
-        ];
-        state.islands.forEach((island) => {
-          const specifier = `${basePath}${
-            island.file.startsWith(".") ? island.file.slice(1) : island.file
-          }`;
-          linkParts.push(`<${encodeURI(specifier)}>; rel="modulepreload"; as="script"`);
-        });
+        const linkParts: string[] = [];
+        if (state.needsClientRuntime) {
+          const runtimeUrl = state.buildCache.clientEntry.startsWith(".")
+            ? state.buildCache.clientEntry.slice(1)
+            : state.buildCache.clientEntry;
+          linkParts.push(
+            `<${encodeURI(`${basePath}${runtimeUrl}`)}>; rel="modulepreload"; as="script"`,
+          );
+          state.islands.forEach((island) => {
+            const specifier = `${basePath}${
+              island.file.startsWith(".") ? island.file.slice(1) : island.file
+            }`;
+            linkParts.push(`<${encodeURI(specifier)}>; rel="modulepreload"; as="script"`);
+          });
+        }
         // CSS preloads: browser fetches island stylesheets from HTTP headers,
         // before it has parsed the <link> tags in the HTML body.
         state.islandAssets.forEach((css) => {
           linkParts.push(`<${encodeURI(css)}>; rel="preload"; as="style"`);
         });
-        headers.append("Link", linkParts.join(", "));
+        if (linkParts.length > 0) {
+          headers.append("Link", linkParts.join(", "));
+        }
 
         state.clear();
         setRenderState(null);

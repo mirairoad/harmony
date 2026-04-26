@@ -8,7 +8,7 @@ export type Method =
   | "OPTIONS";
 
 export type RouteByMethod<T> = {
-  [m in Method]: T[];
+  [m in Method]: T | null;
 };
 
 export interface StaticRouteDef<T> {
@@ -23,30 +23,30 @@ export interface DynamicRouteDef<T> {
 
 function newByMethod<T>(): RouteByMethod<T> {
   return {
-    GET: [],
-    POST: [],
-    PATCH: [],
-    DELETE: [],
-    PUT: [],
-    HEAD: [],
-    OPTIONS: [],
+    GET: null,
+    POST: null,
+    PATCH: null,
+    DELETE: null,
+    PUT: null,
+    HEAD: null,
+    OPTIONS: null,
   };
 }
 
 export interface RouteResult<T> {
   params: Record<string, string>;
-  handlers: T[];
+  item: T | null;
   methodMatch: boolean;
   pattern: string | null;
 }
 
 export interface Router<T> {
   add(
-    method: Method | "ALL",
+    method: Method,
     pathname: string,
-    handlers: T[],
+    item: T,
   ): void;
-  match(method: Method, url: URL, init?: T[]): RouteResult<T>;
+  match(method: Method, url: URL): RouteResult<T>;
   getAllowedMethods(pattern: string): string[];
 }
 
@@ -69,7 +69,7 @@ export class UrlPatternRouter<T> implements Router<T> {
   add(
     method: Method,
     pathname: string,
-    handlers: T[],
+    item: T,
   ) {
     let allowed = this.#allowed.get(pathname);
     if (allowed === undefined) {
@@ -105,28 +105,46 @@ export class UrlPatternRouter<T> implements Router<T> {
       byMethod = def.byMethod;
     }
 
-    byMethod[method].push(...handlers);
+    if (byMethod[method] === null) {
+      byMethod[method] = item;
+    }
   }
 
-  match(method: Method, url: URL, init: T[] = []): RouteResult<T> {
+  match(method: Method, url: URL): RouteResult<T> {
     const result: RouteResult<T> = {
       params: Object.create(null),
-      handlers: init,
+      item: null,
       methodMatch: false,
       pattern: null,
     };
 
-    const staticMatch = this.#statics.get(url.pathname);
-    if (staticMatch !== undefined) {
-      result.pattern = url.pathname;
+    let pathname = url.pathname;
+    let staticMatch = this.#statics.get(pathname);
 
-      let handlers = staticMatch.byMethod[method];
-      if (method === "HEAD" && handlers.length === 0) {
-        handlers = staticMatch.byMethod.GET;
+    // Trailing-slash fallback: if `/foo` was registered but the request is
+    // `/foo/` (or vice versa), try the alternate form before falling through
+    // to dynamic patterns. This stops `trailingSlashes("always")` style
+    // setups from 404'ing requests aimed at routes registered without the
+    // slash. The root path is exempt — it has no alternate form.
+    if (staticMatch === undefined && pathname !== "/") {
+      const alt = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname + "/";
+      const altMatch = this.#statics.get(alt);
+      if (altMatch !== undefined) {
+        staticMatch = altMatch;
+        pathname = alt;
       }
-      if (handlers.length > 0) {
+    }
+
+    if (staticMatch !== undefined) {
+      result.pattern = pathname;
+
+      let item = staticMatch.byMethod[method];
+      if (method === "HEAD" && item === null) {
+        item = staticMatch.byMethod.GET;
+      }
+      if (item !== null) {
         result.methodMatch = true;
-        result.handlers.push(...handlers);
+        result.item = item;
       }
 
       return result;
@@ -140,14 +158,14 @@ export class UrlPatternRouter<T> implements Router<T> {
 
       result.pattern = route.pattern.pathname;
 
-      let handlers = route.byMethod[method];
-      if (method === "HEAD" && handlers.length === 0) {
-        handlers = route.byMethod.GET;
+      let item = route.byMethod[method];
+      if (method === "HEAD" && item === null) {
+        item = route.byMethod.GET;
       }
 
-      if (handlers.length > 0) {
+      if (item !== null) {
         result.methodMatch = true;
-        result.handlers.push(...handlers);
+        result.item = item;
 
         // Decode matched params
         for (const [key, value] of Object.entries(match.pathname.groups)) {
@@ -178,6 +196,11 @@ export function pathToPattern(
   }
 
   let route = "";
+  // Track segments that contribute a required `/` to the route. Routes that
+  // consist solely of optional parameters (e.g. `[[id]].tsx`,
+  // `(group)/[[id]].tsx`) start with `{/` and would never match — they need
+  // to be reformatted to `/{…}?` so they match the bare `/` and `/value`.
+  let nonOptionalSegments = 0;
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -185,6 +208,7 @@ export function pathToPattern(
     // Case: /[...foo].tsx
     if (part.startsWith("[...") && part.endsWith("]")) {
       route += `/:${part.slice(4, part.length - 1)}*`;
+      nonOptionalSegments++;
       continue;
     }
 
@@ -252,11 +276,19 @@ export function pathToPattern(
     }
 
     route += (optional ? "" : "/") + pattern;
+    if (!optional) nonOptionalSegments++;
   }
 
   // Case: /(group)/index.tsx
   if (route === "") {
     route = "/";
+  }
+
+  // Case: /[[id]].tsx — the route is one or more optional segments only.
+  // Pattern would be `{/:id}?` which path-to-regexp treats as invalid;
+  // reformat to `/{:id}?` so it matches `/` and `/value`.
+  if (route.startsWith("{/") && nonOptionalSegments === 0) {
+    route = "/" + route.replace(/^\{\//, "{");
   }
 
   return route;
@@ -271,21 +303,27 @@ export function patternToSegments(
 
   if (path === "/" || path === "*" || path === "/*") return out;
 
+  // Strip optional groups like `{/:param}?` before segmenting so middleware
+  // and layouts registered at a parent path still apply to children with
+  // optional parameters. e.g. `/api{/:opt}?/endpoint` segments the same way
+  // as `/api/endpoint`, so a middleware at `/api` matches both forms.
+  const cleaned = path.replace(/\{[^}]*\}\??/g, "");
+
   let start = -1;
-  for (let i = 0; i < path.length; i++) {
-    const ch = path[i];
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
 
     if (ch === "/") {
       if (i > 0) {
-        const raw = path.slice(start + 1, i);
+        const raw = cleaned.slice(start + 1, i);
         out.push(raw);
       }
       start = i;
     }
   }
 
-  if (includeLast && start < path.length - 1) {
-    out.push(path.slice(start + 1));
+  if (includeLast && start < cleaned.length - 1) {
+    out.push(cleaned.slice(start + 1));
   }
 
   return out;

@@ -1,3 +1,4 @@
+import { setNonce } from "../context.ts";
 import type { Middleware } from "./mod.ts";
 
 /** Options for Content-Security-Policy middleware */
@@ -10,6 +11,13 @@ export interface CSPOptions {
 
   /** Additional CSP directives to add or override the defaults */
   csp?: string[];
+
+  /**
+   * Inject a per-request nonce into `script-src` and propagate it to the
+   * bootloader `<script>` tag. Enables strict CSP without `'unsafe-inline'`.
+   * Defaults to `true`.
+   */
+  nonce?: boolean;
 }
 
 /**
@@ -33,11 +41,11 @@ export function csp<State>(options: CSPOptions = {}): Middleware<State> {
     reportOnly = false,
     reportTo,
     csp = [],
+    nonce = true,
   } = options;
 
-  const defaultCsp = [
+  const baseDefaults = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'", // unsafe-inline needed for fresh
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
@@ -51,14 +59,24 @@ export function csp<State>(options: CSPOptions = {}): Middleware<State> {
     "upgrade-insecure-requests",
   ];
 
-  const cspDirectives = [...defaultCsp, ...csp];
+  const tailDirectives: string[] = [];
   if (reportTo) {
-    cspDirectives.push(`report-to csp-endpoint`);
-    cspDirectives.push(`report-uri ${reportTo}`); // deprecated but some browsers still use it
+    tailDirectives.push(`report-to csp-endpoint`);
+    tailDirectives.push(`report-uri ${reportTo}`);
   }
-  const cspString = cspDirectives.join("; ");
 
   return async (ctx) => {
+    let scriptSrc: string;
+    if (nonce) {
+      const value = crypto.randomUUID().replace(/-/g, "");
+      setNonce(ctx, value);
+      scriptSrc = `script-src 'nonce-${value}' 'strict-dynamic' 'self'`;
+    } else {
+      scriptSrc = "script-src 'self' 'unsafe-inline'";
+    }
+
+    const cspString = [...baseDefaults, scriptSrc, ...csp, ...tailDirectives].join("; ");
+
     const res = await ctx.next();
     const headerName = reportOnly
       ? "Content-Security-Policy-Report-Only"

@@ -90,6 +90,27 @@ render and saves ~5ms per request.
 assets as `preload; as=style`. Browsers start fetching these assets as soon as they receive the HTTP
 response headers, before parsing the HTML body.
 
+### `app.ws()` — WebSocket endpoints
+
+```ts
+app.ws("/ws", {
+  open(socket, ctx) {
+    const userId = ctx.state.userContext?.user?.id;
+    if (!userId) socket.close(1008, "Unauthorized");
+  },
+  message(socket, event) {/* … */},
+  close(socket, code, reason, ctx) {/* … */},
+  error(socket, event, ctx) {/* … */},
+}, { idleTimeout: 30 });
+```
+
+API matches Fresh 2.3's `app.ws()`. Always managed mode. Howl extension: `options.port` binds the
+endpoint to its own `Deno.serve` listener — same middleware pipeline, but hidden from the main port
+and only the registered WS paths are reachable on the secondary listener. `app.listen()` spawns the
+secondary listeners automatically.
+
+Non-WebSocket requests to a registered WS path return `426 Upgrade Required`.
+
 ### `ctx.sse()` — Server-Sent Events
 
 ```ts
@@ -279,6 +300,23 @@ Caught by `DEFAULT_ERROR_HANDLER` in `app.ts` (plain text) or by `asyncHandler` 
 
 ---
 
+## Documentation rule (MANDATORY)
+
+When you change a public API, middleware behaviour, convention, or anything user-facing, you
+**must** update **all three** of the following before reporting the task done:
+
+1. **`README.md`** (repo root) — the user-facing project README.
+2. **`packages/README.md`** — the JSR-published package README.
+3. **`examples/www/server/docs/`** — JSON-driven docs site. Either edit an existing entry or add a
+   new file and register it in
+   [`examples/www/server/docs/manifest.json`](../examples/www/server/docs/manifest.json).
+
+Each doc has a different audience and they drift independently if you only update one. If a
+behaviour cannot be exercised from a Howl user app (purely internal refactor), say so explicitly in
+your end-of-turn summary and skip — but the default is to update all three.
+
+---
+
 ## Coding conventions
 
 - **Deno / JSR idioms** — `import type`, `@std/*`, explicit `.ts` extensions.
@@ -340,9 +378,31 @@ Caught by `DEFAULT_ERROR_HANDLER` in `app.ts` (plain text) or by `asyncHandler` 
 
 ## Testing
 
-Tests live next to the files they test (`*_test.ts`) or in `packages/tests/`. Run:
-`deno test packages/` or specific file: `deno test packages/core/router_test.ts`. `MockBuildCache`
-in `test_utils.ts` is the test double for `BuildCache`.
+All tests live under `packages/tests/` (no co-located `*_test.ts` files in
+`core/`, `api/`, `dev/`). Three layers:
+
+| Layer        | Path                          | What it covers                                                                  |
+| ------------ | ----------------------------- | ------------------------------------------------------------------------------- |
+| Integration  | `packages/tests/integration/` | Routing, middleware order, ctx helpers, cookies, SSE, CORS, CSP, coalesce       |
+| API          | `packages/tests/api/`         | `defineApi`, auth, Zod validation, rate limit, caching, OpenAPI generation      |
+| Unit         | `packages/tests/unit/`        | `UrlPatternRouter`, `CookieManager`, utils, cache adapters (`memoryCache`, `tryCache`) |
+
+Harness: [`packages/tests/harness.ts`](../packages/tests/harness.ts) exports
+`makeApp(opts)` returning `{ app, fetch }`. Tests dispatch through the handler
+directly — no TCP port. Use `MockBuildCache` from `core/test_utils.ts` if you
+need to seed FS routes or islands.
+
+Tasks (defined in root `deno.json`):
+
+- `deno task test` — full suite (currently 85 tests, ~700ms)
+- `deno task test:integration` / `:api` / `:unit` — targeted
+- `deno task doc:lint` — JSDoc coverage check (must stay clean)
+
+**Test conventions:**
+- Use `@std/expect` (`expect(...).toBe(...)`); avoid `assertEquals` etc. for consistency.
+- Default `Deno.test("name", async () => {...})` — never disable `sanitizeOps`/`sanitizeResources`. If a test trips a leak, the production code is leaking; fix it there.
+- Each test sets up its own `makeApp()` — no shared mutable fixtures.
+- Browser-based fixtures + helpers live in `packages/tests/test_utils.tsx` (uses Astral). Most tests should not need it; reach for it only when you genuinely need a real browser.
 
 ---
 

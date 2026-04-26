@@ -94,6 +94,18 @@ Deno.test("middleware — thrown HttpError yields plain-text status response", a
   expect(await text(res)).toBe("I'm a teapot");
 });
 
+Deno.test("middleware — HttpError without message falls back to canonical status text", async () => {
+  const t = makeApp();
+  const { HttpError } = await import("../../core/error.ts");
+  t.app.get("/missing", () => {
+    throw new HttpError(404);
+  });
+
+  const res = await t.fetch("/missing");
+  expect(res.status).toBe(404);
+  expect(await text(res)).toBe("Not Found");
+});
+
 Deno.test("middleware — thrown non-HttpError returns 500", async () => {
   const t = makeApp();
   t.app.get("/boom", () => {

@@ -64,4 +64,9 @@ export { type BuildCache, IslandPreparer, ProdBuildCache } from "./build_cache.t
 export { fsItemsToCommands, type FsRouteFile } from "./fs_routes.ts";
 export { type Command, CommandType } from "./commands.ts";
 export { type ServerIslandRegistry } from "./context.ts";
-export type { ApiConfig, ClientConfig } from "./app.ts";
+export type {
+  ApiConfig,
+  ClientConfig,
+  WebSocketHandlers,
+  WebSocketUpgradeOptions,
+} from "./app.ts";

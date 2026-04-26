@@ -41,8 +41,14 @@ export const enum UrlMatchKind {
   Current,
 }
 
-export function matchesUrl(current: string, needle: string): UrlMatchKind {
-  let href = new URL(needle, "http://localhost").pathname;
+export function matchesUrl(
+  current: string,
+  needle: string,
+  currentSearch?: string,
+): UrlMatchKind {
+  const needleUrl = new URL(needle, "http://localhost");
+  let href = needleUrl.pathname;
+  const needleSearch = needleUrl.search;
   if (href !== "/" && href.endsWith("/")) {
     href = href.slice(0, -1);
   }
@@ -52,6 +58,15 @@ export function matchesUrl(current: string, needle: string): UrlMatchKind {
   }
 
   if (current === href) {
+    // When the link carries query params, demote to ancestor unless the
+    // current URL's search exactly matches. Links with no query params
+    // still match any current URL — useful for "All" tabs / index links.
+    if (
+      needleSearch && currentSearch !== undefined &&
+      needleSearch !== currentSearch
+    ) {
+      return UrlMatchKind.Ancestor;
+    }
     return UrlMatchKind.Current;
   } else if (current.startsWith(href + "/") || href === "/") {
     return UrlMatchKind.Ancestor;
@@ -61,14 +76,23 @@ export function matchesUrl(current: string, needle: string): UrlMatchKind {
 }
 
 /**
- * Mark active or ancestor link
- * Note: This function is used both on the server and the client
+ * Mark active or ancestor link.
+ * Note: This function is used both on the server and the client.
+ *
+ * Honors any `aria-current` already set by the user — component libraries
+ * (e.g. daisyUI tabs, accordions) often set their own value, and stomping
+ * on it would break the library's behaviour.
  */
-export function setActiveUrl(vnode: VNode, pathname: string): void {
+export function setActiveUrl(
+  vnode: VNode,
+  pathname: string,
+  search?: string,
+): void {
   const props = vnode.props as Record<string, unknown>;
+  if (props["aria-current"] !== undefined) return;
   const hrefProp = props.href;
   if (typeof hrefProp === "string" && hrefProp.startsWith("/")) {
-    const match = matchesUrl(pathname, hrefProp);
+    const match = matchesUrl(pathname, hrefProp, search);
     if (match === UrlMatchKind.Current) {
       props[DATA_CURRENT] = "true";
       props["aria-current"] = "page";

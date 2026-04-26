@@ -367,7 +367,7 @@ export default function Index(_ctx: Context<State>): JSX.Element {
                   delay: 1.1,
                 },
               ].map((t, i) => (
-                <div key={i} class="relative flex-1 max-w-18 min-w-11">
+                <div key={i} class="relative flex-1 max-w-18 min-w-11" style="container-type: size">
                   <div
                     class="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-linear-to-b from-transparent via-base-content/10 to-transparent"
                     style={`animation: lane-pulse ${

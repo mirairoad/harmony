@@ -7,55 +7,267 @@
       "id": "file-based",
       "heading": "File-based routing",
       "blocks": [
-        { "type": "p", "text": "Page files live in client/pages/. The file path maps directly to the URL." },
-        { "type": "table", "headers": ["File", "URL"], "rows": [
-          ["pages/index.tsx", "/"],
-          ["pages/about.tsx", "/about"],
-          ["pages/blog/index.tsx", "/blog"],
-          ["pages/blog/[slug].tsx", "/blog/:slug"],
-          ["pages/user/[id]/settings.tsx", "/user/:id/settings"]
-        ]},
-        { "type": "p", "text": "A page component receives ctx as its argument, which is the full request context including state, params, url, and all response helpers." },
-        { "type": "code", "lang": "tsx", "text": "import type { Context } from \"@hushkey/howl\";\nimport type { State } from \"../../howl.config.ts\";\n\nexport default function HomePage(ctx: Context<State>) {\n  return <h1>Hello, {ctx.state.userContext?.id ?? \"guest\"}</h1>;\n}" }
+        {
+          "type": "p",
+          "text": "Page files live in client/pages/. The file path maps directly to the URL."
+        },
+        {
+          "type": "table",
+          "headers": ["File", "URL"],
+          "rows": [
+            ["pages/index.tsx", "/"],
+            ["pages/about.tsx", "/about"],
+            ["pages/blog/index.tsx", "/blog"],
+            ["pages/blog/[slug].tsx", "/blog/:slug"],
+            ["pages/user/[id]/settings.tsx", "/user/:id/settings"],
+            ["pages/files/[...path].tsx", "/files/* (catch-all)"],
+            ["pages/[[name]].tsx", "/ and /:name (optional)"]
+          ]
+        },
+        {
+          "type": "p",
+          "text": "A page component receives ctx as its argument, which is the full request context including state, params, url, and all response helpers."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "import type { Context } from \"@hushkey/howl\";\nimport type { State } from \"../../howl.config.ts\";\n\nexport default function HomePage(ctx: Context<State>) {\n  return <h1>Hello, {ctx.state.userContext?.id ?? \"guest\"}</h1>;\n}"
+        }
+      ]
+    },
+    {
+      "id": "trailing-slashes",
+      "heading": "Trailing slashes",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "The router tolerates trailing-slash mismatches automatically. A route registered as /wissen matches both /wissen and /wissen/, and vice versa — no 404 either way. Exact matches always take priority when both forms are registered."
+        },
+        {
+          "type": "p",
+          "text": "Use the trailingSlashes() middleware (always | never) when you want to canonicalise URLs for SEO/analytics or force a 308 redirect. Without it, both forms simply work."
+        }
+      ]
+    },
+    {
+      "id": "middleware-segments",
+      "heading": "Middleware and optional segments",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "File-based middleware (_middleware.ts) applies to its directory and below — and it correctly matches routes that contain optional parameters. A middleware at pages/api/_middleware.ts will run for both pages/api/[[id]].tsx and pages/api/users/[id].tsx, even though the first route's URL pattern includes an optional group."
+        },
+        {
+          "type": "p",
+          "text": "Internally, the router strips optional {/:param}? groups before splitting a route into segments, so /api{/:opt}?/endpoint segments identically to /api/endpoint. Without this, middleware registered at /api would skip routes with optional params under it."
+        }
       ]
     },
     {
       "id": "dynamic-params",
       "heading": "Dynamic params",
       "blocks": [
-        { "type": "p", "text": "Wrap a segment name in brackets to make it dynamic. Access captured values via ctx.params." },
-        { "type": "code", "lang": "tsx", "text": "// pages/blog/[slug].tsx → /blog/:slug\nexport default function BlogPost(ctx: Context<State>) {\n  const { slug } = ctx.params;\n  return <article>Post: {slug}</article>;\n}" },
-        { "type": "p", "text": "Use [...slug] for catch-all routes that match any depth." }
+        {
+          "type": "p",
+          "text": "Wrap a segment name in brackets to make it dynamic. Access captured values via ctx.params."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// pages/blog/[slug].tsx → /blog/:slug\nexport default function BlogPost(ctx: Context<State>) {\n  const { slug } = ctx.params;\n  return <article>Post: {slug}</article>;\n}"
+        },
+        { "type": "p", "text": "Use [...slug] for catch-all routes that match any depth." },
+        {
+          "type": "p",
+          "text": "Use [[slug]] (double brackets) for an optional segment. The same file matches both the bare path and any single value:"
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// pages/[[name]].tsx — matches both / and /:name\nexport default function Greeting(ctx: Context<State>) {\n  const { name } = ctx.params;\n  return <h1>Hello, {name || \"world\"}!</h1>;\n}"
+        },
+        {
+          "type": "tip",
+          "text": "Optional params arrive as an empty string when absent. Treat falsy as the no-arg case (`name || fallback`) rather than checking for undefined."
+        }
       ]
     },
     {
       "id": "layouts",
       "heading": "Layouts",
       "blocks": [
-        { "type": "p", "text": "A _layout.tsx file wraps all pages in its directory and below. Layouts receive a Component prop that renders the child page." },
-        { "type": "code", "lang": "tsx", "text": "// pages/_layout.tsx — applies to all pages\nexport default function Layout({ Component }: { Component: () => JSX.Element }) {\n  return (\n    <>\n      <nav class=\"navbar\">\n        <a href=\"/\">Home</a>\n        <a href=\"/docs\">Docs</a>\n      </nav>\n      <main>\n        <Component />\n      </main>\n    </>\n  );\n}" },
-        { "type": "tip", "text": "Layouts nest — pages/docs/_layout.tsx applies only to /docs/* routes and stacks on top of pages/_layout.tsx." },
-        { "type": "p", "text": "Layouts can be async, letting you fetch data for the shell (e.g., navigation items from a database) before the page renders." }
+        {
+          "type": "p",
+          "text": "A _layout.tsx file wraps all pages in its directory and below. Layouts receive a Component prop that renders the child page."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// pages/_layout.tsx — applies to all pages\nexport default function Layout({ Component }: { Component: () => JSX.Element }) {\n  return (\n    <>\n      <nav class=\"navbar\">\n        <a href=\"/\">Home</a>\n        <a href=\"/docs\">Docs</a>\n      </nav>\n      <main>\n        <Component />\n      </main>\n    </>\n  );\n}"
+        },
+        {
+          "type": "tip",
+          "text": "Layouts nest — pages/docs/_layout.tsx applies only to /docs/* routes and stacks on top of pages/_layout.tsx."
+        },
+        {
+          "type": "p",
+          "text": "Layouts can be async, letting you fetch data for the shell (e.g., navigation items from a database) before the page renders."
+        }
+      ]
+    },
+    {
+      "id": "programmatic-routing",
+      "heading": "Programmatic routes and layouts",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Routes registered programmatically via app.route(), app.get(), app.post(), app.ws() etc. fully participate in the layout tree — including the index route at the layout's path. A layout at /foo applies to both /foo and /foo/bar."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "import { Howl } from \"@hushkey/howl\";\n\nconst app = new Howl();\n\napp.layout(\"/\", ({ Component }) => (\n  <html><body>root<Component /></body></html>\n));\n\napp.layout(\"/foo\", ({ Component }) => (\n  <section>foo-shell<Component /></section>\n));\n\n// /foo gets BOTH the root layout AND the /foo layout wrapped around it.\napp.route(\"/foo\", { component: () => <p>foo-index</p> });\n\n// Verb handlers also see the matching layouts when they call ctx.render().\napp.get(\"/foo\", (ctx) => ctx.render(<p>page</p>));"
+        },
+        {
+          "type": "tip",
+          "text": "If you've been mixing app.layout() with app.route() and noticed the index page rendering without its layout, that bug is fixed. Routes attach to the deepest matching segment so layouts at the same path apply correctly."
+        }
       ]
     },
     {
       "id": "app-wrapper",
       "heading": "App wrapper (_app.tsx)",
       "blocks": [
-        { "type": "p", "text": "_app.tsx provides the outer HTML shell — the <html>, <head>, and <body> tags. Every page is rendered inside it." },
-        { "type": "code", "lang": "tsx", "text": "// pages/_app.tsx\nimport { Partial } from \"@hushkey/howl/runtime\";\n\nexport default function App({ Component }) {\n  return (\n    <html>\n      <head>\n        <meta charset=\"utf-8\" />\n        <title>My App</title>\n        <link rel=\"stylesheet\" href=\"/style.css\" />\n      </head>\n      <body f-client-nav>\n        <Partial name=\"main\">\n          <Component />\n        </Partial>\n      </body>\n    </html>\n  );\n}" },
-        { "type": "warning", "text": "The f-client-nav attribute enables SPA navigation. Without it, every link click triggers a full page reload." }
+        {
+          "type": "p",
+          "text": "_app.tsx provides the outer HTML shell — the <html>, <head>, and <body> tags. Every page is rendered inside it."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// pages/_app.tsx\nimport { Partial } from \"@hushkey/howl/runtime\";\n\nexport default function App({ Component }) {\n  return (\n    <html>\n      <head>\n        <meta charset=\"utf-8\" />\n        <title>My App</title>\n        <link rel=\"stylesheet\" href=\"/style.css\" />\n      </head>\n      <body f-client-nav>\n        <Partial name=\"main\">\n          <Component />\n        </Partial>\n      </body>\n    </html>\n  );\n}"
+        },
+        {
+          "type": "warning",
+          "text": "The f-client-nav attribute enables SPA navigation. Without it, every link click triggers a full page reload."
+        }
       ]
     },
     {
       "id": "spa-navigation",
       "heading": "SPA navigation",
       "blocks": [
-        { "type": "p", "text": "When f-client-nav is set on <body>, Howl intercepts link clicks and fetches only the <Partial> region that changed — no full page reloads." },
-        { "type": "p", "text": "Navigation triggers a GET request with a special header. The server detects this and returns only the partial HTML fragment, which the client swaps into the DOM." },
-        { "type": "p", "text": "Partials are identified by name. Wrap any region you want to update independently:" },
-        { "type": "code", "lang": "tsx", "text": "<Partial name=\"sidebar\">\n  <Sidebar items={items} />\n</Partial>" },
-        { "type": "tip", "text": "Average SPA navigation in Howl takes 5-10ms on a local server. The single-pass SSR render and Link preload headers keep it fast." }
+        {
+          "type": "p",
+          "text": "When f-client-nav is set on <body>, Howl intercepts link clicks and fetches only the <Partial> region that changed — no full page reloads."
+        },
+        {
+          "type": "p",
+          "text": "Navigation triggers a GET request with a special header. The server detects this and returns only the partial HTML fragment, which the client swaps into the DOM."
+        },
+        {
+          "type": "p",
+          "text": "Partials are identified by name. Wrap any region you want to update independently:"
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "<Partial name=\"sidebar\">\n  <Sidebar items={items} />\n</Partial>"
+        },
+        {
+          "type": "tip",
+          "text": "Average SPA navigation in Howl takes 5-10ms on a local server. The single-pass SSR render and Link preload headers keep it fast."
+        }
+      ]
+    },
+    {
+      "id": "partial-forms",
+      "heading": "Forms inside f-client-nav",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Forms inside an f-client-nav body are only intercepted for partial submission when they explicitly opt in. A form opts in by setting one of: an f-partial attribute, an action attribute, or having a submit button with formaction. Otherwise, the form submits normally with a full page reload — even though the surrounding body has f-client-nav."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// Intercepted — explicit `action` opts the form into partial submission\n<form action=\"/api/save\" method=\"post\">\n  <input name=\"title\" />\n  <button>Save</button>\n</form>\n\n// Not intercepted — no action/f-partial means the form does a normal submit\n<form method=\"post\">\n  <input name=\"title\" />\n  <button>Save</button>\n</form>"
+        },
+        {
+          "type": "tip",
+          "text": "If you want partial submission without a server endpoint different from the current page, set f-partial=\"\" explicitly: <form f-partial method=\"post\">…</form>."
+        }
+      ]
+    },
+    {
+      "id": "partial-redirects",
+      "heading": "Redirects from partial requests",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "ctx.redirect() automatically preserves the partial-nav search param when called from a partial request. The redirected page renders in partial mode and the SPA stays in partial-nav flow — no manual threading required."
+        },
+        {
+          "type": "code",
+          "lang": "ts",
+          "text": "// /sign-in is reached during a partial nav. The Location header becomes\n// /dashboard?howl-partial=true so the redirect target also renders as\n// a partial.\napp.post(\"/sign-in\", (ctx) => ctx.redirect(\"/dashboard\"));\n\n// Existing query/hash are handled correctly:\nctx.redirect(\"/page?tab=home\");   // → /page?tab=home&howl-partial=true\nctx.redirect(\"/page#section\");    // → /page?howl-partial=true#section"
+        },
+        {
+          "type": "tip",
+          "text": "ctx.partialRedirect() still exists as a backwards-compatible alias of ctx.redirect() — both behave the same now."
+        }
+      ]
+    },
+    {
+      "id": "active-links",
+      "heading": "Active links",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Howl marks active links automatically by stamping data-current / data-ancestor and aria-current attributes during render and partial swaps. Style your nav with the data-* attributes — no extra logic in components."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// Anywhere in your app — Howl detects active state from the URL\n<a href=\"/blog\">Blog</a>\n<a href=\"/blog/post-1\">Post 1</a>\n\n// Visiting /blog/post-1 produces:\n//   <a href=\"/blog\" data-ancestor=\"true\" aria-current=\"true\">Blog</a>\n//   <a href=\"/blog/post-1\" data-current=\"true\" aria-current=\"page\">Post 1</a>"
+        },
+        {
+          "type": "code",
+          "lang": "css",
+          "text": "/* Tailwind / vanilla — both work */\na[data-current] { color: var(--color-primary); font-weight: 600; }\na[data-ancestor] { color: var(--color-primary); opacity: 0.7; }"
+        },
+        {
+          "type": "p",
+          "text": "Query parameters are part of the match. A link with query params is only marked Current when the URL's search string matches exactly — otherwise it's demoted to Ancestor. Links without query params still match any current URL, which is useful for an \"All\" tab."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// Visiting /tabs?sort=name\n<a href=\"/tabs\">All</a>                     // → data-current  (no query, matches anything)\n<a href=\"/tabs?sort=name\">By name</a>      // → data-current  (search matches)\n<a href=\"/tabs?sort=price\">By price</a>    // → data-ancestor (different search)"
+        },
+        {
+          "type": "tip",
+          "text": "Setting your own aria-current is respected. Component libraries like daisyUI tabs that manage active state via aria-current keep working — Howl will not stomp on a user-set value."
+        }
+      ]
+    },
+    {
+      "id": "partial-data-scripts",
+      "heading": "<head> data scripts during partial nav",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Non-executable script tags in the page head — like application/ld+json for SEO structured data — are appended to document.head during partial navigation, with deduplication so they don't accumulate across repeat navigations. Executable script types (module / text/javascript / importmap) are skipped to prevent unintended re-execution."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// pages/blog/[slug].tsx — ld+json metadata follows the partial swap\n<script type=\"application/ld+json\" id=\"article-schema\">\n  {JSON.stringify({\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"Article\",\n    headline: post.title,\n    datePublished: post.publishedAt,\n  })}\n</script>"
+        },
+        {
+          "type": "tip",
+          "text": "Give your data scripts an id when possible — Howl uses it to update an existing script in place. Without an id, deduplication falls back to comparing textContent."
+        }
       ]
     }
   ]

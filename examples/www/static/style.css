@@ -104,16 +104,16 @@
   100% { transform: scale(18);   opacity: 0; }
 }
 @keyframes packet-up {
-  0%   { bottom: -28px; opacity: 0; }
+  0%   { transform: translate(-50%, calc(100cqh + 28px)); opacity: 0; }
   10%  { opacity: 1; }
   90%  { opacity: 1; }
-  100% { bottom: calc(100% + 28px); opacity: 0; }
+  100% { transform: translate(-50%, -28px); opacity: 0; }
 }
 @keyframes packet-down {
-  0%   { top: -28px; opacity: 0; }
+  0%   { transform: translate(-50%, -28px); opacity: 0; }
   10%  { opacity: 1; }
   90%  { opacity: 1; }
-  100% { top: calc(100% + 28px); opacity: 0; }
+  100% { transform: translate(-50%, calc(100cqh + 28px)); opacity: 0; }
 }
 @keyframes lane-pulse {
   0%, 100% { opacity: 0.4; }
@@ -152,7 +152,7 @@
 }
 
 html {
-  background-color: #f0f0f0;
+  background-color: var(--color-base-100);
   scroll-behavior: smooth !important;
 }
 
@@ -332,4 +332,38 @@ textarea,
 .mapboxgl-ctrl-bottom-right,
 .mapboxgl-ctrl-fullscreen {
   display: none !important;
+}
+
+/* View Transitions — animate partial swaps wrapped by f-view-transition */
+@keyframes howl-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes howl-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+::view-transition-group(root) {
+  background-color: var(--color-base-100);
+}
+
+::view-transition-image-pair(root) {
+  isolation: auto;
+  background-color: var(--color-base-100);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+  background-color: var(--color-base-100);
+}
+
+::view-transition-old(root) {
+  animation: howl-fade-out 0.2s ease-in;
+}
+
+::view-transition-new(root) {
+  animation: howl-fade-in 0.2s ease-out;
 }
