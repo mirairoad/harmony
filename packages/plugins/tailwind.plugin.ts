@@ -18,6 +18,9 @@ type PluginOptions = {
   };
 };
 
+/**
+ * Options accepted by the {@linkcode tailwindPlugin}.
+ */
 export interface TailwindPluginOptions extends PluginOptions {
   /**
    * Exclude paths or globs from Tailwind processing.

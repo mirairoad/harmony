@@ -81,11 +81,19 @@ export { staticFiles } from "./static_files.ts";
  * ```
  */
 
+/**
+ * A function invoked for each request — receives a {@linkcode Context} and
+ * must return a {@linkcode Response} (synchronously or via a `Promise`).
+ *
+ * See the module-level documentation for the full middleware contract.
+ */
 export type Middleware<State> = (
   ctx: Context<State>,
 ) => Response | Promise<Response>;
 
 /**
+ * Legacy alias for {@linkcode Middleware}.
+ *
  * @deprecated Use {@linkcode Middleware} instead.
  */
 export type MiddlewareFn<State> = Middleware<State>;
@@ -97,6 +105,13 @@ export type MaybeLazyMiddleware<State> = (
   ctx: Context<State>,
 ) => Response | Promise<Response | Middleware<State>>;
 
+/**
+ * Run a chain of middlewares against a {@linkcode Context}.
+ *
+ * @internal Used by {@linkcode Howl.handler} to invoke the resolved middleware
+ * stack for a request. `onError` is invoked once per uncaught error before it
+ * is re-thrown to the next outer handler.
+ */
 export async function runMiddlewares<State>(
   middlewares: MaybeLazyMiddleware<State>[],
   ctx: Context<State>,

@@ -1,4 +1,14 @@
-import { join } from "@std/path";
+import manifestJson from "./manifest.json" with { type: "json" };
+import gettingStarted from "./getting-started.json" with { type: "json" };
+import routing from "./routing.json" with { type: "json" };
+import apiRoutes from "./api-routes.json" with { type: "json" };
+import context from "./context.json" with { type: "json" };
+import middlewares from "./middlewares.json" with { type: "json" };
+import islands from "./islands.json" with { type: "json" };
+import sse from "./sse.json" with { type: "json" };
+import cacheAdapters from "./cache-adapters.json" with { type: "json" };
+import rateLimiting from "./rate-limiting.json" with { type: "json" };
+import configuration from "./configuration.json" with { type: "json" };
 
 export type BlockType =
   | { type: "p"; text: string }
@@ -29,36 +39,24 @@ export interface ManifestItem {
   order: number;
 }
 
-const _selfDir = import.meta.dirname!;
+const DOC_REGISTRY: Record<string, DocPage> = {
+  "getting-started": gettingStarted as unknown as DocPage,
+  "routing": routing as unknown as DocPage,
+  "api-routes": apiRoutes as unknown as DocPage,
+  "context": context as unknown as DocPage,
+  "middlewares": middlewares as unknown as DocPage,
+  "islands": islands as unknown as DocPage,
+  "sse": sse as unknown as DocPage,
+  "cache-adapters": cacheAdapters as unknown as DocPage,
+  "rate-limiting": rateLimiting as unknown as DocPage,
+  "configuration": configuration as unknown as DocPage,
+};
 
-// Detect whether running from source (dev) or bundle (dist/).
-// In dev:  import.meta.dirname = .../server/docs/
-// In prod: import.meta.dirname = .../dist/ — go up one level then into server/docs/
-async function resolveDocsDir(): Promise<string> {
-  try {
-    await Deno.stat(join(_selfDir, "manifest.json"));
-    return _selfDir;
-  } catch {
-    return join(_selfDir, "..", "server", "docs");
-  }
+export function readManifest(): ManifestItem[] {
+  return (manifestJson as ManifestItem[]).sort((a, b) => a.order - b.order);
 }
 
-const _docsDirPromise = resolveDocsDir();
-
-export async function readManifest(): Promise<ManifestItem[]> {
-  const dir = await _docsDirPromise;
-  const text = await Deno.readTextFile(join(dir, "manifest.json"));
-  const items: ManifestItem[] = JSON.parse(text);
-  return items.sort((a, b) => a.order - b.order);
-}
-
-export async function readDoc(slug: string): Promise<DocPage | null> {
-  const dir = await _docsDirPromise;
+export function readDoc(slug: string): DocPage | null {
   const safe = slug.replace(/[^a-z0-9-]/g, "");
-  try {
-    const text = await Deno.readTextFile(join(dir, `${safe}.json`));
-    return JSON.parse(text) as DocPage;
-  } catch {
-    return null;
-  }
+  return DOC_REGISTRY[safe] ?? null;
 }

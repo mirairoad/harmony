@@ -6,8 +6,17 @@ import type { AnyApiDefinition } from "../api/types.ts";
 import { buildApiCommands } from "../api/api-handler.ts";
 import type { ApiEntry } from "./dev_build_cache.ts";
 
+/**
+ * Options accepted by {@linkcode HowlBuilder}. Extends {@linkcode BuildOptions}
+ * minus the per-client directory fields (resolved per registered client).
+ */
 export interface HowlDevOptions<State = any>
   extends Omit<BuildOptions, "routeDir" | "islandDir" | "staticDir"> {
+  /**
+   * Lazy app loader — invoked when the dev server starts. Accepts either the
+   * {@linkcode Howl} instance directly or a `{ app }` module shape so users can
+   * `import("./main.ts")` without restructuring exports.
+   */
   importApp?: () => Promise<Howl<State> | { app: Howl<State> }> | Howl<State>;
 }
 
@@ -25,6 +34,7 @@ export class HowlBuilder<State = any> {
   #apis: AnyApiDefinition[] = [];
   #apiEntries: ApiEntry[] = [];
 
+  /** Build a {@linkcode HowlBuilder} bound to the given app and options. */
   constructor(howl: Howl<State>, options: HowlDevOptions<State> = {}) {
     this.#howl = howl;
     this.#options = options;
@@ -192,12 +202,17 @@ export class HowlBuilder<State = any> {
 
   // --- Public API ---
 
+  /** Register an island specifier on every underlying builder. */
   registerIsland(specifier: string): void {
     for (const builder of this.#builders.values()) {
       builder.registerIsland(specifier);
     }
   }
 
+  /**
+   * Start the dev server. Crawls `apis/` first, then delegates to each
+   * registered client builder; the first client owns the requested port.
+   */
   async listen(options: ListenOptions = {}): Promise<void> {
     const { importApp } = this.#options;
     if (!importApp) {
@@ -239,6 +254,10 @@ export class HowlBuilder<State = any> {
     );
   }
 
+  /**
+   * Run a production build for every registered client and apply the
+   * resulting snapshot to the underlying {@linkcode Howl} app.
+   */
   async build(): Promise<void> {
     // Crawl apis/ before build
     await this.#crawlApis();

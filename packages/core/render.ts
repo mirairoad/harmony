@@ -49,6 +49,12 @@ export async function renderAsyncAnyComponent<Props>(
   );
 }
 
+/**
+ * Props passed to every page, layout, and app-wrapper component.
+ *
+ * Mirrors the request-scoped subset of {@linkcode Context} (URL, params,
+ * state, etc.) and adds a `data` field populated by the route handler.
+ */
 export type PageProps<Data = unknown, T = unknown> =
   & Pick<
     Context<T>,

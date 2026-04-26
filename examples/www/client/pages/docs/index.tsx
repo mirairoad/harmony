@@ -1,69 +1,93 @@
 import type { PageProps } from "@hushkey/howl";
-import type { State } from "../../../../howl.config.ts";
+import type { State } from "../../../howl.config.ts";
 import { readManifest } from "../../../server/docs/reader.ts";
-import { Head } from "../../../../../packages/core/runtime/head.ts";
+import { Head } from "@hushkey/howl/runtime";
+import type { JSX } from "preact/jsx-runtime";
 
-export default async function DocsIndex(_ctx: PageProps<unknown, State>): Promise<JSX.Element> {
-  const manifest = await readManifest();
+export default function DocsIndex(
+  ctx: PageProps<unknown, State>,
+): JSX.Element {
+  const manifest = readManifest();
+  const title = ctx.state.client.title;
 
   return (
     <>
       <Head>
-        <title>Howl — Documentation</title>
+        <title>{title} — Documentation</title>
+        <meta name="description" content={`Guides and API reference for ${title}, the full-stack Deno framework.`} />
+        <meta property="og:title" content={`${title} — Documentation`} />
+        <meta property="og:description" content={`Guides and API reference for ${title}, the full-stack Deno framework.`} />
+        <meta property="og:image" content="https://howl.hushkey.dev/og-image.png" />
+        <meta property="og:url" content="https://howl.hushkey.dev/docs" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
-      <div class="max-w-4xl mx-auto px-6 py-12">
+
+      {/* Mobile: px-0 full-bleed. Desktop: centered with padding. */}
+      <div class="sm:max-w-3xl sm:mx-auto sm:px-6 py-6 sm:py-12">
+
         {/* Hero */}
-        <div class="mb-12">
-          <div class="flex items-center gap-3 mb-4">
-            <span class="text-4xl">🐺</span>
-            <h1 class="text-4xl font-bold tracking-tight">Howl Documentation</h1>
-          </div>
-          <p class="text-lg text-base-content/60 max-w-2xl">
-            Full-stack Deno framework built on Fresh 2.x. Type-safe APIs, file-based routing,
-            island architecture, and zero-config builds.
+        <div class="mb-8 sm:mb-10 px-0">
+          <p class="font-mono text-xs uppercase tracking-widest text-base-content/50 mb-2">
+            Documentation
+          </p>
+          <h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
+            {title} Docs
+          </h1>
+          <p class="text-base sm:text-lg text-base-content/70 sm:text-base-content/60 leading-relaxed">
+            Backend-first, Deno-native full-stack framework. Typed endpoints, SSR islands,
+            built-in RBAC, and middleware that propagates to every response.
           </p>
           <div class="flex gap-2 mt-4 flex-wrap">
-            {["Deno 2.x", "Preact 10", "Zod 4", "esbuild", "Tailwind v4"].map((t) => (
-              <kbd key={t} class="kbd kbd-sm">{t}</kbd>
+            {["Deno 2.x", "Fresh 2.x", "Preact 10", "TypeScript"].map((t) => (
+              <kbd key={t} class="kbd kbd-sm sm:kbd-md font-mono text-xs sm:text-sm">{t}</kbd>
             ))}
           </div>
         </div>
 
         {/* Quick start */}
-        <div class="alert bg-primary/10 border-primary/20 mb-10">
-          <div>
-            <p class="font-semibold text-primary mb-1">Quick start</p>
-            <code class="text-sm font-mono">deno add jsr:@hushkey/howl</code>
+        <div class="rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur px-5 py-4 mb-8 sm:mb-10">
+          <p class="font-mono text-xs text-primary/70 uppercase tracking-widest mb-2">
+            quick start
+          </p>
+          <div class="font-mono text-sm overflow-x-auto whitespace-nowrap">
+            <span class="text-primary/60 select-none mr-1">$</span>
+            <span class="text-base-content/70">deno add </span>
+            <span class="text-primary font-semibold">jsr:@hushkey/howl</span>
           </div>
         </div>
 
         {/* Section grid */}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {manifest.map((item) => (
             <a
               key={item.slug}
               href={`/docs/${item.slug}`}
-              class="card card-border bg-base-100 hover:bg-base-200 hover:border-primary/40 transition-all group"
+              class="group rounded-2xl border border-base-300 bg-base-200/60 backdrop-blur hover:border-primary/40 hover:bg-base-200 transition-all overflow-hidden"
             >
-              <div class="card-body p-5">
-                <div class="flex items-start justify-between">
-                  <h2 class="card-title text-base font-semibold group-hover:text-primary transition-colors">
+              <div class="px-5 py-4 sm:py-5">
+                <div class="flex items-start justify-between gap-2">
+                  <h2 class="font-semibold text-base sm:text-base group-hover:text-primary transition-colors">
                     {item.title}
                   </h2>
-                  <span class="text-base-content/30 group-hover:text-primary transition-colors text-lg">→</span>
+                  <span class="text-base-content/30 group-hover:text-primary transition-colors text-lg shrink-0">
+                    →
+                  </span>
                 </div>
-                <p class="text-sm text-base-content/60 mt-1">{item.description}</p>
+                <p class="text-sm text-base-content/60 mt-1.5 leading-relaxed">
+                  {item.description}
+                </p>
               </div>
             </a>
           ))}
         </div>
 
         {/* Footer */}
-        <div class="mt-16 pt-8 border-t border-base-300 flex gap-6 text-sm text-base-content/40">
+        <div class="mt-12 pt-6 border-t border-base-300 flex gap-6 text-sm text-base-content/40 font-mono px-0">
           <a href="https://jsr.io/@hushkey/howl" class="hover:text-base-content transition-colors" target="_blank">
-            JSR Package ↗
+            JSR ↗
           </a>
-          <a href="https://github.com/mirairoad/howl" class="hover:text-base-content transition-colors" target="_blank">
+          <a href="https://github.com/hushkey/howl" class="hover:text-base-content transition-colors" target="_blank">
             GitHub ↗
           </a>
         </div>

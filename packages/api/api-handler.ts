@@ -89,6 +89,12 @@ function resolveCaches(
   return { cache, rateLimitCache };
 }
 
+/**
+ * Build the {@linkcode HandlerCommand}s for `apis` without registering them
+ * on the app. Used by `HowlBuilder` to splice API routes into the existing
+ * command list at the position of `app.fsApiRoutes()` so middleware
+ * ordering is preserved.
+ */
 export function buildApiCommands<State, Role extends string>(
   app: Howl<State>,
   apis: AnyApiDefinition[],
@@ -101,6 +107,13 @@ export function buildApiCommands<State, Role extends string>(
   return commands;
 }
 
+/**
+ * Register `apis` directly on `app` by binding each definition to its
+ * matching method/path on the {@linkcode Howl} instance.
+ *
+ * Use this for ad-hoc API registration. For file-system-driven loading via
+ * `app.fsApiRoutes()`, the builder uses {@linkcode buildApiCommands} instead.
+ */
 export function apiHandler<State, Role extends string>(
   app: Howl<State>,
   apis: AnyApiDefinition[],

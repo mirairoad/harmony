@@ -5,26 +5,52 @@ import { assetInternal } from "../core/runtime/shared_internal.ts";
 
 export type TransformMode = "development" | "production";
 
+/**
+ * Options describing which files a transformer should run for.
+ */
 export interface OnTransformOptions {
+  /** Plugin name surfaced in errors and traces. */
   pluginName: string;
+  /** RegExp matched against file paths to opt the file in. */
   filter: RegExp;
+  /** Patterns (RegExp or glob) that opt files back out. */
   exclude?: Array<string | RegExp>;
 }
 
+/**
+ * Result returned from a {@linkcode TransformFn} for a single output file.
+ */
 export interface OnTransformResult {
+  /** New file contents (string is encoded as UTF-8). */
   content: string | Uint8Array;
+  /** Optional rewritten output path. */
   path?: string;
+  /** Optional source map (raw JSON or bytes). */
   map?: string | Uint8Array;
 }
 
+/**
+ * Arguments passed to a {@linkcode TransformFn}.
+ */
 export interface OnTransformArgs {
+  /** Absolute file path being transformed. */
   path: string;
+  /** esbuild `target` value(s) for the active build. */
   target: string | string[];
+  /** UTF-8 decoded file contents. */
   text: string;
+  /** Raw file contents. */
   content: Uint8Array;
+  /** Active build mode (`development` or `production`). */
   mode: TransformMode;
+  /** Project root the build is running against. */
   root: string;
 }
+/**
+ * Callback signature for {@linkcode FileTransformer.onTransform}. Receives the
+ * file being processed and returns one (or more) replacement files, or
+ * nothing to leave the file untouched.
+ */
 export type TransformFn = (
   args: OnTransformArgs,
 ) =>
@@ -37,15 +63,23 @@ export type TransformFn = (
     | Array<{ path: string } & Omit<OnTransformResult, "path">>
   >;
 
+/** A registered transformer — its match options paired with its callback. */
 export interface Transformer {
+  /** Match options selected for this transformer. */
   options: OnTransformOptions;
+  /** Callback invoked for each matching file. */
   fn: TransformFn;
 }
 
+/** A processed output file produced by the {@linkcode FileTransformer}. */
 export interface ProcessedFile {
+  /** Output path (post-transform). */
   path: string;
+  /** Encoded contents. */
   content: Uint8Array;
+  /** Optional source map bytes. */
   map: Uint8Array | null;
+  /** Input file paths that contributed to this output. */
   inputFiles: string[];
 }
 
@@ -57,20 +91,30 @@ interface TransformReq {
   inputFiles: string[];
 }
 
+/**
+ * Pipeline that runs registered {@linkcode Transformer}s against files on
+ * disk and returns the processed outputs.
+ */
 export class FileTransformer {
   #transformers: Transformer[] = [];
   #fs: FsAdapter;
   #root: string;
 
+  /** Build a transformer bound to the given filesystem adapter and root. */
   constructor(fs: FsAdapter, root: string) {
     this.#fs = fs;
     this.#root = root;
   }
 
+  /** Register a transformer callback for files matching `options`. */
   onTransform(options: OnTransformOptions, callback: TransformFn): void {
     this.#transformers.push({ options, fn: callback });
   }
 
+  /**
+   * Read `filePath`, run every matching transformer, and return the
+   * resulting output files. Returns `null` if no transformer matched.
+   */
   async process(
     filePath: string,
     mode: TransformMode,

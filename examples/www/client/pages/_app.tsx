@@ -1,12 +1,17 @@
-import type { FunctionComponent, JSX } from "preact";
+import type { JSX } from "preact/jsx-runtime";
+import type { PageProps } from "@hushkey/howl";
 import { Partial } from "@hushkey/howl/runtime";
+import type { State } from "../../howl.config.ts";
 
-export default function ({ Component }: { Component: FunctionComponent }): JSX.Element {
+export default function App({ Component, state }: PageProps<unknown, State>): JSX.Element {
   return (
     <html>
       <head>
-        <title>Howl! + TailwindCSS</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>{state.client?.title ?? "Howl"}</title>
         <link rel="stylesheet" href="/style.css" />
+        <link rel="icon" type="image/svg+xml" href="/logo.svg" />
       </head>
       <body f-client-nav>
         <Partial name="main">

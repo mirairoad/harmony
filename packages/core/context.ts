@@ -27,40 +27,71 @@ import { CookieManager } from "./cookies.ts";
 
 const ENCODER = new TextEncoder();
 
+/**
+ * A single Server-Sent Events frame written via {@linkcode Context.sse}.
+ *
+ * @see https://html.spec.whatwg.org/multipage/server-sent-events.html
+ */
 export interface SSEEvent {
+  /** Event payload. Non-string values are JSON-stringified before being written. */
   data: unknown;
+  /** Optional event name (`event:` field). Defaults to `"message"` on the client. */
   event?: string;
+  /** Optional event id (`id:` field) used by the client to resume after reconnect. */
   id?: string | number;
   /** Reconnection delay hint in milliseconds. */
   retry?: number;
 }
 
+/**
+ * Metadata describing a single island registered with the server-side
+ * island registry. Populated by the build cache.
+ */
 export interface Island {
+  /** Source file path on disk. */
   file: string;
+  /** Stable display name used in the runtime island marker. */
   name: string;
+  /** Name of the export inside `file` that is the island component. */
   exportName: string;
+  /** The actual component function/class. */
   fn: ComponentType;
+  /** CSS asset URLs that should be preloaded when the island is rendered. */
   css: string[];
   /** Skip SSR for this island. Set via `export const howl = { ssr: false }` in the island file. */
   ssr: boolean;
 }
 
+/** Registry mapping island components to their metadata. */
 export type ServerIslandRegistry = Map<ComponentType, Island>;
 
+/** Symbol used to access framework-internal context fields. */
 export const internals: unique symbol = Symbol("fresh_internal");
 
+/**
+ * Internal description of the wrapping UI tree (app shell + layouts) collected
+ * from segment middleware before the page is rendered.
+ */
 export interface UiTree<Data, State> {
+  /** Outermost app wrapper component, if any. */
   app: AnyComponent<PageProps<Data, State>> | null;
+  /** Layout components stacked from root to leaf. */
   layouts: ComponentDef<Data, State>[];
 }
 
 /**
+ * Legacy alias for {@linkcode Context} preserved for back-compat with code
+ * written against Fresh-era APIs.
+ *
  * @deprecated Use {@linkcode Context} instead.
  */
 export type FreshContext<State = unknown> = Context<State>;
 
+/** @internal Returns the {@linkcode BuildCache} associated with a {@linkcode Context}. */
 export let getBuildCache: <T>(ctx: Context<T>) => BuildCache<T>;
+/** @internal Returns the framework-internal UI tree associated with a {@linkcode Context}. */
 export let getInternals: <T>(ctx: Context<T>) => UiTree<unknown, T>;
+/** @internal Attaches additional CSS asset URLs that should be preloaded for the response. */
 export let setAdditionalStyles: <T>(ctx: Context<T>, css: string[]) => void;
 
 /**
@@ -88,9 +119,11 @@ export class Context<State> {
   readonly params: Record<string, string>;
   /** State object that is shared with all middlewares. */
   readonly state: State = {} as State;
+  /** Mutable per-request data slot — populated by middleware and consumed by route handlers. */
   data: unknown = undefined;
   /** Error value if an error was caught (Default: null) */
   error: unknown | null = null;
+  /** Connection info from `Deno.serve` — local/remote addresses for the current request. */
   readonly info: Deno.ServeHandlerInfo;
   /**
    * Whether the current Request is a partial request.
@@ -129,6 +162,11 @@ export class Context<State> {
   #buildCache: BuildCache<State>;
   #additionalStyles: string[] | null = null;
 
+  /**
+   * The leaf page component being rendered for this request. Populated by the
+   * segment pipeline before the page handler runs; useful inside layouts and
+   * the app wrapper to render the inner tree.
+   */
   Component!: FunctionComponent;
 
   static {
@@ -138,6 +176,7 @@ export class Context<State> {
     setAdditionalStyles = <T>(ctx: Context<T>, css: string[]) => ctx.#additionalStyles = css;
   }
 
+  /** Build a context for an incoming request — invoked by {@linkcode Howl.handler}. */
   constructor(
     req: Request,
     url: URL,
@@ -464,17 +503,20 @@ export class Context<State> {
     return { ...init, headers: merged };
   }
 
-  // Update json():
+  /**
+   * Build a JSON `Response` for the given payload, automatically merging
+   * `ctx.headers` (so cookies/headers set by middleware propagate).
+   */
   json(content: any, init?: ResponseInit): Response {
     return Response.json(content, this.#mergeHeaders(init));
   }
 
-  // Update text():
+  /** Build a plain-text `Response`, merging `ctx.headers`. */
   text(content: string, init?: ResponseInit): Response {
     return new Response(content, this.#mergeHeaders(init));
   }
 
-  // Update html():
+  /** Build an HTML `Response` (sets `Content-Type: text/html`), merging `ctx.headers`. */
   html(content: string, init?: ResponseInit): Response {
     const merged = this.#mergeHeaders(init);
     const headers = new Headers(merged.headers);
@@ -587,6 +629,7 @@ export class Context<State> {
    * const all = ctx.query();               // all params
    */
   query(): Record<string, string>;
+  /** Read a single query-string parameter by name. Returns `undefined` if absent. */
   query(key: string): string | undefined;
   query(key?: string): Record<string, string> | string | undefined {
     if (key !== undefined) {

@@ -7,43 +7,87 @@
       "id": "what-are-islands",
       "heading": "What are islands?",
       "blocks": [
-        { "type": "p", "text": "Islands are Preact components that run in the browser. Everything else in Howl renders on the server and sends static HTML. Islands are the exception — they hydrate on the client and become interactive." },
-        { "type": "p", "text": "This model (\"islands architecture\") means you ship zero JavaScript by default. You opt in to JS per component, keeping bundles small and pages fast." }
+        {
+          "type": "p",
+          "text": "Islands are Preact components that run in the browser. Everything else in Howl renders on the server and sends static HTML. Islands are the exception — they hydrate on the client and become interactive."
+        },
+        {
+          "type": "p",
+          "text": "This model (\"islands architecture\") means you ship zero JavaScript by default. You opt in to JS per component, keeping bundles small and pages fast."
+        }
       ]
     },
     {
       "id": "creating-islands",
       "heading": "Creating an island",
       "blocks": [
-        { "type": "p", "text": "Create a file ending in .island.tsx in your islands/ directory. Use it in any page like a regular component — Howl detects it automatically." },
-        { "type": "code", "lang": "tsx", "text": "// islands/counter.island.tsx\nimport { useState } from \"preact/hooks\";\n\nexport default function Counter({ initial = 0 }: { initial?: number }) {\n  const [count, setCount] = useState(initial);\n  return (\n    <div class=\"flex items-center gap-4\">\n      <button class=\"btn btn-sm\" onClick={() => setCount(c => c - 1)}>-</button>\n      <span class=\"text-2xl font-bold\">{count}</span>\n      <button class=\"btn btn-sm btn-primary\" onClick={() => setCount(c => c + 1)}>+</button>\n    </div>\n  );\n}" },
-        { "type": "code", "lang": "tsx", "text": "// pages/index.tsx — use the island in a page\nimport Counter from \"../../islands/counter.island.tsx\";\n\nexport default function HomePage() {\n  return (\n    <div>\n      <h1>Home</h1>\n      <Counter initial={5} />\n    </div>\n  );\n}" },
-        { "type": "tip", "text": "Props passed to islands must be JSON-serializable — they are embedded in the HTML as inline JSON for hydration." }
+        {
+          "type": "p",
+          "text": "Create a file ending in .island.tsx in your islands/ directory. Use it in any page like a regular component — Howl detects it automatically."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// islands/counter.island.tsx\nimport { useState } from \"preact/hooks\";\n\nexport default function Counter({ initial = 0 }: { initial?: number }) {\n  const [count, setCount] = useState(initial);\n  return (\n    <div class=\"flex items-center gap-4\">\n      <button class=\"btn btn-sm\" onClick={() => setCount(c => c - 1)}>-</button>\n      <span class=\"text-2xl font-bold\">{count}</span>\n      <button class=\"btn btn-sm btn-primary\" onClick={() => setCount(c => c + 1)}>+</button>\n    </div>\n  );\n}"
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// pages/index.tsx — use the island in a page\nimport Counter from \"../../islands/counter.island.tsx\";\n\nexport default function HomePage() {\n  return (\n    <div>\n      <h1>Home</h1>\n      <Counter initial={5} />\n    </div>\n  );\n}"
+        },
+        {
+          "type": "tip",
+          "text": "Props passed to islands must be JSON-serializable — they are embedded in the HTML as inline JSON for hydration."
+        }
       ]
     },
     {
       "id": "skip-ssr",
       "heading": "Skipping SSR",
       "blocks": [
-        { "type": "p", "text": "By default, islands are SSR'd — they render to static HTML on the server, then hydrate on the client. To skip server rendering entirely (render nothing until the client loads), export a harmony config:" },
-        { "type": "code", "lang": "tsx", "text": "// islands/live-chart.island.tsx\nexport const harmony = { ssr: false };\n\nexport default function LiveChart() {\n  // This component never runs on the server.\n  // It renders blank during SSR and activates after hydration.\n  const data = useLiveData();\n  return <Chart data={data} />;\n}" },
-        { "type": "tip", "text": "Use ssr: false for islands that depend on browser APIs (window, document, WebGL) or that fetch their own data on the client. This removes the need to pass data as server props." }
+        {
+          "type": "p",
+          "text": "By default, islands are SSR'd — they render to static HTML on the server, then hydrate on the client. To skip server rendering entirely (render nothing until the client loads), export a howl config:"
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// islands/live-chart.island.tsx\nexport const howl = { ssr: false };\n\nexport default function LiveChart() {\n  // This component never runs on the server.\n  // It renders blank during SSR and activates after hydration.\n  const data = useLiveData();\n  return <Chart data={data} />;\n}"
+        },
+        {
+          "type": "tip",
+          "text": "Use ssr: false for islands that depend on browser APIs (window, document, WebGL) or that fetch their own data on the client. This removes the need to pass data as server props."
+        }
       ]
     },
     {
       "id": "client-only",
       "heading": "ClientOnly wrapper",
       "blocks": [
-        { "type": "p", "text": "ClientOnly is a utility component for rendering content that must only appear on the client, even within a server-rendered page." },
-        { "type": "code", "lang": "tsx", "text": "import { ClientOnly } from \"@hushkey/howl\";\n\nexport default function Page() {\n  return (\n    <div>\n      <h1>Server-rendered heading</h1>\n      <ClientOnly>\n        {() => <BrowserOnlyWidget />}\n      </ClientOnly>\n    </div>\n  );\n}" }
+        {
+          "type": "p",
+          "text": "ClientOnly is a utility component for rendering content that must only appear on the client, even within a server-rendered page."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "import { ClientOnly } from \"@hushkey/howl\";\n\nexport default function Page() {\n  return (\n    <div>\n      <h1>Server-rendered heading</h1>\n      <ClientOnly>\n        {() => <BrowserOnlyWidget />}\n      </ClientOnly>\n    </div>\n  );\n}"
+        }
       ]
     },
     {
       "id": "signals",
       "heading": "Preact Signals",
       "blocks": [
-        { "type": "p", "text": "Islands work with @preact/signals for fine-grained reactivity. Signals that change only re-render the specific DOM node they're bound to — no component re-render needed." },
-        { "type": "code", "lang": "tsx", "text": "import { signal } from \"@preact/signals\";\n\nconst count = signal(0);\n\nexport default function ReactiveCounter() {\n  return (\n    <button onClick={() => count.value++}>\n      Clicked {count} times\n    </button>\n  );\n}" }
+        {
+          "type": "p",
+          "text": "Islands work with @preact/signals for fine-grained reactivity. Signals that change only re-render the specific DOM node they're bound to — no component re-render needed."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "import { signal } from \"@preact/signals\";\n\nconst count = signal(0);\n\nexport default function ReactiveCounter() {\n  return (\n    <button onClick={() => count.value++}>\n      Clicked {count} times\n    </button>\n  );\n}"
+        }
       ]
     }
   ]

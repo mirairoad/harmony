@@ -25,12 +25,16 @@ export function tryCache(
   }
 
   function withTimeout<T>(promise: Promise<T>): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`primary timed out after ${timeoutMs}ms`)), timeoutMs)
-      ),
-    ]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`primary timed out after ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+    });
+    return Promise.race([promise, timeout]).finally(() => {
+      if (timer !== undefined) clearTimeout(timer);
+    });
   }
 
   return {

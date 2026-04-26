@@ -32,6 +32,9 @@ import { automaticWorkspaceFolders } from "./middlewares/automatic_workspace_fol
 import { checkDenoCompilerOptions } from "./check.ts";
 import { crawlFsItem } from "./fs_crawl.ts";
 
+/**
+ * Options accepted by the {@linkcode Builder} constructor.
+ */
 export interface BuildOptions {
   /**
    * This sets the target environment for the generated code.
@@ -104,25 +107,41 @@ export interface BuildOptions {
   plugins?: EsbuildPlugin[];
 }
 
+/**
+ * Fully-resolved build configuration — every {@linkcode BuildOptions} field
+ * with defaults filled in, plus runtime metadata like `mode` and `buildId`.
+ */
 export type ResolvedBuildConfig =
   & Required<Omit<BuildOptions, "sourceMap" | "plugins" | "clientEntry">>
   & {
+    /** Optional client entry point. */
     clientEntry?: string;
+    /** Active run mode — `development` enables HMR, error overlay, etc. */
     mode: "development" | "production";
+    /** Stable build identifier used for cache busting. */
     buildId: string;
+    /** esbuild source-map configuration. */
     sourceMap?: FreshBundleOptions["sourceMap"];
+    /** Additional esbuild plugins. */
     plugins?: EsbuildPlugin[];
   };
 
+/**
+ * Lower-level build pipeline — drives esbuild, file transforms, FS crawling,
+ * and the dev server. Most users should prefer {@linkcode HowlBuilder}, which
+ * wraps `Builder` with project-aware defaults.
+ */
 // deno-lint-ignore no-explicit-any
 export class Builder<State = any> {
   #transformer: FileTransformer;
   #addedInternalTransforms = false;
+  /** Resolved build configuration. */
   config: ResolvedBuildConfig;
   #islandSpecifiers = new Set<string>();
   #fsRoutes: FsRoute<State>;
   #ready = Promise.withResolvers<void>();
 
+  /** Construct a builder with the given options. Defaults are applied here. */
   constructor(options?: BuildOptions) {
     const root = parseDirPath(options?.root ?? ".", Deno.cwd());
     const serverEntry = parseDirPath(options?.serverEntry ?? "main.ts", root);
@@ -157,10 +176,12 @@ export class Builder<State = any> {
     };
   }
 
+  /** Register an island module for inclusion in the client bundle. */
   registerIsland(specifier: string): void {
     this.#islandSpecifiers.add(specifier);
   }
 
+  /** Register a static-file transform callback (CSS modules, image hashing, …). */
   onTransformStaticFile(
     options: OnTransformOptions,
     callback: TransformFn,
@@ -168,6 +189,10 @@ export class Builder<State = any> {
     this.#transformer.onTransform(options, callback);
   }
 
+  /**
+   * Start the dev server: imports the app, builds an in-memory cache, and
+   * serves with live-reload + error overlay middleware installed.
+   */
   async listen(
     importApp: () => Promise<{ app: App<State> } | App<State>>,
     options: ListenOptions = {},
@@ -215,6 +240,12 @@ export class Builder<State = any> {
     ]);
   }
 
+  /**
+   * Run a one-shot production build.
+   *
+   * Returns a callback that attaches the resulting build cache to a
+   * {@linkcode App} instance.
+   */
   async build(
     options?: {
       mode?: ResolvedBuildConfig["mode"];

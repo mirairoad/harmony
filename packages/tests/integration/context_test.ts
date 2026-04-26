@@ -1,0 +1,126 @@
+import { expect } from "@std/expect";
+import { makeApp, text } from "../harness.ts";
+
+Deno.test("ctx.json — sets Content-Type and serialises body", async () => {
+  const t = makeApp();
+  t.app.get("/", (ctx) => ctx.json({ hello: "world" }));
+
+  const res = await t.fetch("/");
+  expect(res.headers.get("Content-Type")).toContain("application/json");
+  expect(await res.json()).toEqual({ hello: "world" });
+});
+
+Deno.test("ctx.text — sends raw text", async () => {
+  const t = makeApp();
+  t.app.get("/", (ctx) => ctx.text("hi"));
+
+  const res = await t.fetch("/");
+  expect(await text(res)).toBe("hi");
+});
+
+Deno.test("ctx.html — sets HTML Content-Type", async () => {
+  const t = makeApp();
+  t.app.get("/", (ctx) => ctx.html("<p>hi</p>"));
+
+  const res = await t.fetch("/");
+  expect(res.headers.get("Content-Type")).toContain("text/html");
+  expect(await text(res)).toBe("<p>hi</p>");
+});
+
+Deno.test("ctx.redirect — defaults to 302 with Location header", async () => {
+  const t = makeApp();
+  t.app.get("/old", (ctx) => ctx.redirect("/new"));
+
+  const res = await t.fetch("/old");
+  expect(res.status).toBe(302);
+  expect(res.headers.get("Location")).toBe("/new");
+});
+
+Deno.test("ctx.partialRedirect — adds howl-partial when isPartial", async () => {
+  const t = makeApp();
+  t.app.get("/auth", (ctx) => ctx.partialRedirect("/sign-in"));
+
+  const direct = await t.fetch("/auth");
+  expect(direct.headers.get("Location")).toBe("/sign-in");
+
+  const partial = await t.fetch("/auth?howl-partial=true");
+  const loc = partial.headers.get("Location") ?? "";
+  expect(loc.includes("howl-partial=true")).toBe(true);
+});
+
+Deno.test("ctx.query — single key and full object", async () => {
+  const t = makeApp();
+  t.app.get("/search", (ctx) => {
+    return ctx.json({ q: ctx.query("q"), all: ctx.query() });
+  });
+
+  const res = await t.fetch("/search?q=howl&page=2");
+  expect(await res.json()).toEqual({
+    q: "howl",
+    all: { q: "howl", page: "2" },
+  });
+});
+
+Deno.test("ctx.cookies — get/set roundtrip via Set-Cookie", async () => {
+  const t = makeApp();
+  t.app.get("/login", (ctx) => {
+    ctx.cookies.set("token", "abc123");
+    return ctx.text("ok");
+  });
+  t.app.get("/me", (ctx) => ctx.json({ token: ctx.cookies.get("token") }));
+
+  const login = await t.fetch("/login");
+  const setCookie = login.headers.get("Set-Cookie") ?? "";
+  expect(setCookie.startsWith("token=abc123")).toBe(true);
+  expect(setCookie.includes("HttpOnly")).toBe(true);
+  expect(setCookie.includes("SameSite=Strict")).toBe(true);
+
+  await login.body?.cancel();
+
+  const me = await t.fetch("/me", {
+    headers: { Cookie: "token=abc123; other=foo" },
+  });
+  expect(await me.json()).toEqual({ token: "abc123" });
+});
+
+Deno.test("ctx.cookies.delete — emits Max-Age=0", async () => {
+  const t = makeApp();
+  t.app.get("/logout", (ctx) => {
+    ctx.cookies.delete("session");
+    return ctx.text("bye");
+  });
+
+  const res = await t.fetch("/logout");
+  const setCookie = res.headers.get("Set-Cookie") ?? "";
+  expect(setCookie.includes("session=")).toBe(true);
+  expect(setCookie.includes("Max-Age=0")).toBe(true);
+});
+
+Deno.test("ctx.cookies.all — returns parsed request cookies", async () => {
+  const t = makeApp();
+  t.app.get("/", (ctx) => ctx.json(ctx.cookies.all()));
+
+  const res = await t.fetch("/", {
+    headers: { Cookie: "a=1; b=two" },
+  });
+  expect(await res.json()).toEqual({ a: "1", b: "two" });
+});
+
+Deno.test("ctx.sse — streams SSE-formatted frames", async () => {
+  const t = makeApp();
+  t.app.get("/events", (ctx) =>
+    ctx.sse(async function* () {
+      yield { data: "first", event: "tick", id: 1 };
+      yield { data: { n: 2 }, event: "tick", id: 2 };
+    }));
+
+  const res = await t.fetch("/events");
+  expect(res.headers.get("Content-Type")).toBe("text/event-stream");
+  expect(res.headers.get("Cache-Control")).toBe("no-cache");
+
+  const body = await text(res);
+  expect(body.includes("id: 1")).toBe(true);
+  expect(body.includes("event: tick")).toBe(true);
+  expect(body.includes("data: first")).toBe(true);
+  expect(body.includes('data: {"n":2}')).toBe(true);
+});

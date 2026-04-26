@@ -3,6 +3,9 @@ import * as colors from "@std/fmt/colors";
 
 // deno-lint-ignore-file no-explicit-any
 
+/**
+ * Options accepted by {@linkcode HowlLogger}.
+ */
 export interface LoggerOptions {
   /** Enable debug output. No-ops when false. @default false */
   debug?: boolean;
@@ -48,6 +51,7 @@ export class HowlLogger {
   #originals: Record<ConsoleMethod, (...args: any[]) => void>;
   #installed = false;
 
+  /** Build a logger with optional debug/ignore configuration. */
   constructor(options: LoggerOptions = {}) {
     this.#debug = options.debug ?? false;
     this.#ignore = [...DEFAULT_IGNORE, ...(options.ignore ?? [])];
@@ -130,19 +134,24 @@ export class HowlLogger {
    * Direct logger methods — bypass console patching.
    * Useful for structured logging outside of console.
    */
-  log(...args: any[]) {
+  /** Emit a `log`-level message through the logger. */
+  log(...args: any[]): void {
     this.#output("log", ...args);
   }
-  error(...args: any[]) {
+  /** Emit an `error`-level message through the logger. */
+  error(...args: any[]): void {
     this.#output("error", ...args);
   }
-  warn(...args: any[]) {
+  /** Emit a `warn`-level message through the logger. */
+  warn(...args: any[]): void {
     this.#output("warn", ...args);
   }
-  info(...args: any[]) {
+  /** Emit an `info`-level message through the logger. */
+  info(...args: any[]): void {
     this.#output("info", ...args);
   }
-  debug(...args: any[]) {
+  /** Emit a `debug`-level message — silently dropped when debug is disabled. */
+  debug(...args: any[]): void {
     if (!this.#debug) return;
     this.#output("debug", ...args);
   }

@@ -1,6 +1,10 @@
 import type { Context } from "../context.ts";
 import type { Middleware } from "./mod.ts";
 
+/**
+ * Configuration for the {@linkcode cors} middleware. Each field corresponds
+ * to one of the standard CORS response headers.
+ */
 export type CORSOptions<State> = {
   /**
    * The value of [`Access-Control-Allow-Origin`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin) CORS header

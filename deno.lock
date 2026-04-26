@@ -7,6 +7,7 @@
     "jsr:@deno/esbuild-plugin@^1.2.1": "1.2.1",
     "jsr:@deno/graph@0.86": "0.86.9",
     "jsr:@deno/loader@~0.3.10": "0.3.12",
+    "jsr:@hushkey/howl@0.4": "0.4.0",
     "jsr:@std/assert@^1.0.17": "1.0.19",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/async@1": "1.2.0",
@@ -50,6 +51,7 @@
     "npm:@preact/signals@^2.8.2": "2.8.2_preact@10.29.0",
     "npm:@radix-ui/react-tooltip@^1.2.8": "1.2.8_react@19.2.4_react-dom@19.2.4__react@19.2.4",
     "npm:@tailwindcss/postcss@4": "4.2.1",
+    "npm:@tailwindcss/typography@~0.5.19": "0.5.19_tailwindcss@4.2.1",
     "npm:daisyui@5.5.18": "5.5.18",
     "npm:esbuild-wasm@~0.27.4": "0.27.4",
     "npm:esbuild@0.25": "0.25.12",
@@ -111,6 +113,29 @@
     },
     "@deno/loader@0.3.12": {
       "integrity": "52d3b3be0a32192efe07b0a4f1b3047077d2f2bba0f693e32f47421507f9fdb6"
+    },
+    "@hushkey/howl@0.4.0": {
+      "integrity": "a37a21b05581dda7063c88314b270a58ba2740e2642db6d986358988df7c3d52",
+      "dependencies": [
+        "jsr:@deno/esbuild-plugin",
+        "jsr:@std/encoding@1",
+        "jsr:@std/fmt@1",
+        "jsr:@std/fs@1",
+        "jsr:@std/html",
+        "jsr:@std/http",
+        "jsr:@std/jsonc",
+        "jsr:@std/media-types@1",
+        "jsr:@std/path@1",
+        "jsr:@std/uuid",
+        "npm:@opentelemetry/api",
+        "npm:@tailwindcss/postcss",
+        "npm:esbuild-wasm",
+        "npm:esbuild@0.25",
+        "npm:postcss",
+        "npm:preact-render-to-string",
+        "npm:preact@^10.25.0",
+        "npm:zod"
+      ]
     },
     "@std/assert@1.0.19": {
       "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
@@ -704,6 +729,13 @@
         "tailwindcss@4.2.1"
       ]
     },
+    "@tailwindcss/typography@0.5.19_tailwindcss@4.2.1": {
+      "integrity": "sha512-w31dd8HOx3k9vPtcQh5QHP9GwKcgbMp87j58qi6xgiBnFFtKEAgCWnDw4qUT8aHwkCp8bKvb/KGKWWHedP0AAg==",
+      "dependencies": [
+        "postcss-selector-parser",
+        "tailwindcss@4.2.1"
+      ]
+    },
     "boolbase@1.0.0": {
       "integrity": "sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww=="
     },
@@ -722,6 +754,10 @@
     },
     "css-what@6.2.2": {
       "integrity": "sha512-u/O3vwbptzhMs3L1fQE82ZSLHQQfto5gyZzwteVIEyeaY5Fc7R4dapF/BvRoSYFeqfBk4m0V1Vafq5Pjv25wvA=="
+    },
+    "cssesc@3.0.0": {
+      "integrity": "sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==",
+      "bin": true
     },
     "cssom@0.5.0": {
       "integrity": "sha512-iKuQcq+NdHqlAcwUY0o/HL69XQrUaQdMjmStJ8JFmUaiiQErlhrmuigkg/CU4E2J0IyUKUrMAgl36TvN67MqTw=="
@@ -973,6 +1009,13 @@
     "picocolors@1.1.1": {
       "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="
     },
+    "postcss-selector-parser@6.0.10": {
+      "integrity": "sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==",
+      "dependencies": [
+        "cssesc",
+        "util-deprecate"
+      ]
+    },
     "postcss@8.5.8": {
       "integrity": "sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==",
       "dependencies": [
@@ -1046,6 +1089,9 @@
     "uhyphen@0.2.0": {
       "integrity": "sha512-qz3o9CHXmJJPGBdqzab7qAYuW8kQGKNEuoHFYrBwV6hWIMcpAmxDLXojcHfFr9US1Pe6zUswEIJIbLI610fuqA=="
     },
+    "util-deprecate@1.0.2": {
+      "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw=="
+    },
     "zod@4.3.6": {
       "integrity": "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="
     }
@@ -1071,12 +1117,11 @@
       },
       "examples/www": {
         "dependencies": [
+          "jsr:@hushkey/howl@0.4",
           "jsr:@std/path@1",
-          "npm:@radix-ui/react-tooltip@^1.2.8",
+          "npm:@tailwindcss/typography@~0.5.19",
           "npm:daisyui@5.5.18",
           "npm:preact@^10.25.0",
-          "npm:react-hot-toast@^2.6.0",
-          "npm:sonner@^2.0.7",
           "npm:tailwindcss@4.1.18",
           "npm:zod@4.3.6"
         ]

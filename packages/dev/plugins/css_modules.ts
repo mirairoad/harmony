@@ -1,6 +1,9 @@
 import type { Plugin as EsbuildPlugin } from "esbuild";
 import * as path from "@std/path";
 
+/**
+ * Options for the {@linkcode cssModulesPlugin} esbuild plugin.
+ */
 export interface CssModulesOptions {
   /**
    * How scoped class names are generated.

@@ -35,6 +35,10 @@ function ensureHandler<State>(route: Route<State>) {
   }
 }
 
+/**
+ * Discriminator for the {@linkcode Command} union — identifies the kind of
+ * registration produced by an `app.use`, `app.get`, layout, error, etc. call.
+ */
 export const enum CommandType {
   Middleware = "middleware",
   Layout = "layout",
@@ -195,6 +199,10 @@ export interface ApiRouteCommand<State> {
   getItems: () => Command<State>[];
 }
 
+/**
+ * Tagged union of every registration recorded on a {@linkcode Howl}
+ * instance — applied lazily by `applyCommands` when the handler is built.
+ */
 export type Command<State> =
   | ErrorCmd<State>
   | AppCommand<State>

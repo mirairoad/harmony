@@ -32,7 +32,7 @@ Howl solves all of these natively.
 | `@hushkey/howl/dev`        | Build pipeline — esbuild, HMR                                        |
 | `@hushkey/howl/plugins`    | Official plugins — Tailwind v4, CSS Modules                          |
 | `@hushkey/howl/api`        | Endpoint contracts — defineApi, Zod validation, OpenAPI              |
-| `@hushkey/howl/middleware` | Built-in middlewares — cors, csrf, csp, trailingSlashes, staticFiles |
+| `@hushkey/howl/middleware` | Built-in middlewares — coalesceRequests, compression, cors, csrf, csp, staticFiles, trailingSlashes |
 
 ---
 
@@ -77,12 +77,19 @@ import { Redis } from "ioredis";
 
 const redis = new Redis(Deno.env.get("REDIS_URL") ?? "redis://localhost:6379");
 
-export interface State {
-  userContext?: UserContext;
-}
+export const APP_NAME = Deno.env.get("APP_NAME") ?? "My App";
+export const APP_VERSION = Deno.env.get("APP_VERSION") ?? "0.0.0";
 
 export interface UserContext {
   user?: { id: string; roles: Role[] };
+}
+
+export interface State {
+  userContext?: UserContext;
+  client: {
+    title: string;
+    version: string;
+  };
 }
 
 export const roles = ["user", "admin"] as const;
@@ -108,20 +115,48 @@ export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
 **`server/main.ts`**
 
 ```typescript
-import { Howl } from "@hushkey/howl";
-import { staticFiles } from "@hushkey/howl/middleware";
+import { Howl, staticFiles } from "@hushkey/howl";
+import { coalesceRequests, compression } from "@hushkey/howl/middleware";
 import type { State } from "../howl.config.ts";
 import { apiConfig } from "../howl.config.ts";
 import { middleware } from "./middleware/_index.middleware.ts";
 
 export const app = new Howl<State>({ logger: true });
 
+app.use(coalesceRequests()); // thundering-herd protection — must be first
+app.use(compression());
 app.use(staticFiles());
 app.configure(middleware);
 app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts
 app.fsClientRoutes(); // crawls client/pages/, mounts all routes
 
 export default { app };
+```
+
+**`server/middleware/_index.middleware.ts`**
+
+```typescript
+import { Howl } from "@hushkey/howl";
+import type { State } from "../howl.config.ts";
+import { APP_NAME, APP_VERSION } from "../howl.config.ts";
+
+export const middleware = (app: Howl<State>) => {
+  app.use((ctx) => {
+    ctx.state.client = {
+      title: APP_NAME,
+      version: APP_VERSION,
+    };
+
+    return ctx.next();
+  });
+
+  app.use((ctx) => {
+    ctx.headers.set("X-Request-Id", crypto.randomUUID());
+    ctx.headers.set("X-Powered-By", `${APP_NAME}/${APP_VERSION}`);
+
+    return ctx.next();
+  });
+};
 ```
 
 **`dev.ts`**
@@ -152,20 +187,22 @@ if (Deno.args.includes("build")) {
 **`client/pages/_app.tsx`** — root HTML shell
 
 ```tsx
-import type { RouteConfig } from "@hushkey/howl";
-import type { FunctionComponent, JSX } from "preact";
+import type { PageProps } from "@hushkey/howl";
+import type { JSX } from "preact";
+import { Partial } from "@hushkey/howl/runtime";
+import type { State } from "../../howl.config.ts";
 
-export const config: RouteConfig = {};
-
-export default function App({ Component }: { Component: FunctionComponent }): JSX.Element {
+export default function App({ Component, state }: PageProps<unknown, State>): JSX.Element {
   return (
     <html>
       <head>
-        <title>My App</title>
+        <title>{state.client?.title ?? "My App"}</title>
         <link rel="stylesheet" href="/style.css" />
       </head>
-      <body>
-        <Component />
+      <body f-client-nav>
+        <Partial name="main">
+          <Component />
+        </Partial>
       </body>
     </html>
   );
@@ -175,14 +212,16 @@ export default function App({ Component }: { Component: FunctionComponent }): JS
 **`client/pages/_layout.tsx`** — shared UI layout (nav, sidebar, etc.)
 
 ```tsx
-import type { FunctionComponent, JSX } from "preact";
+import type { PageProps } from "@hushkey/howl";
+import type { JSX } from "preact";
+import type { State } from "../../howl.config.ts";
 
-export default function ({ Component }: { Component: FunctionComponent }): JSX.Element {
+export default function Layout({ Component, state }: PageProps<unknown, State>): JSX.Element {
   return (
     <>
       <div class="navbar bg-base-200">
         <div class="navbar-start">
-          <a href="/" class="btn btn-ghost text-xl">🐺 Howl</a>
+          <a href="/" class="btn btn-ghost text-xl">🐺 {state.client?.title}</a>
         </div>
         <div class="navbar-end">
           <a href="/" class="btn btn-ghost btn-sm">Home</a>
@@ -206,10 +245,20 @@ export default function ({ Component }: { Component: FunctionComponent }): JSX.E
 
 ```tsx
 import type { Context } from "@hushkey/howl";
+import type { JSX } from "preact";
+import { Head } from "@hushkey/howl/runtime";
 import type { State } from "../../howl.config.ts";
 
-export default function Index(ctx: Context<State>) {
-  return <h1>Hello, {ctx.state.userContext?.user?.id}</h1>;
+export default function Index(_ctx: Context<State>): JSX.Element {
+  return (
+    <>
+      <Head>
+        <title>{_ctx.state.client.title} — Home</title>
+      </Head>
+      <h1>Welcome to {_ctx.state.client.title}</h1>
+      <p>v{_ctx.state.client.version}</p>
+    </>
+  );
 }
 ```
 
@@ -221,19 +270,29 @@ Built-in middlewares are available via `@hushkey/howl/middleware` (barrel) or in
 imports for tree-shaking.
 
 ```typescript
-import { cors, csp, csrf, staticFiles, trailingSlashes } from "@hushkey/howl/middleware";
-// or individually:
-import { cors } from "@hushkey/howl/middleware/cors";
-import { csrf } from "@hushkey/howl/middleware/csrf";
+import {
+  coalesceRequests,
+  compression,
+  cors,
+  csp,
+  csrf,
+  staticFiles,
+  trailingSlashes,
+} from "@hushkey/howl/middleware";
 ```
 
 ```typescript
+app.use(coalesceRequests()); // thundering-herd protection — must be first
+app.use(compression());      // gzip/deflate for text, JSON, JS, SVG
 app.use(staticFiles());
 app.use(cors({ origin: "https://myapp.example.com", credentials: true }));
 app.use(csrf());
 app.use(csp({ reportOnly: false, reportTo: "/api/csp-reports" }));
 app.use(trailingSlashes("never"));
 ```
+
+`coalesceRequests()` deduplicates concurrent GET requests to the same URL. Only applies to requests
+without a `Cookie` or `Authorization` header — authenticated requests always run their own handler.
 
 ---
 

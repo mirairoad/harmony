@@ -17,24 +17,44 @@ import {
 import { isLazy } from "./utils.ts";
 import { recordSpanError, tracer } from "./otel.ts";
 
+/**
+ * Shape of a route/middleware/layout file loaded from the file system.
+ */
 export interface FreshFsMod<State> {
+  /** Optional route configuration. */
   config?: RouteConfig;
+  /** Single handler function or array of handler functions. */
   handler?: RouteHandler<unknown, State> | HandlerFn<unknown, State>[];
+  /** Per-method handler map. */
   handlers?: RouteHandler<unknown, State>;
+  /** Default export — the page/layout/middleware component. */
   default?:
     | AnyComponent<PageProps<unknown, State>>
     | AsyncAnyComponent<PageProps<unknown, State>>;
+  /** CSS asset URLs to preload alongside the route. */
   css?: string[];
 }
 
+/**
+ * Internal representation of a single file collected from the routes
+ * directory by the FS crawler.
+ */
 export interface FsRouteFile<State> {
+  /** Stable identifier (typically the relative file path). */
   id: string;
+  /** Absolute path on disk. */
   filePath: string;
+  /** Module export (or a lazy loader). */
   mod: MaybeLazy<FreshFsMod<State>>;
+  /** URL pattern derived from the file path. */
   pattern: string;
+  /** Command type (route, middleware, layout, app, error, not-found). */
   type: CommandType;
+  /** Pattern used for OpenAPI/route registration purposes. */
   routePattern: string;
+  /** Optional configuration override declared on the file. */
   overrideConfig: RouteConfig | undefined;
+  /** CSS assets emitted by the build for this route. */
   css: string[];
 }
 
@@ -52,6 +72,9 @@ function isFreshFile<State>(
     typeof mod.handler === "function";
 }
 
+/**
+ * Options accepted by the file-system route loader.
+ */
 export interface FsRoutesOptions {
   /**
    * Parent directory for the `/routes` and `/islands` folders.
@@ -60,10 +83,16 @@ export interface FsRoutesOptions {
    * @default app.config.root
    */
   dir?: string;
+  /** Regular expressions matched against file paths to skip during the crawl. */
   ignoreFilePattern?: RegExp[];
+  /** Callback used to dynamically import a route module by absolute path. */
   loadRoute: (path: string) => Promise<unknown>;
 }
 
+/**
+ * Convert collected {@linkcode FsRouteFile}s into the internal command list
+ * consumed by the router.
+ */
 export function fsItemsToCommands<State>(
   items: FsRouteFile<State>[],
 ): Command<State>[] {

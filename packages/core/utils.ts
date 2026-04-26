@@ -2,6 +2,10 @@ import * as path from "@std/path";
 import type { Lazy, MaybeLazy } from "./types.ts";
 import { pathToFileUrl, relativeUrl } from "./file_url.ts";
 
+/**
+ * Throw if `filePath` resolves outside of `dir` — used to defend against
+ * path-traversal attacks when serving static files.
+ */
 export function assertInDir(
   filePath: string,
   dir: string,
@@ -41,6 +45,11 @@ const SCRIPT_ESCAPE = /<\/(style|script)/gi;
 const COMMENT_ESCAPE = /<!--/gi;
 
 // See https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements
+/**
+ * Escape a string for safe inclusion inside a `<script>` tag.
+ * Pass `{ json: true }` when the content is JSON to get a JSON-safe escape
+ * for `<!--` sequences.
+ */
 export function escapeScript(
   content: string,
   options: { json?: boolean } = {},
@@ -50,9 +59,14 @@ export function escapeScript(
     .replaceAll(COMMENT_ESCAPE, options.json ? "\\u003C!--" : "\\x3C!--");
 }
 
+/**
+ * Generates JS-safe identifiers and disambiguates duplicates by suffixing
+ * a counter (`Foo`, `Foo_1`, `Foo_2`, …).
+ */
 export class UniqueNamer {
   #seen = new Map<string, number>();
 
+  /** Returns a JS-safe, collision-free identifier derived from `name`. */
   getUniqueName(name: string): string {
     // These names are only internal, so we can convert everything to
     // plain ASCII.
@@ -244,6 +258,10 @@ const JS_RESERVED = new Set([
 ]);
 
 const PATH_TO_SPEC = /[\\/]+/g;
+/**
+ * Convert an arbitrary import specifier (URL, absolute path, relative path)
+ * into a specifier valid from `outDir`.
+ */
 export function pathToSpec(outDir: string, spec: string): string {
   const outDirUrl = pathToFileUrl(outDir);
 

@@ -34,7 +34,11 @@ export function assetSrcSet(srcset: string): string {
   return assetSrcSetInternal(srcset, BUILD_ID);
 }
 
+/**
+ * Props for the {@linkcode Partial} component.
+ */
 export interface PartialProps {
+  /** Children rendered inside the partial. */
   children?: ComponentChildren;
   /**
    * The name of the partial. This value must be unique across partials.
@@ -47,10 +51,16 @@ export interface PartialProps {
   mode?: "replace" | "prepend" | "append";
 }
 
+/**
+ * Marks a region of the page that can be replaced via Howl partial navigation
+ * without re-rendering the rest of the document. The runtime swaps the
+ * matching partial in-place when the user navigates.
+ */
 export function Partial(props: PartialProps): VNode {
   // deno-lint-ignore no-explicit-any
   return props.children as any;
 }
+/** Component display name surfaced in Preact devtools. */
 Partial.displayName = "Partial";
 
 export { Head, type HeadProps } from "./head.ts";

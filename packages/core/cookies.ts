@@ -1,12 +1,24 @@
 // packages/core/cookies.ts
 
+/**
+ * Options accepted by {@linkcode CookieManager.set} — mirror the standard
+ * `Set-Cookie` attributes. Defaults: `path="/"`, `httpOnly=true`,
+ * `sameSite="Strict"`. `secure` is auto-detected from `x-forwarded-proto`.
+ */
 export interface CookieOptions {
+  /** `Path` attribute. Defaults to `/`. */
   path?: string;
+  /** `Domain` attribute. */
   domain?: string;
+  /** `Secure` attribute. Auto-detected from `x-forwarded-proto` when omitted. */
   secure?: boolean;
+  /** `HttpOnly` attribute. Defaults to `true`. */
   httpOnly?: boolean;
+  /** `Max-Age` attribute in seconds. */
   maxAge?: number;
+  /** `Expires` attribute as a `Date`. */
   expires?: Date;
+  /** `SameSite` attribute. Defaults to `Strict`. */
   sameSite?: "Strict" | "Lax" | "None";
 }
 
@@ -19,6 +31,7 @@ export class CookieManager {
   #requestHeaders: Headers;
   #responseHeaders: Headers;
 
+  /** Wrap the incoming and outgoing header sets for cookie I/O. */
   constructor(requestHeaders: Headers, responseHeaders: Headers) {
     this.#requestHeaders = requestHeaders;
     this.#responseHeaders = responseHeaders;

@@ -26,15 +26,28 @@ import {
 } from "./commands.ts";
 import { MockBuildCache } from "./test_utils.ts";
 import { HowlLogger, type LoggerOptions } from "./logger.ts";
+/**
+ * Configuration for a registered client app — an isolated build of routes/islands
+ * mounted at a path.
+ */
 export interface ClientConfig {
+  /** Unique client name; used as the build cache namespace. */
   name: string;
+  /** Absolute or root-relative directory containing the client's pages/islands. */
   dir: string;
+  /** URL path the client is mounted at (e.g. `/`, `/admin`). */
   mount: string;
 }
 
+/**
+ * Configuration for the file-system API route loader.
+ */
 export interface ApiConfig {
+  /** Directory (absolute or root-relative) to crawl for `*.api.ts` files. */
   dir: string;
+  /** URL prefix prepended to inferred API paths (e.g. `/api`). */
   prefix: string;
+  /** Whether to expose the generated OpenAPI spec endpoint. */
   spec?: boolean;
 }
 
@@ -83,9 +96,18 @@ function getNetworkIp(): string | null {
   return null;
 }
 
+/**
+ * Options accepted by {@linkcode Howl.listen}.
+ *
+ * Mirrors `Deno.ServeTcpOptions` (and optional TLS key/cert) plus an optional
+ * `remoteAddress` string used purely for the dev-server startup banner.
+ */
 export type ListenOptions =
   & Partial<Deno.ServeTcpOptions & Deno.TlsCertifiedKeyPem>
-  & { remoteAddress?: string };
+  & {
+    /** Optional remote URL printed on startup (informational only). */
+    remoteAddress?: string;
+  };
 
 function createOnListen(
   basePath: string,
@@ -161,12 +183,15 @@ function listenOnFreePort(
   throw firstError;
 }
 
+/** @internal Returns the {@linkcode BuildCache} attached to a Howl app, or `null`. */
 export let getBuildCache: <State>(app: Howl<State>) => BuildCache<State> | null;
+/** @internal Attaches a {@linkcode BuildCache} to a Howl app and locks the run mode. */
 export let setBuildCache: <State>(
   app: Howl<State>,
   cache: BuildCache<State>,
   mode: "development" | "production",
 ) => void;
+/** @internal Installs an error interceptor invoked when a middleware throws. */
 export let setErrorInterceptor: <State>(
   app: Howl<State>,
   fn: (err: unknown) => void,
@@ -174,6 +199,12 @@ export let setErrorInterceptor: <State>(
 
 const NOOP = () => {};
 
+/**
+ * Constructor options for {@linkcode Howl}.
+ *
+ * Extends the resolved {@linkcode HowlConfig} (basePath, mode, root) with
+ * optional per-app logger settings.
+ */
 export interface HowlOptions extends HowlConfig {
   /**
    * Enable Howl's built-in logger.
@@ -240,6 +271,7 @@ export class Howl<State = any> {
     return this.#logger;
   }
 
+  /** Create a new Howl application. */
   constructor(options: HowlOptions = {}) {
     this.config = {
       root: ".",
@@ -279,6 +311,7 @@ export class Howl<State = any> {
    * app.use("/admin", adminOnly);
    */
   use(...middleware: MaybeLazyMiddleware<State>[]): this;
+  /** Register middleware scoped to a path pattern. */
   use(path: string, ...middleware: MaybeLazyMiddleware<State>[]): this;
   use(
     pathOrMiddleware: string | MaybeLazyMiddleware<State>,
@@ -293,6 +326,14 @@ export class Howl<State = any> {
       pattern = "*";
       middlewares.unshift(pathOrMiddleware);
       fns = middlewares;
+    }
+    // Trailing /* and /** collapse to the parent segment so the middleware
+    // attaches one level up and propagates to every descendant route via the
+    // segment-walk in segmentToMiddlewares. Bare "*" / "/*" stay as-is and
+    // map to the root segment.
+    if (pattern.length > 2 && (pattern.endsWith("/*") || pattern.endsWith("/**"))) {
+      pattern = pattern.endsWith("/**") ? pattern.slice(0, -3) : pattern.slice(0, -2);
+      if (pattern === "") pattern = "/";
     }
     this.#commands.push(newMiddlewareCmd(pattern, fns, true));
     return this;

@@ -7,11 +7,21 @@ import { z } from "zod";
  * Implement this to plug in any cache backend.
  */
 export interface CacheAdapter {
+  /** Read the value at `key`, or `null` if missing/expired. */
   get(key: string): Promise<string | null>;
+  /** Write `value` at `key` with a TTL in seconds. */
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
+  /** Remove the value at `key`. */
   delete(key: string): Promise<void>;
 }
 
+/**
+ * Per-route or app-wide rate limit configuration.
+ *
+ * Counters are keyed on `userId` when authenticated, otherwise on the client
+ * IP. Use `rateLimitCache` in {@linkcode HowlApiConfig} to share counters
+ * across instances (Redis/Deno KV).
+ */
 export interface RateLimitConfig {
   /** Max requests allowed in the window. */
   max: number;
@@ -76,13 +86,23 @@ export interface HowlApiConfig<
   rateLimitCache?: CacheAdapter;
 }
 
+/**
+ * Map of HTTP status codes to Zod schemas describing the response body.
+ * Used by {@linkcode ApiDefinition.responses} for type inference and
+ * OpenAPI generation.
+ */
 export type ResponsesMap = Record<number, z.ZodTypeAny>;
 
+/**
+ * Acceptable Zod schema types for an API request body — any object schema,
+ * union of object schemas, or `z.any()` for unstructured payloads.
+ */
 export type RequestBodySchema =
   | z.ZodObject<any, any>
   | z.ZodUnion<any>
   | z.ZodAny;
 
+/** Zod schema describing typed query-string parameters. */
 export type QuerySchema = z.ZodObject<any, any>;
 
 /**
@@ -166,6 +186,7 @@ export interface ApiDefinition<
    * Mirrors the file path e.g. "public/search"
    */
   directory: string;
+  /** HTTP method this endpoint responds to. */
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   /**
    * Explicit path override. If omitted, path is auto-generated from
@@ -176,12 +197,14 @@ export interface ApiDefinition<
    * // Webhook: path: "/webhooks/stripe"
    */
   path?: string | string[];
+  /** Human-readable description used by OpenAPI generation. */
   description?: string;
   /**
    * Roles required to access this endpoint.
    * Empty array = public route, no auth required.
    */
   roles: Role[];
+  /** Optional response caching — set `ttl` in seconds (0 disables). */
   caching?: {
     /** TTL in seconds. 0 = no cache. */
     ttl: number;
@@ -195,12 +218,15 @@ export interface ApiDefinition<
    * rateLimit: false                           // no limit
    */
   rateLimit?: RateLimitConfig | false;
+  /** Map of HTTP status codes to Zod schemas describing response bodies. */
   responses: R;
+  /** Optional Zod schema describing the JSON request body. */
   requestBody?: B;
   /** Query params Zod schema — parsed, validated, and typed on ctx.query() */
   query?: Q;
   /** Path params Zod schema */
   params?: z.ZodObject<any, any>;
+  /** Request handler invoked after auth, validation, rate-limiting, and cache lookup. */
   handler: B extends RequestBodySchema
     ? Q extends QuerySchema
       ? (ctx: ContextWithBodyAndQuery<B, Q, State>, app: Howl<State>) => HandlerReturn<R>
@@ -210,5 +236,9 @@ export interface ApiDefinition<
     : (ctx: Context<State>, app: Howl<State>) => HandlerReturn<R>;
 }
 
+/**
+ * An {@linkcode ApiDefinition} with all generic parameters relaxed — useful
+ * for collections of heterogeneous APIs (registries, OpenAPI generation).
+ */
 // deno-lint-ignore no-explicit-any
 export type AnyApiDefinition = ApiDefinition<any, any, any, any, any>;
