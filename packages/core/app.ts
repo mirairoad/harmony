@@ -477,8 +477,8 @@ export class Howl<State = any> {
   }
 
   /**
-   * Register a WebSocket endpoint at `path`. Mirrors the API of Fresh's
-   * `app.ws()` — handlers receive the upgraded `WebSocket` and the request
+   * Register a WebSocket endpoint at `path`. Handlers receive the upgraded
+   * `WebSocket` and the request
    * `Context`, so middleware-set state (auth, request id, …) is available
    * before the first frame.
    *

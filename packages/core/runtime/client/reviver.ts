@@ -9,7 +9,7 @@ import {
 } from "preact";
 import { type CustomParser, parse } from "../../jsonify/parse.ts";
 import { computed, signal } from "@preact/signals";
-import { DATA_FRESH_KEY, PartialMode } from "../shared_internal.ts";
+import { DATA_HOWL_KEY, PartialMode } from "../shared_internal.ts";
 
 const enum RootKind {
   Island,
@@ -44,7 +44,7 @@ interface SlotRef {
   name: string;
   id: number;
 }
-const SLOT_SYMBOL = Symbol.for("_FRESH_SLOT");
+const SLOT_SYMBOL = Symbol.for("_HOWL_SLOT");
 function isSlotRef(x: unknown): x is SlotRef {
   return x !== null && typeof x === "object" && "kind" in x &&
     x.kind === SLOT_SYMBOL;
@@ -99,7 +99,7 @@ export function revive(
           props[propName] = root;
         } else {
           const template = document.querySelector(
-            `#frsh-${value.id}-${value.name}`,
+            `#howl-${value.id}-${value.name}`,
           ) as HTMLTemplateElement | null;
           if (template !== null) {
             const root = h(Fragment, null);
@@ -201,11 +201,11 @@ export function boot(
 
 const SHOW_MARKERS = false;
 
-interface FreshMarker extends Text {
+interface HowlMarker extends Text {
   _howlMarker: string;
 }
 
-export function isFreshMarkerText(node: Node): node is FreshMarker {
+export function isHowlMarkerText(node: Node): node is HowlMarker {
   return node.nodeType === Node.TEXT_NODE &&
     // deno-lint-ignore no-explicit-any
     typeof (node as any)._howlMarker === "string";
@@ -217,7 +217,7 @@ export function isFreshMarkerText(node: Node): node is FreshMarker {
  */
 export function maybeHideMarker(marker: Comment): Comment | Text {
   if (SHOW_MARKERS) return marker;
-  const text = new Text("") as FreshMarker;
+  const text = new Text("") as HowlMarker;
   text._howlMarker = marker.data;
   marker.parentNode!.insertBefore(text, marker);
   marker.remove();
@@ -245,7 +245,7 @@ function _walkInner(
     }
   } else if (isCommentNode(node)) {
     const comment = node.data;
-    if (comment.startsWith("frsh:")) {
+    if (comment.startsWith("howl:")) {
       node = maybeHideMarker(node);
       const parts = comment.split(":");
       const kind = parts[1];
@@ -289,13 +289,13 @@ function _walkInner(
         }
         ctx.stack.push(found);
       }
-    } else if (comment === "/frsh:island" || comment === "/frsh:partial") {
+    } else if (comment === "/howl:island" || comment === "/howl:partial") {
       node = maybeHideMarker(node);
       const item = ctx.stack.pop();
       if (item !== undefined) {
         item.end = node as Comment;
       }
-    } else if (comment === "/frsh:slot") {
+    } else if (comment === "/howl:slot") {
       node = maybeHideMarker(node);
       const item = ctx.slotIdStack.pop();
       if (item !== undefined) {
@@ -345,7 +345,7 @@ export function domToVNode(
       for (let i = 0; i < sib.attributes.length; i++) {
         const attr = sib.attributes[i];
 
-        if (attr.nodeName === DATA_FRESH_KEY) {
+        if (attr.nodeName === DATA_HOWL_KEY) {
           props.key = attr.nodeValue;
           continue;
         }
@@ -373,9 +373,9 @@ export function domToVNode(
       if (appendVNode) {
         vnodeStack.pop();
       }
-    } else if (isCommentNode(sib) || isFreshMarkerText(sib)) {
-      const comment = isFreshMarkerText(sib) ? sib._howlMarker : sib.data;
-      if (comment.startsWith("frsh:")) {
+    } else if (isCommentNode(sib) || isHowlMarkerText(sib)) {
+      const comment = isHowlMarkerText(sib) ? sib._howlMarker : sib.data;
+      if (comment.startsWith("howl:")) {
         const parts = comment.split(":");
 
         const kind = parts[1];
@@ -480,13 +480,13 @@ export function domToVNode(
           continue;
         }
       } else if (
-        comment === "/frsh:island" || comment === "/frsh:slot" ||
-        comment === "/frsh:partial"
+        comment === "/howl:island" || comment === "/howl:slot" ||
+        comment === "/howl:partial"
       ) {
         vnodeStack.pop();
         markerStack.pop();
         sib = maybeHideMarker(sib);
-      } else if (comment === "/frsh:key") {
+      } else if (comment === "/howl:key") {
         vnodeStack.pop();
         sib = maybeHideMarker(sib);
       }

@@ -21,7 +21,7 @@ export type UnknownPageProps<_Data = unknown, T = unknown> = Context<T>;
 export type ErrorPageProps<_Data = unknown, T = unknown> = Context<T>;
 
 /**
- * @deprecated Use {@linkcode FreshContext} instead.
+ * @deprecated Use {@linkcode HowlContext} instead.
  */
 export type RouteContext<_T = never, S = Record<string, unknown>> = Context<S>;
 

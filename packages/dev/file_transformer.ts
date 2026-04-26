@@ -289,7 +289,7 @@ const CSS_URL_REGEX = /url\(("[^"]+"|'[^']+'|[^)]+)\)/g;
 
 export function cssAssetHash(transformer: FileTransformer) {
   transformer.onTransform({
-    pluginName: "fresh-css",
+    pluginName: "howl-css",
     filter: /\.css$/,
   }, (args) => {
     const replaced = args.text.replaceAll(CSS_URL_REGEX, (_, str) => {

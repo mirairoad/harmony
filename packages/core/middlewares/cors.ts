@@ -39,12 +39,12 @@ export type CORSOptions<State> = {
  * CORS Middleware to set [`Cross-Origin-Resource-Sharing`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) headers.
  *
  * @param [options] - The options for the CORS middleware.
- * @returns The Fresh middleware handler function.
+ * @returns The Howl middleware handler function.
  *
  * @example Basic usage
  * ```ts
  * // main.ts or routes/_middleware.ts
- * import { cors } from 'fresh';
+ * import { cors } from '@hushkey/howl/middleware';
  *
  * export const handler = [
  *   cors({ origin: '*' }), // Allow all origins

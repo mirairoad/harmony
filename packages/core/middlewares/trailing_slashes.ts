@@ -1,7 +1,7 @@
 import type { Middleware } from "./mod.ts";
 
 /**
- * Fresh middleware to force URLs to end with a slash or never end with one.
+ * Howl middleware to force URLs to end with a slash or never end with one.
  *
  * ```ts
  * // Always add trailing slash

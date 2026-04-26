@@ -12,28 +12,28 @@ export function EnvIsland(props: EnvIslandProps) {
     active.value = true;
   }, []);
 
-  const deno = Deno.env.get("FRESH_PUBLIC_TEST_FOO");
-  const deno2 = Deno.env.get("FRESH_PUBLIC_TEST_FOO");
+  const deno = Deno.env.get("HOWL_PUBLIC_TEST_FOO");
+  const deno2 = Deno.env.get("HOWL_PUBLIC_TEST_FOO");
   // @ts-ignore f
-  const processEnv = process.env.FRESH_PUBLIC_TEST_FOO;
+  const processEnv = process.env.HOWL_PUBLIC_TEST_FOO;
 
   let denoPrivateEnv = "not ok";
   try {
-    Deno.env.get("FRESH_PRIVATE_TEST_FOO");
+    Deno.env.get("HOWL_PRIVATE_TEST_FOO");
   } catch {
     denoPrivateEnv = "ok";
   }
 
   let denoPrivateEnv2 = "not ok";
   try {
-    Deno.env.get("FRESH_PRIVATE_TEST_FOO");
+    Deno.env.get("HOWL_PRIVATE_TEST_FOO");
   } catch {
     denoPrivateEnv2 = "ok";
   }
 
   let processEnvPrivate = "not ok";
   try {
-    process.env.FRESH_PRIVATE_TEST_FOO;
+    process.env.HOWL_PRIVATE_TEST_FOO;
   } catch {
     processEnvPrivate = "ok";
   }

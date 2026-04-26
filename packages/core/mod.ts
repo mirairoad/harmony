@@ -13,7 +13,7 @@ export {
 } from "./app.ts";
 
 // --- Request context ---
-export { Context, type FreshContext, type SSEEvent } from "./context.ts";
+export { Context, type HowlContext, type SSEEvent } from "./context.ts";
 
 // --- Page props ---
 export type { PageProps } from "./render.ts";

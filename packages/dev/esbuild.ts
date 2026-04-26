@@ -65,7 +65,7 @@ function reactCompatPlugin(cwd: string): EsbuildPlugin {
     },
   };
 }
-export interface FreshBundleOptions {
+export interface HowlBundleOptions {
   dev: boolean;
   cwd: string;
   buildId: string;
@@ -103,7 +103,7 @@ let esbuild: null | typeof import("esbuild") = null;
 const PREACT_ENV = Deno.env.get("PREACT_PATH");
 
 export async function bundleJs(
-  options: FreshBundleOptions,
+  options: HowlBundleOptions,
 ): Promise<BuildOutput> {
   if (esbuild === null) {
     await startEsbuild();
@@ -239,7 +239,7 @@ function buildIdPlugin(buildId: string): EsbuildPlugin {
     name: "howl-build-id",
     setup(build) {
       build.onResolve({
-        filter: /^(jsr:)?@fresh\/build-id|build-id\.ts$|\/build-id$/,
+        filter: /build-id\.ts$|\/build-id$/,
       }, (args) => ({
         path: args.path,
         namespace: "howl-internal-build-id",

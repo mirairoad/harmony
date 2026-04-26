@@ -1,11 +1,11 @@
 import { useSignal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 
-export interface FreshAttrs {
+export interface HowlAttrs {
   id?: string;
 }
 
-export function FreshAttrs(props: FreshAttrs) {
+export function HowlAttrs(props: HowlAttrs) {
   const active = useSignal(false);
   useEffect(() => {
     active.value = true;
@@ -13,7 +13,7 @@ export function FreshAttrs(props: FreshAttrs) {
 
   return (
     <div id={props.id} class={active.value ? "ready" : ""}>
-      <h1>Fresh attrs</h1>
+      <h1>Howl attrs</h1>
       <div class="f-client-nav-true" f-client-nav>f-client-nav=true</div>
       <div class="f-client-nav-false" f-client-nav={false}>
         f-client-nav=false

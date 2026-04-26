@@ -5,14 +5,14 @@ import { tracer } from "../otel.ts";
 import { getBuildCache } from "../context.ts";
 
 /**
- * Fresh middleware to serve static files from the `static/` directory.
+ * Howl middleware to serve static files from the `static/` directory.
  * ```ts
- * // Enable Fresh static file serving
+ * // Enable Howl static file serving
  * app.use(staticFiles());
  * ```
  */
 export function staticFiles<T>(): Middleware<T> {
-  return async function freshServeStaticFiles(ctx) {
+  return async function howlServeStaticFiles(ctx) {
     const { req, url, config } = ctx;
 
     const buildCache = getBuildCache(ctx);
@@ -45,7 +45,7 @@ export function staticFiles<T>(): Middleware<T> {
     }
 
     const span = tracer.startSpan("static file", {
-      attributes: { "fresh.span_type": "static_file" },
+      attributes: { "howl.span_type": "static_file" },
       startTime,
     });
 
@@ -55,8 +55,8 @@ export function staticFiles<T>(): Middleware<T> {
         url.searchParams.delete(ASSET_CACHE_BUST_KEY);
         const location = url.pathname + url.search;
         file.close();
-        span.setAttribute("fresh.cache", "invalid_bust_key");
-        span.setAttribute("fresh.cache_key", cacheKey);
+        span.setAttribute("howl.cache", "invalid_bust_key");
+        span.setAttribute("howl.cache_key", cacheKey);
         return new Response(null, {
           status: 307,
           headers: {
@@ -80,7 +80,7 @@ export function staticFiles<T>(): Middleware<T> {
           (ifNoneMatch === etag || ifNoneMatch === `W/"${etag}"`)
         ) {
           file.close();
-          span.setAttribute("fresh.cache", "not_modified");
+          span.setAttribute("howl.cache", "not_modified");
           return new Response(null, { status: 304, headers });
         } else if (etag !== null) {
           headers.set("Etag", `W/"${etag}"`);
@@ -94,10 +94,10 @@ export function staticFiles<T>(): Middleware<T> {
             `${ctx.config.basePath}/_howl/js/${BUILD_ID}/`,
           ))
       ) {
-        span.setAttribute("fresh.cache", "immutable");
+        span.setAttribute("howl.cache", "immutable");
         headers.append("Cache-Control", "public, max-age=31536000, immutable");
       } else {
-        span.setAttribute("fresh.cache", "no_cache");
+        span.setAttribute("howl.cache", "no_cache");
         headers.append(
           "Cache-Control",
           "no-cache, no-store, max-age=0, must-revalidate",

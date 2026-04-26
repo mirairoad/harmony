@@ -12,7 +12,7 @@ import { SpanStatusCode } from "@opentelemetry/api";
 import type { ResolvedHowlConfig } from "./config.ts";
 import type { BuildCache } from "./build_cache.ts";
 import type { LayoutConfig } from "./types.ts";
-import { FreshScripts, RenderState, setRenderState } from "./runtime/server/preact_hooks.ts";
+import { HowlScripts, RenderState, setRenderState } from "./runtime/server/preact_hooks.ts";
 import { DEV_ERROR_OVERLAY_URL, PARTIAL_SEARCH_PARAM } from "./constants.ts";
 import { tracer } from "./otel.ts";
 import {
@@ -66,7 +66,7 @@ export interface Island {
 export type ServerIslandRegistry = Map<ComponentType, Island>;
 
 /** Symbol used to access framework-internal context fields. */
-export const internals: unique symbol = Symbol("fresh_internal");
+export const internals: unique symbol = Symbol("howl_internal");
 
 /**
  * Internal description of the wrapping UI tree (app shell + layouts) collected
@@ -80,12 +80,11 @@ export interface UiTree<Data, State> {
 }
 
 /**
- * Legacy alias for {@linkcode Context} preserved for back-compat with code
- * written against Fresh-era APIs.
+ * Legacy alias for {@linkcode Context}.
  *
  * @deprecated Use {@linkcode Context} instead.
  */
-export type FreshContext<State = unknown> = Context<State>;
+export type HowlContext<State = unknown> = Context<State>;
 
 /** @internal Returns the {@linkcode BuildCache} associated with a {@linkcode Context}. */
 export let getBuildCache: <T>(ctx: Context<T>) => BuildCache<T>;
@@ -122,7 +121,7 @@ export class Context<State> {
     layouts: [],
   };
 
-  /** Reference to the resolved Fresh configuration */
+  /** Reference to the resolved Howl configuration */
   readonly config: ResolvedHowlConfig;
   /**
    * The request url parsed into an `URL` instance. This is typically used
@@ -147,7 +146,7 @@ export class Context<State> {
   /**
    * Whether the current Request is a partial request.
    *
-   * Partials in Fresh will append the query parameter
+   * Partials in Howl will append the query parameter
    * {@linkcode PARTIAL_SEARCH_PARAM} to the URL. This property can
    * be used to determine if only `<Partial>`'s need to be rendered.
    */
@@ -243,7 +242,7 @@ export class Context<State> {
 
   /**
    * Return a redirect response to the specified path. This is the
-   * preferred way to do redirects in Fresh.
+   * preferred way to do redirects in Howl.
    *
    * ```ts
    * ctx.redirect("/foo/bar") // redirect user to "<yoursite>/foo/bar"
@@ -409,11 +408,11 @@ export class Context<State> {
     let partialId = "";
     if (this.url.searchParams.has(PARTIAL_SEARCH_PARAM)) {
       partialId = crypto.randomUUID();
-      headers.set("X-Fresh-Id", partialId);
+      headers.set("X-Howl-Id", partialId);
     }
 
     const html = tracer.startActiveSpan("render", (span) => {
-      span.setAttribute("fresh.span_type", "render");
+      span.setAttribute("howl.span_type", "render");
       const state = new RenderState(
         this,
         this.#buildCache,
@@ -433,7 +432,7 @@ export class Context<State> {
         // Single-pass: render the full tree (app + layouts + page) in one call.
         // appVNode captures appChild by closure reference; since appChild = vnode
         // and is never reassigned, Preact walks the entire tree once and island
-        // detection runs correctly before FreshScripts renders at end of <body>.
+        // detection runs correctly before HowlScripts renders at end of <body>.
         let html = renderToString(
           hasApp ? appVNode : (vnode ?? h(Fragment, null)),
         );
@@ -449,7 +448,7 @@ export class Context<State> {
             if (
               this.url.pathname !== this.config.basePath + DEV_ERROR_OVERLAY_URL
             ) {
-              scripts = h(FreshScripts, null) as VNode;
+              scripts = h(HowlScripts, null) as VNode;
             }
 
             fallback = h("body", null, fallback, scripts);

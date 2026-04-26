@@ -160,7 +160,7 @@ export async function renderRoute<State>(
   headers.set("Content-Type", "text/html;charset=utf-8");
 
   const res = await tracer.startActiveSpan("handler", {
-    attributes: { "fresh.span_type": "fs_routes/handler" },
+    attributes: { "howl.span_type": "fs_routes/handler" },
   }, async (span) => {
     try {
       let fn: HandlerFn<unknown, State> | null = null;

@@ -10,7 +10,7 @@ import {
 } from "../core/mod.ts";
 import * as path from "@std/path";
 import * as colors from "@std/fmt/colors";
-import { bundleJs, type FreshBundleOptions } from "./esbuild.ts";
+import { bundleJs, type HowlBundleOptions } from "./esbuild.ts";
 import type { Plugin as EsbuildPlugin } from "esbuild";
 import { liveReload } from "./middlewares/live_reload.ts";
 import {
@@ -88,7 +88,7 @@ export interface BuildOptions {
    * Production source map options.
    * See https://esbuild.github.io/api/#source-maps
    */
-  sourceMap?: FreshBundleOptions["sourceMap"];
+  sourceMap?: HowlBundleOptions["sourceMap"];
   /**
    * Alias map passed directly to esbuild.
    * Primary use case: React → Preact/compat shim.
@@ -121,7 +121,7 @@ export type ResolvedBuildConfig =
     /** Stable build identifier used for cache busting. */
     buildId: string;
     /** esbuild source-map configuration. */
-    sourceMap?: FreshBundleOptions["sourceMap"];
+    sourceMap?: HowlBundleOptions["sourceMap"];
     /** Additional esbuild plugins. */
     plugins?: EsbuildPlugin[];
   };

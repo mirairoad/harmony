@@ -18,7 +18,7 @@ export interface CsrfOptions<State = any> {
 }
 
 /**
- * CSRF Protection Middleware for Fresh.
+ * CSRF Protection Middleware for Howl.
  *
  * @param options Options for the CSRF protection middleware.
  * @returns The middleware handler function.

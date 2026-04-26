@@ -20,7 +20,7 @@ import { recordSpanError, tracer } from "./otel.ts";
 /**
  * Shape of a route/middleware/layout file loaded from the file system.
  */
-export interface FreshFsMod<State> {
+export interface HowlFsMod<State> {
   /** Optional route configuration. */
   config?: RouteConfig;
   /** Single handler function or array of handler functions. */
@@ -45,7 +45,7 @@ export interface FsRouteFile<State> {
   /** Absolute path on disk. */
   filePath: string;
   /** Module export (or a lazy loader). */
-  mod: MaybeLazy<FreshFsMod<State>>;
+  mod: MaybeLazy<HowlFsMod<State>>;
   /** URL pattern derived from the file path. */
   pattern: string;
   /** Command type (route, middleware, layout, app, error, not-found). */
@@ -58,11 +58,11 @@ export interface FsRouteFile<State> {
   css: string[];
 }
 
-function isFreshFile<State>(
+function isHowlFile<State>(
   // deno-lint-ignore no-explicit-any
   mod: any,
   commandType: CommandType,
-): mod is FreshFsMod<State> {
+): mod is HowlFsMod<State> {
   if (mod === null || typeof mod !== "object") return false;
 
   return typeof mod.default === "function" ||
@@ -176,7 +176,7 @@ export function fsItemsToCommands<State>(
         if (isLazy(rawMod)) {
           normalized = async () => {
             return await tracer.startActiveSpan("lazy-route", {
-              attributes: { "fresh.route_name": rawMod.name ?? "anonymous" },
+              attributes: { "howl.route_name": rawMod.name ?? "anonymous" },
             }, async (span) => {
               try {
                 const result = await rawMod();
@@ -228,7 +228,7 @@ function warnInvalidRoute(message: string) {
 const APP_REG = /_app(?!\.[tj]sx?)?$/;
 
 /**
- * Sort route paths where special Fresh files like `_app`,
+ * Sort route paths where special Howl files like `_app`,
  * `_layout` and `_middleware` are sorted in front.
  */
 export function sortRoutePaths(a: string, b: string) {
@@ -336,9 +336,9 @@ export function validateFsMod<State>(
   commandType: CommandType,
 ): {
   handlers: RouteHandler<unknown, State> | HandlerFn<unknown, State>[] | null;
-  mod: FreshFsMod<State>;
+  mod: HowlFsMod<State>;
 } {
-  if (!isFreshFile<State>(mod, commandType)) {
+  if (!isHowlFile<State>(mod, commandType)) {
     throw new Error(
       `Expected a route, middleware, layout or error template, but couldn't find relevant exports in: ${filePath}`,
     );
@@ -356,7 +356,7 @@ export function validateFsMod<State>(
 
 function normalizeRoute<State>(
   filePath: string,
-  rawMod: FreshFsMod<State>,
+  rawMod: HowlFsMod<State>,
   routePattern: string,
   commandType: CommandType,
 ): Route<State> {

@@ -130,7 +130,7 @@ export function ErrorOverlay(props: { url: URL }) {
 
   return (
     <>
-      <div class="frsh-error-page">
+      <div class="howl-error-page">
         <style
           // deno-lint-ignore react-no-danger
           dangerouslySetInnerHTML={{ __html: errorCss }}

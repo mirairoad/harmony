@@ -36,7 +36,7 @@ function reconnect() {
     if (backoffIdx === 0) {
       // deno-lint-ignore no-console
       console.log(
-        `%c Fresh %c Connection closed. Trying to reconnect...`,
+        `%c Howl %c Connection closed. Trying to reconnect...`,
         "background-color: #86efac; color: black",
         "color: inherit",
       );
@@ -125,7 +125,7 @@ if (IS_BROWSER) {
       return;
     }
 
-    document.querySelector("#fresh-error-overlay")?.remove();
+    document.querySelector("#howl-error-overlay")?.remove();
   });
 
   // Disconnect when the tab becomes inactive and re-connect when it

@@ -3,7 +3,7 @@ import { ASSET_CACHE_BUST_KEY } from "../constants.ts";
 
 export const DATA_CURRENT = "data-current";
 export const DATA_ANCESTOR = "data-ancestor";
-export const DATA_FRESH_KEY = "data-frsh-key";
+export const DATA_HOWL_KEY = "data-howl-key";
 export const CLIENT_NAV_ATTR = "f-client-nav";
 
 export const enum OptionsType {
@@ -117,9 +117,9 @@ export const enum PartialMode {
 export function assetInternal(path: string, buildId: string): string {
   if (!path.startsWith("/") || path.startsWith("//")) return path;
   try {
-    const url = new URL(path, "https://freshassetcache.local");
+    const url = new URL(path, "https://howlassetcache.local");
     if (
-      url.protocol !== "https:" || url.host !== "freshassetcache.local" ||
+      url.protocol !== "https:" || url.host !== "howlassetcache.local" ||
       url.searchParams.has(ASSET_CACHE_BUST_KEY)
     ) {
       return path;
@@ -159,13 +159,13 @@ export function assetHashingHook(
   vnode: VNode<{
     src?: string;
     srcset?: string;
-    ["data-fresh-disable-lock"]?: boolean;
+    ["data-howl-disable-lock"]?: boolean;
   }>,
   buildId: string,
 ) {
   if (vnode.type === "img" || vnode.type === "source") {
     const { props } = vnode;
-    if (props["data-fresh-disable-lock"]) return;
+    if (props["data-howl-disable-lock"]) return;
     if (typeof props.src === "string") {
       props.src = assetInternal(props.src, buildId);
     }

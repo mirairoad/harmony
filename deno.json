@@ -32,7 +32,7 @@
     },
     "exclude": [
       "**/node_modules",
-      "**/_fresh",
+      "**/_howl",
       "**/.git"
     ]
   },
@@ -44,7 +44,7 @@
     "singleQuote": false,
     "exclude": [
       "**/node_modules",
-      "**/_fresh"
+      "**/_howl"
     ]
   },
   "imports": {

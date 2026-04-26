@@ -18,7 +18,7 @@ import { getNonce, type Island } from "../../context.ts";
 import {
   assetHashingHook,
   CLIENT_NAV_ATTR,
-  DATA_FRESH_KEY,
+  DATA_HOWL_KEY,
   OptionsType,
   PartialMode,
   setActiveUrl,
@@ -144,7 +144,7 @@ options[OptionsType.VNODE] = (vnode) => {
     }
   } else if (typeof vnode.type === "string") {
     if (vnode.type === "body") {
-      const scripts = h(FreshScripts, null);
+      const scripts = h(HowlScripts, null);
       if (vnode.props.children == null) {
         vnode.props.children = scripts;
       } else if (Array.isArray(vnode.props.children)) {
@@ -166,7 +166,7 @@ options[OptionsType.ATTR] = (name, value) => {
   if (name === CLIENT_NAV_ATTR) {
     return `${CLIENT_NAV_ATTR}="${String(Boolean(value))}"`;
   } else if (name === "key") {
-    return `${DATA_FRESH_KEY}="${escapeHtml(String(value))}"`;
+    return `${DATA_HOWL_KEY}="${escapeHtml(String(value))}"`;
   }
 
   return oldAttrHook?.(name, value);
@@ -423,7 +423,7 @@ options[OptionsType.DIFF] = (vnode) => {
         vnode.key !== undefined &&
         (RENDER_STATE!.partialDepth > 0 || hasIslandOwner(RENDER_STATE!, vnode))
       ) {
-        (vnode.props as Record<string, unknown>)[DATA_FRESH_KEY] = String(
+        (vnode.props as Record<string, unknown>)[DATA_HOWL_KEY] = String(
           vnode.key,
         );
       }
@@ -525,12 +525,12 @@ function wrapWithMarker(
     null,
     h(Fragment, {
       // @ts-ignore unstable property is not typed
-      UNSTABLE_comment: `frsh:${kind}:${markerText}`,
+      UNSTABLE_comment: `howl:${kind}:${markerText}`,
     }),
     vnode,
     h(Fragment, {
       // @ts-ignore unstable property is not typed
-      UNSTABLE_comment: "/frsh:" + kind,
+      UNSTABLE_comment: "/howl:" + kind,
     }),
   );
 }
@@ -579,7 +579,7 @@ const stringifiers: Stringifiers = {
   },
 };
 
-export function FreshScripts() {
+export function HowlScripts() {
   if (RENDER_STATE === null) return null;
   if (RENDER_STATE.hasRuntimeScript) {
     return null;
@@ -587,7 +587,7 @@ export function FreshScripts() {
   RENDER_STATE.hasRuntimeScript = true;
   const { slots } = RENDER_STATE;
 
-  // Remaining slots must be rendered before creating the Fresh runtime
+  // Remaining slots must be rendered before creating the Howl runtime
   // script, so that we have the full list of islands rendered
   return (
     h(
@@ -598,11 +598,11 @@ export function FreshScripts() {
         return (
           h("template", {
             key: slot.id,
-            id: `frsh-${slot.id}-${slot.name}`,
+            id: `howl-${slot.id}-${slot.name}`,
           }, slot.vnode)
         );
       }),
-      h(FreshRuntimeScript, null),
+      h(HowlRuntimeScript, null),
     )
   );
 }
@@ -616,7 +616,7 @@ export interface PartialStateJson {
   props: string;
 }
 
-function FreshRuntimeScript() {
+function HowlRuntimeScript() {
   const { islands, nonce, ctx, islandProps, partialId, buildCache } = RENDER_STATE!;
   const basePath = ctx.config.basePath;
 
@@ -639,7 +639,7 @@ function FreshRuntimeScript() {
 
     return (
       h("script", {
-        id: `__FRSH_STATE_${partialId}`,
+        id: `__HOWL_STATE_${partialId}`,
         type: "application/json",
         dangerouslySetInnerHTML: {
           __html: escapeScript(JSON.stringify(json), { json: true }),
@@ -730,7 +730,7 @@ export function ShowErrorOverlay() {
 
   return (
     h("iframe", {
-      id: "fresh-error-overlay",
+      id: "howl-error-overlay",
       src: `${basePath}${DEV_ERROR_OVERLAY_URL}?${searchParams.toString()}`,
       style:
         "unset: all; position: fixed; top: 0; left: 0; z-index: 99999; width: 100%; height: 100%; border: none;",

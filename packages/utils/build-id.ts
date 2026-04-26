@@ -1,5 +1,5 @@
 /**
- * Don't use this package directly. It's considered internal for Fresh.
+ * Don't use this package directly. It's considered internal for Howl.
  *
  * @example
  * ```ts

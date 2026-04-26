@@ -1,4 +1,4 @@
-import type { Context } from "@hushkey/howl";
+import { type Context, HttpError } from "@hushkey/howl";
 import type { State } from "../../../howl.config.ts";
 import type { BlockType, ManifestItem } from "../../../server/docs/reader.ts";
 import { readDoc, readManifest } from "../../../server/docs/reader.ts";
@@ -318,9 +318,7 @@ export default function DocPage(
   const { slug } = ctx.params;
   const [doc, manifest] = [readDoc(slug), readManifest()];
 
-  // if (!doc) {
-  //   return ctx.redirect("/docs") as unknown as JSX.Element;
-  // }
+  if (!doc) throw new HttpError(404, "Doc not found");
 
   return (
     <>

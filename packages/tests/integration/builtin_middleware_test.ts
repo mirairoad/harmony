@@ -100,7 +100,7 @@ Deno.test("csp — injects per-request nonce into script-src by default", async 
   expect(policy).not.toContain("script-src 'self' 'unsafe-inline'");
 });
 
-Deno.test("csp — generates a fresh nonce per request", async () => {
+Deno.test("csp — generates a howl nonce per request", async () => {
   const t = makeApp();
   const seen: string[] = [];
   t.app.use(csp());

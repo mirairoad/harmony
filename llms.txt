@@ -18,13 +18,15 @@ Root: `packages/` (single JSR package, multiple sub-entries).
 | `@hushkey/howl/api` | `api/mod.ts` | defineApi, defineConfig, caching, OpenAPI |
 | `@hushkey/howl/api/errors` | `api/errors.ts` | API error types |
 | `@hushkey/howl/api/cache` | `api/cache/mod.ts` | memoryCache, redisCache, tryCache |
-| `@hushkey/howl/middleware` | `core/middlewares/mod.ts` | All built-in middlewares (barrel) |
+| `@hushkey/howl/middleware` | `core/middlewares/mod.ts` | Built-in middlewares — coalesceRequests, compression, cors, csrf, csp, staticFiles, trailingSlashes |
+| `@hushkey/howl/middleware/coalesce` | `core/middlewares/coalesce.ts` | Request coalescing (thundering-herd protection) |
+| `@hushkey/howl/middleware/compression` | `core/middlewares/compression.ts` | Gzip/deflate compression |
 | `@hushkey/howl/middleware/cors` | `core/middlewares/cors.ts` | CORS middleware |
 | `@hushkey/howl/middleware/csrf` | `core/middlewares/csrf.ts` | CSRF middleware |
 | `@hushkey/howl/middleware/csp` | `core/middlewares/csp.ts` | Content-Security-Policy middleware |
 | `@hushkey/howl/middleware/trailing-slashes` | `core/middlewares/trailing_slashes.ts` | Trailing slash middleware |
 | `@hushkey/howl/middleware/static-files` | `core/middlewares/static_files.ts` | Static file serving |
-| `@hushkey/howl/runtime` | `core/runtime/shared.ts` | Client-safe runtime (Partial, IS_BROWSER, asset, Head) |
+| `@hushkey/howl/runtime` | `core/runtime/shared.ts` | Client-safe runtime (Partial, IS_BROWSER, asset, Head) — must point to `shared.ts`, not `client/mod.ts` (latter calls `document.addEventListener` at module level) |
 
 ---
 
@@ -74,13 +76,17 @@ export const { defineApi, config: apiConfig } = defineConfig<State, Role>({
 
 ```typescript
 // server/main.ts
-import { Howl } from "@hushkey/howl";
-import { staticFiles } from "@hushkey/howl/middleware";
+import { Howl, staticFiles } from "@hushkey/howl";
+import { coalesceRequests, compression } from "@hushkey/howl/middleware";
 import { apiConfig } from "../howl.config.ts";
+import { middleware } from "./middleware/_index.middleware.ts";
 
 export const app = new Howl<State>({ logger: true });
 
+app.use(coalesceRequests()); // thundering-herd protection — must be first
+app.use(compression());
 app.use(staticFiles());
+app.configure(middleware);
 app.fsApiRoutes(apiConfig); // crawls server/apis/, registers all .api.ts
 app.fsClientRoutes();       // crawls client/pages/, mounts all routes
 
@@ -93,11 +99,12 @@ import { HowlBuilder } from "@hushkey/howl/dev";
 import { tailwindPlugin } from "@hushkey/howl/plugins";
 import { app } from "./server/main.ts";
 
-const builder = new HowlBuilder(app, {
+const builder = new HowlBuilder<State>(app, {
   root: import.meta.dirname ?? "",
   importApp: () => app,
   outDir: "dist",
   serverEntry: "./server/main.ts",
+  clientEntry: "./client/pages/_app.ts",
 });
 
 tailwindPlugin(builder.getBuilder("default")!);
@@ -302,14 +309,26 @@ Returns `null` before routes are registered, `OpenAPIV3_1.Document` after.
 ## Built-in middleware
 
 ```typescript
-import { cors, csrf, csp, trailingSlashes, staticFiles } from "@hushkey/howl/middleware";
+import {
+  coalesceRequests,
+  compression,
+  cors,
+  csp,
+  csrf,
+  staticFiles,
+  trailingSlashes,
+} from "@hushkey/howl/middleware";
 
+app.use(coalesceRequests());                              // thundering-herd protection — must be first
+app.use(compression());                                   // gzip/deflate for text, JSON, JS, SVG
 app.use(staticFiles());
 app.use(cors({ origin: "https://myapp.com", credentials: true }));
 app.use(csrf());                                          // blocks cross-origin state-mutating requests
 app.use(csp({ reportOnly: false, reportTo: "/api/csp" })); // sensible defaults + overrides
 app.use(trailingSlashes("never"));                        // "always" | "never"
 ```
+
+`coalesceRequests()` deduplicates concurrent GET requests to the same URL. Only applies to requests without a `Cookie` or `Authorization` header — authenticated requests always run their own handler.
 
 ---
 
@@ -319,12 +338,12 @@ app.use(trailingSlashes("never"));                        // "always" | "never"
 import { memoryCache, redisCache, tryCache } from "@hushkey/howl/api/cache";
 
 memoryCache({ maxSize: 1000 })          // in-process LRU, zero deps
-redisCache(redisClient)                 // any ioredis-compatible client
+redisCache(redisClient)                 // any ioredis-compatible client (auto error listener — reconnect events don't crash)
 tryCache(primary, fallback)             // primary first, fallback on miss/error
 tryCache(primary, fallback, { timeoutMs: 150 }) // fallback if primary slow
 ```
 
-Cache key: `{method}:{url}:{userId}` — per-user automatically when authenticated.
+Cache key: `{method}:{url}:{userId}` — per-user automatically when authenticated. Implement `CacheAdapter` to plug in any other backend.
 
 ---
 

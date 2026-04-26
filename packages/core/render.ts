@@ -31,11 +31,11 @@ export async function renderAsyncAnyComponent<Props>(
   return await tracer.startActiveSpan(
     "invoke async component",
     async (span) => {
-      span.setAttribute("fresh.span_type", "fs_routes/async_component");
+      span.setAttribute("howl.span_type", "fs_routes/async_component");
       try {
         const result = (await fn(props)) as VNode | Response;
         span.setAttribute(
-          "fresh.component_response",
+          "howl.component_response",
           result instanceof Response ? "http" : "jsx",
         );
         return result;

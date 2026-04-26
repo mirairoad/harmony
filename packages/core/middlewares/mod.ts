@@ -12,14 +12,14 @@ export { trailingSlashes } from "./trailing_slashes.ts";
 export { staticFiles } from "./static_files.ts";
 
 /**
- * A middleware function is the basic building block of Fresh. It allows you
+ * A middleware function is the basic building block of Howl. It allows you
  * to respond to an incoming request in any way you want. You can redirect
  * routes, serve files, create APIs and much more. Middlewares can be chained by
  * calling {@linkcode Context.next|ctx.next()} inside of the function.
  *
  * Middlewares can be synchronous or asynchronous. If a middleware returns a
  * {@linkcode Response} object, the response will be sent back to the client. If
- * a middleware returns a `Promise<Response>`, Fresh will wait for the promise
+ * a middleware returns a `Promise<Response>`, Howl will wait for the promise
  * to resolve before sending the response.
  *
  * A {@linkcode Context} object is passed to the middleware function. This
@@ -29,7 +29,7 @@ export { staticFiles } from "./static_files.ts";
  *
  * Middlewares can be defined as a single function or an array of functions.
  * When an array of middlewares is passed to
- * {@linkcode _App.prototype.use|app.use}, Fresh will call each middleware in the
+ * {@linkcode _App.prototype.use|app.use}, Howl will call each middleware in the
  * order they are defined.
  *
  * Middlewares can also be defined using the
@@ -163,7 +163,7 @@ export function compileMiddlewares<State>(
   return (ctx) => {
     const tail = ctx.next;
     return tracer.startActiveSpan("middlewares", {
-      attributes: { "fresh.middleware.count": count },
+      attributes: { "howl.middleware.count": count },
     }, async (span) => {
       try {
         return await chain(ctx, tail);

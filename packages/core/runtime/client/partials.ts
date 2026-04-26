@@ -27,10 +27,10 @@ export const PARTIAL_ATTR = "f-partial";
 
 class NoPartialsError extends Error {}
 
-// Fresh partials history updates set the fClientNav flag
+// Howl partials history updates set the fClientNav flag
 // and prevent reloads in the popstate handler when
 // user-code triggers history navigation events.
-export interface FreshHistoryState {
+export interface HowlHistoryState {
   fClientNav: boolean;
   index: number;
   scrollX: number;
@@ -47,7 +47,7 @@ function checkClientNavEnabled(el: HTMLElement) {
 let index = typeof history !== "undefined" ? history.state?.index || 0 : 0;
 
 if (typeof history !== "undefined" && !history.state) {
-  const state: FreshHistoryState = {
+  const state: HowlHistoryState = {
     fClientNav: true,
     index,
     scrollX: typeof scrollX !== "undefined" ? scrollX : 0,
@@ -59,9 +59,9 @@ if (typeof history !== "undefined" && !history.state) {
 function maybeUpdateHistory(nextUrl: URL) {
   // Only add history entry when URL is new. Still apply
   // the partials because sometimes users click a link to
-  // "refresh" the current page.
+  // "reload" the current page.
   if (nextUrl.href !== globalThis.location.href) {
-    const state: FreshHistoryState = {
+    const state: HowlHistoryState = {
       fClientNav: true,
       index,
       scrollX: globalThis.scrollX,
@@ -171,11 +171,11 @@ addEventListener("popstate", async (e) => {
     }
     return;
   }
-  // Do nothing if Fresh navigation is not explicitly opted-in.
+  // Do nothing if Howl client nav is not explicitly opted-in.
   // Other applications might manage scrollRestoration individually.
   if (!e.state.fClientNav) return;
 
-  const state: FreshHistoryState = history.state;
+  const state: HowlHistoryState = history.state;
   const nextIdx = state.index ?? index + 1;
   index = nextIdx;
 
@@ -274,9 +274,9 @@ function updateLinks(url: URL) {
   document.querySelectorAll("a").forEach((link) => {
     // Don't touch user-set `aria-current` — only update attributes Howl
     // marked itself (data-current / data-ancestor on the previous render).
-    const hasFreshAria = link.hasAttribute(DATA_CURRENT) ||
+    const hasHowlAria = link.hasAttribute(DATA_CURRENT) ||
       link.hasAttribute(DATA_ANCESTOR);
-    const hasUserAria = !hasFreshAria && link.hasAttribute("aria-current");
+    const hasUserAria = !hasHowlAria && link.hasAttribute("aria-current");
     if (hasUserAria) return;
 
     const match = matchesUrl(url.pathname, link.href, url.search);
@@ -336,12 +336,12 @@ export async function applyPartials(res: Response): Promise<void> {
     throw new Error(`Unable to process partial response.`);
   }
 
-  const id = res.headers.get("X-Fresh-Id");
+  const id = res.headers.get("X-Howl-Id");
 
   const resText = await res.text();
   const doc = new DOMParser().parseFromString(resText, "text/html") as Document;
 
-  const state = doc.querySelector(`#__FRSH_STATE_${id}`);
+  const state = doc.querySelector(`#__HOWL_STATE_${id}`);
   let allProps: DeserializedProps = [];
   if (state !== null) {
     const json = JSON.parse(state.textContent!) as PartialStateJson;
@@ -491,18 +491,18 @@ function revivePartials(
     if (isCommentNode(sib)) {
       const comment = sib.data;
       const parts = comment.split(":");
-      if (parts[0] === "frsh") {
+      if (parts[0] === "howl") {
         sib = maybeHideMarker(sib);
       }
 
-      if (parts[0] === "frsh" && parts[1] === "partial") {
+      if (parts[0] === "howl" && parts[1] === "partial") {
         if (++partialCount === 1) {
           startNode = sib;
           partialName = parts[2];
           partialMode = +parts[3] as PartialMode;
           partialKey = parts[4];
         }
-      } else if (comment === "/frsh:partial") {
+      } else if (comment === "/howl:partial") {
         ctx.foundPartials++;
 
         // Skip hydrating nested partials, only hydrate the outer one

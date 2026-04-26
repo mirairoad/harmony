@@ -1,7 +1,7 @@
 import { DEV_ERROR_OVERLAY_URL } from "../../../core/constants.ts";
 import { HttpError } from "../../../core/error.ts";
 import type { Middleware } from "../../../core/middlewares/mod.ts";
-import { FreshScripts } from "../../../core/runtime/server/preact_hooks.ts";
+import { HowlScripts } from "../../../core/runtime/server/preact_hooks.ts";
 import { ErrorOverlay } from "./overlay.tsx";
 
 export function devErrorOverlay<T>(): Middleware<T> {
@@ -25,7 +25,7 @@ export function devErrorOverlay<T>(): Middleware<T> {
         // deno-lint-ignore no-console
         console.error(err);
 
-        return ctx.render(<FreshScripts />, init);
+        return ctx.render(<HowlScripts />, init);
       }
       throw err;
     }
