@@ -8,7 +8,7 @@
     "start": "deno run -A dist/compiled-entry.js"
   },
   "imports": {
-    "@hushkey/howl": "jsr:@hushkey/howl@^0.4.5",
+    "@hushkey/howl": "jsr:@hushkey/howl@^{{HOWL_VERSION}}",
     "preact": "npm:preact@^10.25.0",
     "preact/hooks": "npm:preact@^10.25.0/hooks",
     "preact/jsx-runtime": "npm:preact@^10.25.0/jsx-runtime",

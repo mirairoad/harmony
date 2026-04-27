@@ -13,6 +13,9 @@ export const DEFAULT_TEMPLATES_ROOT: string = new URL("../templates/", import.me
 /** Token replaced inside `.tpl` files with the project name. */
 export const PROJECT_NAME_TOKEN = "{{PROJECT_NAME}}";
 
+/** Token replaced inside `.tpl` files with the published `@hushkey/howl` version. */
+export const HOWL_VERSION_TOKEN = "{{HOWL_VERSION}}";
+
 /** Progress callback invoked after each file is written. */
 export interface ScaffoldProgress {
   /** Index of the file just written, starting at 1. */
@@ -40,10 +43,12 @@ export interface ScaffoldOptions {
   onProgress?: (progress: ScaffoldProgress) => void;
 }
 
-/** Mapping of template id to relative file paths inside the template folder. */
+/** Manifest written by `scripts/generate_manifest.ts` and shipped under `templates/`. */
 export interface TemplateManifest {
-  /** Sorted list of template-relative file paths for the given template id. */
-  [templateId: string]: string[];
+  /** Resolved `@hushkey/howl` version baked at publish time. Substituted into `{{HOWL_VERSION}}`. */
+  howlVersion: string;
+  /** Mapping of template id to sorted list of template-relative file paths. */
+  templates: Record<string, string[]>;
 }
 
 /**
@@ -59,7 +64,7 @@ export interface TemplateManifest {
 export async function scaffold(opts: ScaffoldOptions): Promise<void> {
   const root = normaliseRoot(opts.templatesRoot ?? DEFAULT_TEMPLATES_ROOT);
   const manifest = await loadManifest(root);
-  const files = manifest[opts.templateId];
+  const files = manifest.templates[opts.templateId];
   if (!files || files.length === 0) {
     throw new Error(`Template not found: ${opts.templateId} (looked in ${root})`);
   }
@@ -81,7 +86,9 @@ export async function scaffold(opts: ScaffoldOptions): Promise<void> {
 
     if (isTemplate) {
       const source = await res.text();
-      const rendered = source.replaceAll(PROJECT_NAME_TOKEN, opts.projectName);
+      const rendered = source
+        .replaceAll(PROJECT_NAME_TOKEN, opts.projectName)
+        .replaceAll(HOWL_VERSION_TOKEN, manifest.howlVersion);
       await Deno.writeTextFile(destPath, rendered);
     } else {
       const buf = new Uint8Array(await res.arrayBuffer());
