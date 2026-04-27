@@ -13,6 +13,16 @@ export const DEFAULT_TEMPLATES_ROOT: string = new URL("../templates/", import.me
 /** Token replaced inside `.tpl` files with the project name. */
 export const PROJECT_NAME_TOKEN = "{{PROJECT_NAME}}";
 
+/** Progress callback invoked after each file is written. */
+export interface ScaffoldProgress {
+  /** Index of the file just written, starting at 1. */
+  current: number;
+  /** Total number of files in the template. */
+  total: number;
+  /** Template-relative path of the file just written. */
+  file: string;
+}
+
 /** Inputs to {@link scaffold}. */
 export interface ScaffoldOptions {
   /** Template id — must match a key in the manifest under `templatesRoot`. */
@@ -26,6 +36,8 @@ export interface ScaffoldOptions {
    * scheme) or an absolute filesystem path. Defaults to {@link DEFAULT_TEMPLATES_ROOT}.
    */
   templatesRoot?: string;
+  /** Optional progress callback. Fires once per file as it is written. */
+  onProgress?: (progress: ScaffoldProgress) => void;
 }
 
 /** Mapping of template id to relative file paths inside the template folder. */
@@ -55,7 +67,8 @@ export async function scaffold(opts: ScaffoldOptions): Promise<void> {
   await assertEmptyTarget(opts.targetDir);
   await ensureDir(opts.targetDir);
 
-  for (const rel of files) {
+  for (let i = 0; i < files.length; i++) {
+    const rel = files[i];
     const sourceUrl = new URL(`${opts.templateId}/${rel}`, root);
     const { destRel, isTemplate } = mapName(rel);
     const destPath = join(opts.targetDir, destRel);
@@ -74,6 +87,8 @@ export async function scaffold(opts: ScaffoldOptions): Promise<void> {
       const buf = new Uint8Array(await res.arrayBuffer());
       await Deno.writeFile(destPath, buf);
     }
+
+    opts.onProgress?.({ current: i + 1, total: files.length, file: rel });
   }
 }
 

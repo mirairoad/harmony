@@ -16,6 +16,11 @@ export interface RunInitOptions {
   prompt?: PromptDeps;
   /** Templates root override; tests use this to point at a fixture folder. */
   templatesRoot?: string;
+  /**
+   * Progress callback fired once per file written. Defaults to a TTY progress
+   * bar when stdout is a terminal; pass `undefined` explicitly to silence.
+   */
+  onProgress?: (progress: { current: number; total: number; file: string }) => void;
 }
 
 /** Outcome of a successful init run. */
@@ -45,14 +50,38 @@ export async function runInit(opts: RunInitOptions = {}): Promise<RunInitResult>
   const templateId = resolveTemplateId(opts.template, prompts);
   const targetDir = isAbsolute(name) ? name : resolve(join(cwd, name));
 
+  const progress = opts.onProgress ?? (Deno.stdout.isTerminal() ? ttyProgress() : undefined);
+
   await scaffold({
     templateId,
     targetDir,
     projectName: name,
     templatesRoot: opts.templatesRoot,
+    onProgress: progress,
   });
 
   return { path: targetDir, name, template: templateId };
+}
+
+function ttyProgress(): (p: { current: number; total: number; file: string }) => void {
+  const encoder = new TextEncoder();
+  let lastLineLength = 0;
+
+  return ({ current, total, file }) => {
+    const pct = Math.round((current / total) * 100);
+    const barWidth = 24;
+    const filled = Math.round((current / total) * barWidth);
+    const bar = "█".repeat(filled) + "░".repeat(barWidth - filled);
+    const counter = `${current.toString().padStart(total.toString().length)}/${total}`;
+    const truncated = file.length > 40 ? "…" + file.slice(-39) : file;
+    const line = `  [${bar}] ${pct.toString().padStart(3)}%  ${counter}  ${truncated}`;
+
+    const padded = line.padEnd(lastLineLength);
+    lastLineLength = line.length;
+    Deno.stdout.writeSync(encoder.encode(`\r${padded}`));
+
+    if (current === total) Deno.stdout.writeSync(encoder.encode("\n"));
+  };
 }
 
 /** CLI entry — parses argv, calls {@link runInit}, prints next-steps on success. */
