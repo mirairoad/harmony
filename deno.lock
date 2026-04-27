@@ -676,17 +676,6 @@
       "npm:preact@*"
     ],
     "members": {
-      "examples/software-www": {
-        "dependencies": [
-          "jsr:@hushkey/howl@0.5",
-          "jsr:@std/path@1",
-          "npm:@tailwindcss/typography@~0.5.19",
-          "npm:daisyui@5.5.18",
-          "npm:preact@^10.25.0",
-          "npm:tailwindcss@4.1.18",
-          "npm:zod@4.3.6"
-        ]
-      },
       "examples/www": {
         "dependencies": [
           "jsr:@hushkey/howl@0.5",

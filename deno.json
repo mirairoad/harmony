@@ -3,8 +3,7 @@
   "workspace": [
     "./packages/howl",
     "./packages/howl-init",
-    "./examples/www",
-    "./examples/software-www"
+    "./examples/www"
   ],
   "tasks": {
     "dev:fullstack": "deno run -A --watch examples/fullstack/dev.ts",
