@@ -1,3 +1,11 @@
+/**
+ * @module
+ *
+ * Trailing-slash normalisation middleware entrypoint. Exports
+ * {@linkcode trailingSlashes}, which redirects requests so URLs either
+ * always or never end with a slash, depending on the configured mode.
+ */
+
 import type { Middleware } from "./mod.ts";
 
 /**

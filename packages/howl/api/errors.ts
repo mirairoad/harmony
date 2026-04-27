@@ -1,3 +1,14 @@
+/**
+ * @module
+ *
+ * API-error helpers for `@hushkey/howl/api/errors`. Re-exports the
+ * framework-wide {@linkcode HttpError} class and ships a default
+ * `errors` object with constructors for the common HTTP statuses
+ * (`badRequest`, `unauthorized`, `forbidden`, `notFound`, `disabled`,
+ * `conflict`, `internal`). Throw these from API handlers — the API
+ * pipeline catches them and emits the matching JSON envelope.
+ */
+
 import { type ErrorStatus, HttpError } from "../core/error.ts";
 
 /**

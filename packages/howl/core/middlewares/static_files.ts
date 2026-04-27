@@ -1,3 +1,12 @@
+/**
+ * @module
+ *
+ * Static-file middleware entrypoint. Exports {@linkcode staticFiles},
+ * which serves files from the project's `static/` directory through
+ * the active build cache, with content-hash cache-busting and ETag
+ * support.
+ */
+
 import type { Middleware } from "./mod.ts";
 import { ASSET_CACHE_BUST_KEY } from "../constants.ts";
 import { BUILD_ID } from "../../utils/build-id.ts";

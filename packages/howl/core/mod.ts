@@ -1,3 +1,19 @@
+/**
+ * @module
+ *
+ * Public entrypoint for `@hushkey/howl`. Exports the core application
+ * primitives — the {@linkcode Howl} class, {@linkcode Context}, the
+ * built-in middleware barrel, the cookie manager, page/route types,
+ * islands utilities ({@linkcode ClientOnly}, environment guards), the
+ * built-in {@linkcode HowlLogger}, configuration types, and
+ * shared HTTP helpers including {@linkcode HttpError} and
+ * {@linkcode isHttpError}.
+ *
+ * Use this module to construct an app, define routes/middleware, and
+ * compose the Howl runtime. Build pipeline lives in `@hushkey/howl/dev`,
+ * the typed API layer in `@hushkey/howl/api`.
+ */
+
 // =============================================================================
 // @hushkey/howl — Public API
 // =============================================================================

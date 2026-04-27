@@ -1,3 +1,17 @@
+/**
+ * @module
+ *
+ * Typed API layer entrypoint for `@hushkey/howl/api`. Exports
+ * {@linkcode defineConfig} (the recommended pre-typed factory) and the
+ * generic {@linkcode defineApi} helper, the {@linkcode apiHandler}
+ * registrar, OpenAPI generation ({@linkcode getApiSpecs},
+ * {@linkcode generateOpenApiSpec}), the cache-adapter family
+ * ({@linkcode memoryCache}, {@linkcode redisCache}, {@linkcode kvCache},
+ * {@linkcode tryCache}), and the public type surface for API definitions
+ * — {@linkcode ApiDefinition}, {@linkcode HowlApiConfig},
+ * {@linkcode CacheAdapter}, {@linkcode RateLimitConfig}, etc.
+ */
+
 // =============================================================================
 // @hushkey/howl/api
 // =============================================================================

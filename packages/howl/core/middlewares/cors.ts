@@ -1,3 +1,10 @@
+/**
+ * @module
+ *
+ * CORS middleware entrypoint. Exports {@linkcode cors} (the middleware
+ * factory) and {@linkcode CORSOptions} (its configuration type).
+ */
+
 import type { Context } from "../context.ts";
 import type { Middleware } from "./mod.ts";
 

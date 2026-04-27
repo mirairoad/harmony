@@ -1,3 +1,15 @@
+/**
+ * @module
+ *
+ * Middleware barrel for `@hushkey/howl/middleware`. Exports the built-in
+ * middleware family — {@linkcode coalesceRequests}, {@linkcode compression},
+ * {@linkcode cors}, {@linkcode csrf}, {@linkcode csp},
+ * {@linkcode staticFiles}, {@linkcode trailingSlashes} — together with
+ * the {@linkcode Middleware} / {@linkcode MaybeLazyMiddleware} types and
+ * the framework-internal {@linkcode compileMiddlewares} helper used to
+ * fold a chain into a single handler.
+ */
+
 import { type Context, getInternals } from "../context.ts";
 import type { Howl as _Howl } from "../app.ts";
 import type { Define as _Define } from "../define.ts";

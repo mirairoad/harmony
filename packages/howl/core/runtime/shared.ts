@@ -1,3 +1,14 @@
+/**
+ * @module
+ *
+ * Shared runtime entrypoint for `@hushkey/howl/runtime`. Exports types and
+ * components that are safe to import from both server and client code —
+ * {@linkcode Partial} regions, the {@linkcode Head} component, the
+ * `IS_BROWSER` guard, the {@linkcode asset}/{@linkcode assetSrcSet}
+ * cache-busting helpers, and a re-export of {@linkcode HttpError} so
+ * island code can detect HTTP errors without pulling server-only modules.
+ */
+
 import type { ComponentChildren, VNode } from "preact";
 import { BUILD_ID } from "../../utils/build-id.ts";
 import { assetInternal, assetSrcSetInternal } from "./shared_internal.ts";

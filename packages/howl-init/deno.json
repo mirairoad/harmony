@@ -15,7 +15,8 @@
   },
   "tasks": {
     "start": "deno run -A mod.ts",
-    "test": "deno test -A --no-check tests/"
+    "test": "deno test -A --no-check tests/",
+    "manifest": "deno run -A scripts/generate_manifest.ts"
   },
   "imports": {
     "@std/cli/parse-args": "jsr:@std/cli@^1.0.0/parse-args",
@@ -33,7 +34,8 @@
       "LICENSE"
     ],
     "exclude": [
-      "tests/"
+      "tests/",
+      "scripts/"
     ]
   }
 }

@@ -1,3 +1,12 @@
+/**
+ * @module
+ *
+ * CSRF middleware entrypoint. Exports {@linkcode csrf} (the middleware
+ * factory) and {@linkcode CsrfOptions} (its origin-allowlist
+ * configuration). Use it on any state-changing route to reject
+ * cross-origin POST/PUT/PATCH/DELETE requests.
+ */
+
 import type { Context } from "../context.ts";
 import { HttpError } from "../error.ts";
 import type { Middleware } from "./mod.ts";

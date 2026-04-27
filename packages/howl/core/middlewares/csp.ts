@@ -1,3 +1,13 @@
+/**
+ * @module
+ *
+ * Content-Security-Policy middleware entrypoint. Exports
+ * {@linkcode csp} (the middleware factory) and {@linkcode CSPOptions}
+ * (its directive-map configuration). The middleware also installs a
+ * per-request nonce on the context so the renderer can apply it to the
+ * bootloader script.
+ */
+
 import { setNonce } from "../context.ts";
 import type { Middleware } from "./mod.ts";
 
