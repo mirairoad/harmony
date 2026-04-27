@@ -2,7 +2,7 @@
   {
     "slug": "getting-started",
     "title": "Getting Started",
-    "description": "Install Howl and create your first full-stack app",
+    "description": "Scaffold a Howl project in 30 seconds and run it locally",
     "order": 1
   },
   {

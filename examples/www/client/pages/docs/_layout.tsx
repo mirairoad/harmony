@@ -14,12 +14,6 @@ export default function DocsLayout(
 
   return (
     <div class="relative min-h-screen bg-base-100 bg-dot-grid bg-size-[28px_28px]">
-      {/* Ambient glow */}
-      <div class="pointer-events-none fixed inset-0 overflow-hidden">
-        <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-150 h-150 rounded-full bg-primary opacity-[0.04] blur-3xl" />
-        <div class="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-secondary opacity-[0.04] blur-3xl" />
-      </div>
-
       {/* Sidebar + content — pt clears the brand bar (mobile ~64px, desktop ~88px) */}
       <div class="flex pt-20 sm:pt-24">
         <aside class="hidden lg:flex w-64 shrink-0 flex-col border-r border-base-300 fixed top-24 bottom-0 overflow-y-auto bg-base-100/60 backdrop-blur">
