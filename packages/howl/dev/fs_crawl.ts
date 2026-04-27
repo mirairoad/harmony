@@ -121,6 +121,8 @@ export async function walkDir(
   }
 }
 
+const ISLAND_NAME_RE = /\.island\.(tsx|jsx|ts|js)$/;
+
 export async function crawlFsItem(
   options: { islandDir: string; routeDir: string; ignore: RegExp[] },
 ): Promise<{ islands: string[]; routes: FsRouteFileNoMod<unknown>[] }> {
@@ -131,6 +133,12 @@ export async function crawlFsItem(
       fsAdapter,
       options.islandDir,
       (entry) => {
+        if (!ISLAND_NAME_RE.test(entry.path)) {
+          // deno-lint-ignore no-console
+          console.warn(
+            `[howl] ${entry.path} is registered as an island. Rename to *.island.tsx to follow the framework convention.`,
+          );
+        }
         islands.push(entry.path);
       },
       options.ignore,
@@ -139,7 +147,15 @@ export async function crawlFsItem(
       fsAdapter,
       options.routeDir,
       options.ignore,
-      (entry) => islands.push(entry),
+      (entry) => {
+        if (!ISLAND_NAME_RE.test(entry)) {
+          // deno-lint-ignore no-console
+          console.warn(
+            `[howl] ${entry} is registered as an island via (_islands). Rename to *.island.tsx to follow the framework convention.`,
+          );
+        }
+        islands.push(entry);
+      },
     ),
   ]);
 

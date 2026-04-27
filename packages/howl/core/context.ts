@@ -60,6 +60,12 @@ export interface Island {
   css: string[];
   /** Skip SSR for this island. Set via `export const howl = { ssr: false }` in the island file. */
   ssr: boolean;
+  /**
+   * Optional placeholder rendered server-side when `ssr` is `false`. Set via
+   * `export const howl = { ssr: false, skeleton: () => <div /> }`. The
+   * skeleton output is replaced by a full client render after hydration.
+   */
+  skeleton?: ComponentType;
 }
 
 /** Registry mapping island components to their metadata. */

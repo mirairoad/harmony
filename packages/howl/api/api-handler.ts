@@ -73,7 +73,7 @@ function finalizeApiRegistration(
 ): void {
   setApiSpec(generateOpenApiSpec(apis, options));
   // deno-lint-ignore no-console
-  console.info(`[howl] ${apis.length} APIs registered`);
+  console.debug(`[howl] ${apis.length} APIs registered`);
 }
 
 /**

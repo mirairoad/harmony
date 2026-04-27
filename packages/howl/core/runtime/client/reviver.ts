@@ -4,6 +4,7 @@ import {
   type ComponentType,
   Fragment,
   h,
+  hydrate,
   render,
   type VNode,
 } from "preact";
@@ -110,8 +111,15 @@ export function revive(
       }
     }
 
-    // TODO: explore hydrate?
-    render(h(component, props), container as unknown as HTMLElement);
+    const target = container as unknown as HTMLElement;
+    const first = target.firstChild as Node | null;
+    const isSkeleton = first !== null && first.nodeType === Node.ELEMENT_NODE &&
+      (first as HTMLElement).hasAttribute("data-howl-skel");
+    if (first !== null && !isSkeleton) {
+      hydrate(h(component, props), target);
+    } else {
+      render(h(component, props), target);
+    }
   };
 
   "scheduler" in window

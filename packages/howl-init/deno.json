@@ -1,0 +1,19 @@
+{
+  "name": "@hushkey/howl-init",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mirairoad/howl"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Leo Termine",
+    "email": "leotermine@hushkey.app"
+  },
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "tasks": {
+    "start": "deno run -A mod.ts"
+  }
+}

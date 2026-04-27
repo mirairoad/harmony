@@ -18,9 +18,9 @@ type ConsoleMethod = "log" | "error" | "warn" | "info" | "debug";
 const METHOD_COLORS: Record<ConsoleMethod, (str: string) => string> = {
   log: (s) => colors.rgb24(s, 0x57c26e), // green
   error: (s) => colors.rgb24(s, 0xe74c3c), // red
-  warn: (s) => colors.rgb24(s, 0xf39c12), // yellow
+  warn: (s) => colors.rgb24(s, 0xfde68a), // light yellow
   info: (s) => colors.rgb24(s, 0x3498db), // blue
-  debug: (s) => colors.rgb24(s, 0x9b59b6), // howl purple
+  debug: (s) => colors.rgb24(s, 0xbf00ff), // acid purple
 };
 
 const DEFAULT_IGNORE = [

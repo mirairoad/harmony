@@ -2,7 +2,7 @@ import * as path from "@std/path";
 import type { Command } from "./commands.ts";
 import { fsItemsToCommands, type FsRouteFile } from "./fs_routes.ts";
 import type { ServerIslandRegistry } from "./context.ts";
-import type { AnyComponent } from "preact";
+import type { AnyComponent, ComponentType } from "preact";
 import { UniqueNamer } from "./utils.ts";
 import { setBuildId } from "../utils/build-id.ts";
 
@@ -180,10 +180,11 @@ export class IslandPreparer {
     modName: string,
     css: string[],
   ): void {
-    // Also support legacy "howl" directive
-    const howlDirective = mod["howl"] as { ssr?: boolean } | undefined;
-    const directive = howlDirective ?? howlDirective;
+    const directive = mod["howl"] as
+      | { ssr?: boolean; skeleton?: ComponentType }
+      | undefined;
     const ssr = directive?.ssr !== false; // default true
+    const skeleton = directive?.skeleton;
 
     for (const [name, value] of Object.entries(mod)) {
       if (typeof value !== "function") continue;
@@ -199,6 +200,7 @@ export class IslandPreparer {
         name: uniqueName,
         css,
         ssr,
+        skeleton,
       });
     }
   }

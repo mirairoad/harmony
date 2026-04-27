@@ -1,7 +1,8 @@
 {
   "nodeModulesDir": "auto",
   "workspace": [
-    "./packages",
+    "./packages/howl",
+    "./packages/howl-init",
     "./examples/www",
     "./examples/fullstack"
   ],
@@ -14,12 +15,12 @@
     "start:www": "deno run -A examples/www/dist/compiled-entry.js",
     "lint": "deno lint",
     "fmt": "deno fmt",
-    "check": "deno check packages/core/mod.ts packages/dev/mod.ts",
-    "test": "deno test -A --no-check packages/tests/",
-    "test:integration": "deno test -A --no-check packages/tests/integration/",
-    "test:api": "deno test -A --no-check packages/tests/api/",
-    "test:unit": "deno test -A --no-check packages/tests/unit/",
-    "doc:lint": "cd packages && deno doc --lint core/mod.ts core/runtime/shared.ts dev/mod.ts plugins/mod.ts api/mod.ts api/errors.ts api/cache/mod.ts core/middlewares/mod.ts core/middlewares/cors.ts core/middlewares/csrf.ts core/middlewares/csp.ts core/middlewares/trailing_slashes.ts core/middlewares/static_files.ts"
+    "check": "deno check packages/howl/core/mod.ts packages/howl/dev/mod.ts",
+    "test": "deno test -A --no-check packages/howl/tests/",
+    "test:integration": "deno test -A --no-check packages/howl/tests/integration/",
+    "test:api": "deno test -A --no-check packages/howl/tests/api/",
+    "test:unit": "deno test -A --no-check packages/howl/tests/unit/",
+    "doc:lint": "cd packages/howl && deno doc --lint core/mod.ts core/runtime/shared.ts dev/mod.ts plugins/mod.ts api/mod.ts api/errors.ts api/cache/mod.ts core/middlewares/mod.ts core/middlewares/cors.ts core/middlewares/csrf.ts core/middlewares/csp.ts core/middlewares/trailing_slashes.ts core/middlewares/static_files.ts"
   },
   "lint": {
     "rules": {

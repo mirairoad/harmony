@@ -237,7 +237,6 @@ options[OptionsType.DIFF] = (vnode) => {
 
           break patcher;
         }
-        // NEW: skip SSR for islands with ssr: false
         if (island.ssr === false) {
           const { islands, islandProps, islandAssets } = RENDER_STATE;
           for (let i = 0; i < island.css.length; i++) {
@@ -248,9 +247,16 @@ options[OptionsType.DIFF] = (vnode) => {
           const props = vnode.props ?? {};
           const propsIdx = islandProps.push({ slots: [], props }) - 1;
           const key = vnode.key ? normalizeKey(vnode.key) : "";
+          const Skeleton = island.skeleton;
           vnode.type = () =>
             wrapWithMarker(
-              h("div", { style: "display:contents" }),
+              Skeleton
+                ? h("div", {
+                  style: "display:contents",
+                  "data-howl-skel": "",
+                  // deno-lint-ignore no-explicit-any
+                }, h<any>(Skeleton, props))
+                : null,
               "island",
               `${island.name}:${propsIdx}:${key}`,
             );

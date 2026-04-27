@@ -119,7 +119,7 @@ export class HowlBuilder<State = any> {
 
     if (this.#apis.length > 0) {
       // deno-lint-ignore no-console
-      console.info(`[howl] Found ${this.#apis.length} API definitions in apis/`);
+      console.debug(`[howl] Found ${this.#apis.length} API definitions in apis/`);
     }
   }
 

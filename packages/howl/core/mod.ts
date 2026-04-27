@@ -29,6 +29,9 @@ export type { MaybeLazyMiddleware, Middleware } from "./middlewares/mod.ts";
 // --- Client-only utility ---
 export { ClientOnly } from "./client_only.tsx";
 
+// --- Environment guards ---
+export { IS_BROWSER, IS_SERVER } from "./guards.ts";
+
 // --- Logger ---
 export { HowlLogger, type LoggerOptions } from "./logger.ts";
 

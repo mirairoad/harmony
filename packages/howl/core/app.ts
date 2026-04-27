@@ -178,25 +178,26 @@ function createOnListen(
 
     const address = colors.rgb24(
       `${protocol}//${hostname}:${params.port}${pathname}`,
-      0x9b59b6,
+      0xbf00ff,
     );
     const networkIp = getNetworkIp();
 
     // deno-lint-ignore no-console
-    console.log();
+    // console.log();
     // deno-lint-ignore no-console
-    console.log(
-      colors.bgRgb24(colors.rgb24(" 🐺 Howl ready   ", 0xffffff), 0x472773),
+    // console.log(Deno.env.toObject());
+    console.info(
+      colors.bgRgb24(colors.rgb24(`${colors.bold(" HOWL ")}`, 0xffffff), 0xbf00ff),
     );
     // deno-lint-ignore no-console
-    console.log(`    ${colors.bold("Local:")}    ${address}`);
+    console.info(`${colors.bold("Local:")}   ${address} ${colors.dim("← Server")}`);
     if (networkIp) {
       // deno-lint-ignore no-console
-      console.log(
-        `    ${colors.bold("Network:")}  ${
+      console.info(
+        `${colors.bold("Network:")} ${
           colors.rgb24(
             `${protocol}//${networkIp}:${params.port}${pathname}`,
-            0x9b59b6,
+            0xbf00ff,
           )
         }  ${colors.dim("← phone/tablet")}`,
       );
@@ -204,11 +205,11 @@ function createOnListen(
     if (options.remoteAddress) {
       // deno-lint-ignore no-console
       console.log(
-        `    ${colors.bold("Remote:")}   ${colors.rgb24(options.remoteAddress, 0x9b59b6)}`,
+        `${colors.bold("Remote:")}   ${colors.rgb24(options.remoteAddress, 0xbf00ff)}`,
       );
     }
     // deno-lint-ignore no-console
-    console.log();
+    // console.log();
   };
 }
 

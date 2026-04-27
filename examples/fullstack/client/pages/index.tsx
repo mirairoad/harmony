@@ -1,6 +1,6 @@
 import type { Context } from "@hushkey/howl";
 import type { State } from "../../howl.config.ts";
-import { Head } from "../../../../packages/core/runtime/head.ts";
+import { Head } from "../../../../packages/howl/core/runtime/head.ts";
 
 export default function Index(ctx: Context<State>) {
   console.log("ctx:", ctx.state);
