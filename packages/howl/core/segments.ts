@@ -6,7 +6,7 @@ import { type Context, getInternals } from "./context.ts";
 import { recordSpanError, tracer } from "./otel.ts";
 import { type HandlerFn, isHandlerByMethod } from "./handlers.ts";
 import { type AsyncAnyComponent, type PageProps, renderRouteComponent } from "./render.ts";
-import { HttpError } from "./error.ts";
+import { isHttpError } from "./error.ts";
 
 export type RouteComponent<State> =
   | AsyncAnyComponent<PageProps<unknown, State>>
@@ -112,7 +112,7 @@ export function segmentToMiddlewares<State>(
       try {
         return await ctx.next();
       } catch (err) {
-        const status = err instanceof HttpError ? err.status : 500;
+        const status = isHttpError(err) ? err.status : 500;
         if (root.notFound !== null && status === 404) {
           return await root.notFound(ctx);
         }

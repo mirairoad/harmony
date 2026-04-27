@@ -36,10 +36,21 @@ function getTimestamp(): string {
   ].join(":") + "." + d.getMilliseconds().toString().padStart(3, "0");
 }
 
+// Process-wide guard so multiple Howl apps in the same process don't fight
+// over globalThis.console. The first install wins; subsequent calls become
+// no-ops, but each HowlLogger instance can still emit through its own direct
+// methods (`logger.log/info/...`) so per-app log channels remain useful.
+const INSTALL_MARKER: unique symbol = Symbol.for("howl.logger.installed");
+type GlobalWithMarker = typeof globalThis & { [INSTALL_MARKER]?: HowlLogger };
+
 /**
  * Howl's built-in logger.
- * Patches globalThis.console when installed.
- * Adds timestamp, PID, and method-colored output in local mode.
+ *
+ * Decorates output with a timestamp + PID prefix and method-tinted colors
+ * in local mode; passes through plain in production. The first
+ * {@linkcode install} call in a process patches `globalThis.console`; later
+ * loggers in the same process keep their direct {@linkcode log}/{@linkcode info}/...
+ * methods working but skip the global patch to avoid clobbering each other.
  *
  * @example
  * const app = new Howl({ mode: "fullstack", logger: true, debug: true });
@@ -66,11 +77,25 @@ export class HowlLogger {
   }
 
   /**
-   * Install logger — patches globalThis.console.
-   * Safe to call multiple times, installs only once.
+   * Install the logger as the global console transport.
+   *
+   * Idempotent both per-instance and process-wide: if another `HowlLogger`
+   * has already claimed the global console, this call is a no-op and the
+   * direct emitter methods (`log`, `info`, `warn`, `error`, `debug`) on
+   * this instance still produce the same formatted output. This prevents
+   * multi-app processes (tests, mountApp, sub-apps) from hijacking each
+   * other's console output.
    */
   install(): void {
     if (this.#installed) return;
+    const g = globalThis as GlobalWithMarker;
+    if (g[INSTALL_MARKER] !== undefined) {
+      // Some other HowlLogger already owns the global console. Skip the
+      // patch — direct methods on this instance still work.
+      this.#installed = true;
+      return;
+    }
+    g[INSTALL_MARKER] = this;
     this.#installed = true;
 
     const patch = (method: ConsoleMethod) => {
@@ -91,10 +116,17 @@ export class HowlLogger {
 
   /**
    * Uninstall logger — restores original console methods.
+   *
+   * Only the instance that originally claimed the global console actually
+   * restores it; uninstall on any other logger is a no-op on the global
+   * surface (it still flips its own `installed` flag back to false).
    */
   uninstall(): void {
     if (!this.#installed) return;
     this.#installed = false;
+    const g = globalThis as GlobalWithMarker;
+    if (g[INSTALL_MARKER] !== this) return;
+    delete g[INSTALL_MARKER];
     for (const method of Object.keys(this.#originals) as ConsoleMethod[]) {
       console[method] = this.#originals[method];
     }

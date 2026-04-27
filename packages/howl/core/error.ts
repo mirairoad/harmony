@@ -53,9 +53,29 @@ export class HttpError extends Error {
     options?: ErrorOptions,
   ) {
     super(message, options);
-    // Use a literal so the duck-type check in DEFAULT_ERROR_HANDLER stays
-    // reliable under bundlers that rename classes (e.g. SWC/esbuild).
+    // Literal `name` keeps {@linkcode isHttpError} reliable under bundlers
+    // that rename classes (esbuild, SWC) and under `deno compile` module
+    // duplication where `instanceof` would fail across distinct copies of
+    // this constructor.
     this.name = "HttpError";
     this.status = status;
   }
+}
+
+/**
+ * Duck-typed {@linkcode HttpError} predicate. `instanceof HttpError` is
+ * unreliable under `deno compile` because the runtime can resolve this
+ * module under multiple specifiers, producing distinct constructors — an
+ * `HttpError` thrown from one copy fails `instanceof` against another.
+ * Matching `name === "HttpError"` plus a numeric `status` is stable across
+ * module duplication.
+ *
+ * Prefer `isHttpError(err)` over `err instanceof HttpError` everywhere
+ * except in unit tests.
+ */
+export function isHttpError(err: unknown): err is HttpError {
+  if (err instanceof HttpError) return true;
+  if (err === null || typeof err !== "object") return false;
+  const e = err as { name?: unknown; status?: unknown };
+  return e.name === "HttpError" && typeof e.status === "number";
 }

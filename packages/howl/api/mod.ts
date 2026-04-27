@@ -8,7 +8,7 @@ export { getApiSpecs } from "./api-specs.ts";
 export { generateOpenApiSpec } from "./generate-openapi.ts";
 export { default as errors, HttpError } from "./errors.ts";
 export { memoryCache } from "./cache/memory.ts";
-export { redisCache } from "./cache/redis.ts";
+export { redisCache, type RedisLike } from "./cache/redis.ts";
 export { tryCache } from "./cache/tiered.ts";
 export { kvCache } from "./cache/kv.ts";
 export type {
@@ -22,3 +22,4 @@ export type {
   ResponseReturnType,
   ResponsesMap,
 } from "./types.ts";
+

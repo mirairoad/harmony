@@ -6,7 +6,7 @@ import { Context } from "./context.ts";
 import { mergePath, type Method, UrlPatternRouter } from "./router.ts";
 import type { HowlConfig, ResolvedHowlConfig } from "./config.ts";
 import type { BuildCache } from "./build_cache.ts";
-import { HttpError } from "./error.ts";
+import { isHttpError } from "./error.ts";
 import { STATUS_TEXT } from "@std/http/status";
 import type { LayoutConfig, MaybeLazy, Route, RouteConfig } from "./types.ts";
 import type { RouteComponent } from "./segments.ts";
@@ -113,17 +113,6 @@ const defaultOptionsHandler = (methods: string[]): () => Promise<Response> => {
       }),
     );
 };
-
-// Duck-typed HttpError check. `instanceof HttpError` is unreliable under
-// `deno compile` because the runtime can resolve the same module under
-// multiple specifiers, producing distinct constructors — so a thrown
-// HttpError from one copy fails `instanceof` against another.
-function isHttpError(err: unknown): err is HttpError {
-  if (err instanceof HttpError) return true;
-  if (err === null || typeof err !== "object") return false;
-  const e = err as { name?: unknown; status?: unknown };
-  return e.name === "HttpError" && typeof e.status === "number";
-}
 
 // deno-lint-ignore require-await
 const DEFAULT_ERROR_HANDLER = async <State>(ctx: Context<State>) => {

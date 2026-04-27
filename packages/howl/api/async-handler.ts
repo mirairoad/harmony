@@ -1,7 +1,7 @@
 import type { Context } from "../core/context.ts";
 import type { Howl } from "../core/app.ts";
 import type { AnyApiDefinition, CacheAdapter, HowlApiConfig, RateLimitConfig } from "./types.ts";
-import { HttpError } from "./errors.ts";
+import { HttpError, isHttpError } from "../core/error.ts";
 import { getApiRequestState } from "./_request_state.ts";
 
 // Helpers below operate on `Context<any>` because they read/inspect generic
@@ -89,7 +89,6 @@ function buildCacheKey(ctx: AnyCtx, perUser: boolean, howlConfig: AnyApiConfig):
 
 interface ApiHandlerError {
   message?: string;
-  statusCode?: number;
   status?: number;
 }
 
@@ -181,21 +180,35 @@ export function asyncHandler<State, Role extends string>(
       try {
         response = await Promise.resolve((handler as HandlerFn)(handlerCtx, app));
       } catch (innerErr) {
-        if (innerErr instanceof HttpError) throw innerErr;
-        const e = innerErr as ApiHandlerError | undefined;
-        const msg = typeof e?.message === "string" ? e.message : String(innerErr ?? "Unknown error");
-        const err = new Error(msg) as Error & { statusCode?: number };
-        const status = e?.statusCode ?? e?.status;
-        if (typeof status === "number") err.statusCode = status;
-        throw err;
+        if (isHttpError(innerErr)) throw innerErr;
+        // Re-wrap arbitrary errors so the outer catch's status read is
+        // consistent. Preserve a numeric `status`/`statusCode` hint if the
+        // underlying error carried one — `statusCode` is honoured for
+        // backwards compatibility with older user code.
+        const e = innerErr as
+          | { message?: unknown; status?: unknown; statusCode?: unknown }
+          | undefined;
+        const msg = typeof e?.message === "string"
+          ? e.message
+          : String(innerErr ?? "Unknown error");
+        const wrapped = new Error(msg) as Error & { status?: number };
+        const hint = typeof e?.status === "number"
+          ? e.status
+          : typeof e?.statusCode === "number"
+          ? e.statusCode
+          : undefined;
+        if (hint !== undefined) wrapped.status = hint;
+        throw wrapped;
       }
 
       if (response instanceof Response) return response;
 
-      const respObj = (response ?? {}) as Record<string, unknown> & ApiHandlerError;
+      const respObj = (response ?? {}) as
+        & Record<string, unknown>
+        & { statusCode?: number };
       const location = (respObj.headers as Headers | undefined)?.get?.("location");
       if (location) {
-        return ctx.redirect(location, respObj.statusCode ?? respObj.status ?? 302);
+        return ctx.redirect(location, respObj.statusCode ?? 302);
       }
 
       const statusCode = respObj.statusCode ?? 200;
@@ -216,7 +229,7 @@ export function asyncHandler<State, Role extends string>(
       );
     } catch (err) {
       const e = err as ApiHandlerError | undefined;
-      const statusCode = e?.statusCode ?? e?.status ?? 500;
+      const statusCode = typeof e?.status === "number" ? e.status : 500;
       const errorMessage = typeof e?.message === "string"
         ? e.message
         : "Something went wrong, try again.";

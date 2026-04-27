@@ -1,7 +1,7 @@
 import type { CacheAdapter } from "../types.ts";
 
 /** Minimal interface satisfied by ioredis, node-redis, and Upstash. */
-interface RedisLike {
+export interface RedisLike {
   get(key: string): Promise<string | null>;
   setex(key: string, seconds: number, value: string): Promise<unknown>;
   del(key: string): Promise<unknown>;

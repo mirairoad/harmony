@@ -27,7 +27,7 @@ import type { BuildCache } from "../../build_cache.ts";
 import { BUILD_ID } from "../../../utils/build-id.ts";
 import { DEV_ERROR_OVERLAY_URL, PARTIAL_SEARCH_PARAM } from "../../constants.ts";
 import { escape as escapeHtml } from "@std/html";
-import { HttpError } from "../../error.ts";
+import { isHttpError } from "../../error.ts";
 import { getCodeFrame } from "./code_frame.ts";
 import { escapeScript } from "../../utils.ts";
 import { HeadContext } from "../head.ts";
@@ -710,7 +710,7 @@ export function ShowErrorOverlay() {
   if (error === null || error === undefined) return null;
 
   // Ignore HTTP errors <500
-  if (error instanceof HttpError && error.status < 500) {
+  if (isHttpError(error) && error.status < 500) {
     return null;
   }
 
