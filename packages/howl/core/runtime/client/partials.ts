@@ -316,6 +316,18 @@ async function fetchPartials(
     }
   }
 
+  // Non-HTML response (e.g. file download, image, attachment). Fall
+  // back to a full browser navigation so the user gets the raw response
+  // instead of an unhandled partial. location.assign adds a fresh
+  // cross-document history entry so the back button returns cleanly to
+  // the previous SPA page.
+  const contentType = res.headers.get("Content-Type");
+  if (contentType === null || !contentType.startsWith("text/html")) {
+    res.body?.cancel();
+    globalThis.location.assign(actualUrl.href);
+    return;
+  }
+
   if (shouldNavigate) {
     maybeUpdateHistory(actualUrl);
   }

@@ -8,7 +8,16 @@
       "heading": "Overview",
       "blocks": [
         { "type": "p", "text": "Rate limiting in Howl is built into the API pipeline. Every API route can have its own limit, fall back to a global default, or opt out entirely." },
-        { "type": "p", "text": "Limits are tracked per user ID (authenticated) or IP address (anonymous), using the cache adapter you configure." }
+        { "type": "p", "text": "Limits are tracked per identifier returned by getRateLimitIdentifier(ctx) on HowlApiConfig (e.g. ctx.state.user?.id). When the hook is unset or returns undefined, the limiter falls back to the client IP." }
+      ]
+    },
+    {
+      "id": "identifier",
+      "heading": "Custom identifier",
+      "blocks": [
+        { "type": "p", "text": "Howl makes no assumptions about the shape of your State. Provide getRateLimitIdentifier on HowlApiConfig to key counters on whatever you store — user id, session id, API key, tenant id." },
+        { "type": "code", "lang": "ts", "text": "defineConfig({\n  getRateLimitIdentifier: (ctx) => ctx.state.user?.id,\n  defaultRateLimit: { max: 100, windowMs: 60_000 },\n});" },
+        { "type": "p", "text": "Per-user response cache keys use the same hook (falling back to \"anonymous\")." }
       ]
     },
     {
@@ -43,6 +52,15 @@
         { "type": "p", "text": "With multiple instances behind a load balancer, rate limit counters must be stored in a shared backend — otherwise each instance counts independently and the effective limit is max × N instances." },
         { "type": "code", "lang": "ts", "text": "import { redisCache, memoryCache } from \"@hushkey/howl/api/cache\";\n\nconst redis = new Redis(Deno.env.get(\"REDIS_URL\"));\n\ndefineConfig({\n  // Response cache — per-instance is fine (responses are idempotent)\n  cache: memoryCache({ maxSize: 1000 }),\n  // Rate limit counters — must be shared across all instances\n  rateLimitCache: redisCache(redis),\n});" },
         { "type": "warning", "text": "If you only set cache (not rateLimitCache), the same adapter is used for both. With memoryCache(), rate limits are per-instance and not enforced globally." }
+      ]
+    },
+    {
+      "id": "atomicity",
+      "heading": "Atomic counter increments",
+      "blocks": [
+        { "type": "p", "text": "Howl writes the counter via cache.incr(key, ttl). On Redis this maps to INCR + EXPIRE (atomic server-side); on Deno KV it uses an atomic().check().set() CAS loop; on the in-memory adapter it is trivially atomic because the runtime is single-threaded. This guarantees the limit is enforced even under concurrent burst traffic." },
+        { "type": "p", "text": "If you supply a custom CacheAdapter that doesn't implement the optional incr method, the rate limiter falls back to a non-atomic read-modify-write path. Don't use that on a shared backend — concurrent requests can punch through the limit." },
+        { "type": "code", "lang": "ts", "text": "// Custom adapter — implement `incr` for safe shared-backend use.\nfunction myAdapter(): CacheAdapter {\n  return {\n    async get(key) { /* … */ },\n    async set(key, value, ttl) { /* … */ },\n    async delete(key) { /* … */ },\n    async incr(key, ttl) {\n      // Atomic counter+TTL primitive on whichever backend you're using.\n      // Must apply ttl on first write; subsequent calls just bump the count.\n      return await myBackend.atomicIncr(key, ttl);\n    },\n  };\n}" }
       ]
     },
     {

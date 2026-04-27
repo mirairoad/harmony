@@ -159,11 +159,11 @@
         {
           "type": "code",
           "lang": "ts",
-          "text": "import type { Middleware } from \"@hushkey/howl\";\nimport type { State } from \"./howl.config.ts\";\n\nconst requestId: Middleware<State> = (ctx) => {\n  ctx.headers.set(\"X-Request-Id\", crypto.randomUUID());\n  return ctx.next();\n};\n\n// Guard: redirect unauthenticated users\nconst requireAuth: Middleware<State> = (ctx) => {\n  if (!ctx.state.userContext) {\n    return ctx.partialRedirect(\"/login\");\n  }\n  return ctx.next();\n};\n\napp.use(requestId);\napp.get(\"/dashboard\", requireAuth, (ctx) => ctx.render(<Dashboard />));"
+          "text": "import type { Middleware } from \"@hushkey/howl\";\nimport type { State } from \"./howl.config.ts\";\n\nconst requestId: Middleware<State> = (ctx) => {\n  ctx.headers.set(\"X-Request-Id\", crypto.randomUUID());\n  return ctx.next();\n};\n\n// Guard: redirect unauthenticated users\nconst requireAuth: Middleware<State> = (ctx) => {\n  if (!ctx.state.userContext) {\n    return ctx.redirect(\"/login\");\n  }\n  return ctx.next();\n};\n\napp.use(requestId);\napp.get(\"/dashboard\", requireAuth, (ctx) => ctx.render(<Dashboard />));"
         },
         {
           "type": "tip",
-          "text": "Use ctx.partialRedirect() instead of ctx.redirect() in middleware guards — it preserves the SPA partial nav state so the browser doesn't do a full reload after the redirect."
+          "text": "ctx.redirect() automatically preserves the SPA partial-nav search param on partial requests — middleware guards work with the SPA flow without any special variant. (The previous ctx.partialRedirect() helper has been removed; ctx.redirect() handles both cases.)"
         }
       ]
     },

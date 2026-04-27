@@ -14,6 +14,7 @@
     "jsr:@std/async@^1.1.0": "1.2.0",
     "jsr:@std/bytes@^1.0.2": "1.0.6",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
+    "jsr:@std/cli@1": "1.0.28",
     "jsr:@std/cli@^1.0.28": "1.0.28",
     "jsr:@std/crypto@^1.0.5": "1.0.5",
     "jsr:@std/data-structures@^1.0.10": "1.0.10",
@@ -186,7 +187,7 @@
     "@std/http@1.0.25": {
       "integrity": "577b4252290af1097132812b339fffdd55fb0f4aeb98ff11bdbf67998aa17193",
       "dependencies": [
-        "jsr:@std/cli",
+        "jsr:@std/cli@^1.0.28",
         "jsr:@std/encoding@^1.0.10",
         "jsr:@std/fmt@^1.0.9",
         "jsr:@std/fs@^1.0.23",
@@ -939,6 +940,14 @@
           "npm:preact@^10.25.0",
           "npm:tailwindcss@4",
           "npm:zod@4.3.6"
+        ]
+      },
+      "packages/howl-init": {
+        "dependencies": [
+          "jsr:@std/cli@1",
+          "jsr:@std/expect@^1.0.18",
+          "jsr:@std/fs@1",
+          "jsr:@std/path@1"
         ]
       }
     }

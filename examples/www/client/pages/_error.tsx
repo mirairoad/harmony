@@ -13,8 +13,6 @@ export default function Error({ error }: { error: unknown }): JSX.Element {
     "Unknown error";
   const status = (error as { status: number }).status || 500;
 
-  console.error("error", error);
-
   return (
     <>
       <Head>

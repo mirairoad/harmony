@@ -1,8 +1,8 @@
-import { App, Howl, type ListenOptions } from "../core/app.ts";
+import { Howl, type ListenOptions } from "../core/app.ts";
 import { Builder, type BuildOptions } from "./builder.ts";
 import { cssModulesPlugin } from "./plugins/css_modules.ts";
 import * as path from "@std/path";
-import type { AnyApiDefinition } from "../api/types.ts";
+import type { AnyApiDefinition, HowlApiConfig } from "../api/types.ts";
 import { buildApiCommands } from "../api/api-handler.ts";
 import type { ApiEntry } from "./dev_build_cache.ts";
 
@@ -196,7 +196,10 @@ export class HowlBuilder<State = any> {
     if (!this.#howl.isApiRoutesEnabled()) return;
     if (this.#apis.length === 0) return;
 
-    const commands = buildApiCommands(app, this.#apis, app.getApiConfig() ?? null);
+    const config = (app.getApiConfig() ?? null) as
+      | HowlApiConfig<State, string>
+      | null;
+    const commands = buildApiCommands(app, this.#apis, config);
     app.setApiRouteItems(commands);
   }
 
@@ -244,7 +247,7 @@ export class HowlBuilder<State = any> {
             const result = await Promise.resolve(importApp());
             const app = result instanceof Howl ? result : result.app;
             this.#registerApis(app);
-            const clientApp = new App<State>({ basePath: client.mount });
+            const clientApp = new Howl<State>({ basePath: client.mount });
             clientApp.mountApp(client.mount, app);
             return clientApp;
           },

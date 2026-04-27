@@ -63,5 +63,20 @@ export function memoryCache(options: { maxSize?: number } = {}): CacheAdapter {
       store.delete(key);
       return Promise.resolve();
     },
+
+    incr(key: string, ttlSeconds: number): Promise<number> {
+      evictExpired();
+      const now = Date.now();
+      const existing = store.get(key);
+      if (existing && existing.expiresAt >= now) {
+        const next = (Number(existing.value) || 0) + 1;
+        store.delete(key);
+        store.set(key, { value: String(next), expiresAt: existing.expiresAt });
+        return Promise.resolve(next);
+      }
+      if (store.size >= maxSize) evictOldest();
+      store.set(key, { value: "1", expiresAt: now + ttlSeconds * 1000 });
+      return Promise.resolve(1);
+    },
   };
 }

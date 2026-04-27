@@ -1,3 +1,5 @@
+/// <reference lib="deno.unstable" />
+
 import type { CacheAdapter } from "../types.ts";
 
 /**
@@ -31,6 +33,26 @@ export function kvCache(
 
     async delete(key: string): Promise<void> {
       await kv.delete([...prefix, key]);
+    },
+
+    async incr(key: string, ttlSeconds: number): Promise<number> {
+      const k: Deno.KvKey = [...prefix, key];
+      // CAS loop. KV's `set` resets TTL, so we store { count, expiresAt }
+      // and pass `expireIn = remaining` on every write to preserve the
+      // original window across increments.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const existing = await kv.get<{ count: number; expiresAt: number }>(k);
+        const now = Date.now();
+        const next = existing.value && existing.value.expiresAt > now
+          ? { count: existing.value.count + 1, expiresAt: existing.value.expiresAt }
+          : { count: 1, expiresAt: now + ttlSeconds * 1000 };
+        const result = await kv.atomic()
+          .check({ key: k, versionstamp: existing.versionstamp })
+          .set(k, next, { expireIn: Math.max(1, next.expiresAt - now) })
+          .commit();
+        if (result.ok) return next.count;
+      }
+      throw new Error("kvCache.incr: too many concurrent CAS retries");
     },
   };
 }

@@ -76,3 +76,5 @@ test-output/
 .yarn/
 .pnp.*
 .DS_Store
+
+my-howl-app

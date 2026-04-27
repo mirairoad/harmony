@@ -1,6 +1,6 @@
-import { App } from "../../../core/app.ts";
+import { Howl } from "../../../core/app.ts";
 
-const app = new App().get(
+const app = new Howl().get(
   "/",
   (ctx) =>
     ctx.render(

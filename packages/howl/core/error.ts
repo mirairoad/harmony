@@ -53,7 +53,9 @@ export class HttpError extends Error {
     options?: ErrorOptions,
   ) {
     super(message, options);
-    this.name = this.constructor.name;
+    // Use a literal so the duck-type check in DEFAULT_ERROR_HANDLER stays
+    // reliable under bundlers that rename classes (e.g. SWC/esbuild).
+    this.name = "HttpError";
     this.status = status;
   }
 }

@@ -39,8 +39,17 @@
       "id": "production",
       "heading": "Production deployment",
       "blocks": [
-        { "type": "code", "lang": "sh", "text": "# Build\ndeno run -A dev.ts build\n\n# Run the compiled server\ndeno run -A dist/compiled-entry.js" },
-        { "type": "tip", "text": "The production build outputs a single compiled-entry.js. No node_modules, no build tools needed at runtime — just Deno." }
+        { "type": "code", "lang": "sh", "text": "# Build\ndeno run -A dev.ts build\n\n# Run the compiled server\ndeno run -A dist/compiled-entry.js\n\n# Override host/port via env\nDENO_PORT=9000 DENO_HOSTNAME=0.0.0.0 deno run -A dist/compiled-entry.js" },
+        { "type": "tip", "text": "The production build outputs a single compiled-entry.js. No node_modules, no build tools needed at runtime — just Deno." },
+        { "type": "p", "text": "compiled-entry.js coerces DENO_PORT to a number and throws on a non-numeric value, so a typo fails fast at startup instead of silently picking a random port." }
+      ]
+    },
+    {
+      "id": "handler-lifecycle",
+      "heading": "Handler lifecycle",
+      "blocks": [
+        { "type": "p", "text": "app.handler() is built lazily on first call and cached per listener. app.listen() spawns the main listener plus one secondary listener per WS port — each gets its own cached handler with the same middleware pipeline." },
+        { "type": "warning", "text": "Once handler() has been built, the app is frozen: app.use(...), app.get/post/..., app.fsApiRoutes(...), app.layout(...), app.mountApp(...) all throw with a clear error. Register everything before requesting the handler." }
       ]
     }
   ]

@@ -4,7 +4,6 @@
 
 // --- Framework entry point ---
 export {
-  App,
   getBuildCache,
   Howl,
   type HowlOptions,
@@ -13,7 +12,7 @@ export {
 } from "./app.ts";
 
 // --- Request context ---
-export { Context, type HowlContext, type SSEEvent } from "./context.ts";
+export { Context, type SSEEvent } from "./context.ts";
 
 // --- Page props ---
 export type { PageProps } from "./render.ts";

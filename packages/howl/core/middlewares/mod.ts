@@ -1,5 +1,5 @@
 import { type Context, getInternals } from "../context.ts";
-import type { App as _App } from "../app.ts";
+import type { Howl as _Howl } from "../app.ts";
 import type { Define as _Define } from "../define.ts";
 import { recordSpanError, tracer } from "../otel.ts";
 // --- Built-in middleware implementations ---
@@ -29,7 +29,7 @@ export { staticFiles } from "./static_files.ts";
  *
  * Middlewares can be defined as a single function or an array of functions.
  * When an array of middlewares is passed to
- * {@linkcode _App.prototype.use|app.use}, Howl will call each middleware in the
+ * {@linkcode _Howl.prototype.use|app.use}, Howl will call each middleware in the
  * order they are defined.
  *
  * Middlewares can also be defined using the
@@ -90,13 +90,6 @@ export { staticFiles } from "./static_files.ts";
 export type Middleware<State> = (
   ctx: Context<State>,
 ) => Response | Promise<Response>;
-
-/**
- * Legacy alias for {@linkcode Middleware}.
- *
- * @deprecated Use {@linkcode Middleware} instead.
- */
-export type MiddlewareFn<State> = Middleware<State>;
 
 /**
  * A lazy {@linkcode Middleware}

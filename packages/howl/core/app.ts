@@ -27,6 +27,7 @@ import {
 } from "./commands.ts";
 import { MockBuildCache } from "./test_utils.ts";
 import { HowlLogger, type LoggerOptions } from "./logger.ts";
+import { ALIVE_URL } from "./constants.ts";
 /**
  * Configuration for a registered client app — an isolated build of routes/islands
  * mounted at a path.
@@ -113,20 +114,35 @@ const defaultOptionsHandler = (methods: string[]): () => Promise<Response> => {
     );
 };
 
+// Duck-typed HttpError check. `instanceof HttpError` is unreliable under
+// `deno compile` because the runtime can resolve the same module under
+// multiple specifiers, producing distinct constructors — so a thrown
+// HttpError from one copy fails `instanceof` against another.
+function isHttpError(err: unknown): err is HttpError {
+  if (err instanceof HttpError) return true;
+  if (err === null || typeof err !== "object") return false;
+  const e = err as { name?: unknown; status?: unknown };
+  return e.name === "HttpError" && typeof e.status === "number";
+}
+
 // deno-lint-ignore require-await
 const DEFAULT_ERROR_HANDLER = async <State>(ctx: Context<State>) => {
   const { error } = ctx;
-  if (error instanceof HttpError) {
+  const where = `${ctx.req.method} ${ctx.url.pathname}${ctx.url.search}`;
+  if (isHttpError(error)) {
     if (error.status >= 500) {
       // deno-lint-ignore no-console
-      console.error(error);
+      console.error(`[${error.status}] ${where}`, error);
+    } else if (error.status >= 400) {
+      // deno-lint-ignore no-console
+      console.warn(`[${error.status}] ${where}`);
     }
     return new Response(error.message || STATUS_TEXT[error.status], {
       status: error.status,
     });
   }
   // deno-lint-ignore no-console
-  console.error(error);
+  console.error(`[500] ${where}`, error);
   return new Response("Internal server error", { status: 500 });
 };
 
@@ -298,9 +314,24 @@ export class Howl<State = any> {
   #onError: (err: unknown) => void = NOOP;
   #logger: HowlLogger | null = null;
   #apiRoutesEnabled = false;
-  // deno-lint-ignore no-explicit-any
-  #apiConfig: any = null;
+  #apiConfig: unknown = null;
   #apiRouteCmd: ApiRouteCommand<State> | null = null;
+  /**
+   * Cached handler closures keyed by `boundPort` (`-1` represents the main
+   * listener). Built lazily on first {@linkcode handler} call and reused
+   * thereafter to avoid rebuilding the router/segment tree.
+   */
+  #handlerCache: Map<number, (req: Request, info?: Deno.ServeHandlerInfo) => Promise<Response>> =
+    new Map();
+  #frozen = false;
+
+  #assertMutable(method: string): void {
+    if (this.#frozen) {
+      throw new Error(
+        `Howl.${method}() called after handler() was built. Register all routes and middleware before requesting the handler.`,
+      );
+    }
+  }
 
   static {
     getBuildCache = (app) => app.#getBuildCache();
@@ -386,12 +417,14 @@ export class Howl<State = any> {
       pattern = pattern.endsWith("/**") ? pattern.slice(0, -3) : pattern.slice(0, -2);
       if (pattern === "") pattern = "/";
     }
+    this.#assertMutable("use");
     this.#commands.push(newMiddlewareCmd(pattern, fns, true));
     return this;
   }
 
   /** Set a custom 404 handler. */
   notFound(routeOrMiddleware: Route<State> | Middleware<State>): this {
+    this.#assertMutable("notFound");
     this.#commands.push(newNotFoundCmd(routeOrMiddleware));
     return this;
   }
@@ -401,12 +434,14 @@ export class Howl<State = any> {
     path: string,
     routeOrMiddleware: Route<State> | Middleware<State>,
   ): this {
+    this.#assertMutable("onError");
     this.#commands.push(newErrorCmd(path, routeOrMiddleware, true));
     return this;
   }
 
   /** Set the outermost app wrapper component. */
   appWrapper(component: RouteComponent<State>): this {
+    this.#assertMutable("appWrapper");
     this.#commands.push(newAppCmd(component));
     return this;
   }
@@ -417,6 +452,7 @@ export class Howl<State = any> {
     component: RouteComponent<State>,
     config?: LayoutConfig,
   ): this {
+    this.#assertMutable("layout");
     this.#commands.push(newLayoutCmd(path, component, config, true));
     return this;
   }
@@ -427,52 +463,56 @@ export class Howl<State = any> {
     route: MaybeLazy<Route<State>>,
     config?: RouteConfig,
   ): this {
-    // includeLastSegment: true so programmatic routes attach to the deepest
-    // segment in the segment tree — that's where matching `app.layout()`
-    // entries live. Without this, `app.route("/foo", …)` would only see
-    // layouts registered on the root and miss the `/foo` layout itself.
+    this.#assertMutable("route");
     this.#commands.push(newRouteCmd(path, route, config, true));
     return this;
   }
 
   /** Add a GET handler. */
   get(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("get");
     this.#commands.push(newHandlerCmd("GET", path, middlewares, true));
     return this;
   }
 
   /** Add a POST handler. */
   post(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("post");
     this.#commands.push(newHandlerCmd("POST", path, middlewares, true));
     return this;
   }
 
   /** Add a PATCH handler. */
   patch(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("patch");
     this.#commands.push(newHandlerCmd("PATCH", path, middlewares, true));
     return this;
   }
 
   /** Add a PUT handler. */
   put(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("put");
     this.#commands.push(newHandlerCmd("PUT", path, middlewares, true));
     return this;
   }
 
   /** Add a DELETE handler. */
   delete(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("delete");
     this.#commands.push(newHandlerCmd("DELETE", path, middlewares, true));
     return this;
   }
 
   /** Add a HEAD handler. */
   head(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("head");
     this.#commands.push(newHandlerCmd("HEAD", path, middlewares, true));
     return this;
   }
 
   /** Add a handler for all HTTP verbs. */
   all(path: string, ...middlewares: MaybeLazy<Middleware<State>>[]): this {
+    this.#assertMutable("all");
     this.#commands.push(newHandlerCmd("ALL", path, middlewares, true));
     return this;
   }
@@ -554,6 +594,7 @@ export class Howl<State = any> {
       return response;
     };
 
+    this.#assertMutable("ws");
     this.#commands.push(newHandlerCmd("GET", path, [middleware], true));
     return this;
   }
@@ -565,6 +606,7 @@ export class Howl<State = any> {
    * app.fsClientRoutes();
    */
   fsClientRoutes(pattern = "*"): this {
+    this.#assertMutable("fsClientRoutes");
     this.#commands.push({
       type: CommandType.FsRoute,
       pattern,
@@ -588,8 +630,8 @@ export class Howl<State = any> {
    * import { apiConfig } from "./howl.config.ts";
    * app.fsApiRoutes(apiConfig);
    */
-  // deno-lint-ignore no-explicit-any
-  fsApiRoutes(config?: any): this {
+  fsApiRoutes(config?: unknown): this {
+    this.#assertMutable("fsApiRoutes");
     this.#apiRoutesEnabled = true;
     if (config !== undefined) this.#apiConfig = config;
     const cmd: ApiRouteCommand<State> = { type: CommandType.ApiRoute, getItems: () => [] };
@@ -604,8 +646,7 @@ export class Howl<State = any> {
   }
 
   /** @internal — used by HowlBuilder */
-  // deno-lint-ignore no-explicit-any
-  getApiConfig(): any {
+  getApiConfig(): unknown {
     return this.#apiConfig;
   }
 
@@ -620,6 +661,7 @@ export class Howl<State = any> {
    * Merge another Howl instance into this app at the specified path.
    */
   mountApp(path: string, app: Howl<State>): this {
+    this.#assertMutable("mountApp");
     for (let i = 0; i < app.#commands.length; i++) {
       const cmd = app.#commands[i];
       if (
@@ -660,6 +702,11 @@ export class Howl<State = any> {
     request: Request,
     info?: Deno.ServeHandlerInfo,
   ) => Promise<Response> {
+    const cacheKey = boundPort ?? -1;
+    const cached = this.#handlerCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+    this.#frozen = true;
+
     let buildCache = this.#getBuildCache();
     if (buildCache === null) {
       if (this.config.mode === "production" && DENO_DEPLOYMENT_ID !== undefined) {
@@ -691,12 +738,40 @@ export class Howl<State = any> {
       ? wsPortRoutes.get(boundPort)?.paths ?? new Set<string>()
       : null;
 
-    return async (
+    const aliveUrl = this.config.basePath + ALIVE_URL;
+    const isProduction = this.config.mode !== "development";
+
+    const handlerFn = async (
       req: Request,
       conn: Deno.ServeHandlerInfo = DEFAULT_CONN_INFO,
     ) => {
       const url = new URL(req.url);
       url.pathname = url.pathname.replace(/\/+/g, "/");
+
+      // Cached dev clients (with `/_howl/alive` baked into their bundle)
+      // hit production servers in a reconnect loop, throwing 404s every
+      // few seconds. Quietly accept the WS upgrade and send a bumped
+      // revision so the dev client reloads — once reloaded the prod
+      // runtime takes over and the polling stops. In dev, the
+      // `liveReload()` middleware intercepts before this falls through.
+      if (isProduction && url.pathname === aliveUrl) {
+        if (req.headers.get("upgrade") === "websocket") {
+          try {
+            const { response, socket } = Deno.upgradeWebSocket(req);
+            socket.addEventListener("open", () => {
+              socket.send(JSON.stringify({
+                type: "initial-state",
+                revision: Date.now(),
+              }));
+              socket.close(1000, "stale dev client — reloading");
+            });
+            return response;
+          } catch {
+            return new Response(null, { status: 404 });
+          }
+        }
+        return new Response(null, { status: 404 });
+      }
 
       // Port-isolated WS routing.
       if (allowedWsPaths !== null) {
@@ -761,6 +836,9 @@ export class Howl<State = any> {
         return await DEFAULT_ERROR_HANDLER(ctx);
       }
     };
+
+    this.#handlerCache.set(cacheKey, handlerFn);
+    return handlerFn;
   }
 
   /**
@@ -822,9 +900,3 @@ export class Howl<State = any> {
     return this;
   }
 }
-
-/**
- * @deprecated Use {@linkcode Howl} directly.
- * App is kept as an internal alias for backward compatibility.
- */
-export { Howl as App };

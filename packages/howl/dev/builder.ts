@@ -1,5 +1,5 @@
 import {
-  App,
+  Howl,
   fsAdapter,
   type ListenOptions,
   parseDirPath,
@@ -194,15 +194,15 @@ export class Builder<State = any> {
    * serves with live-reload + error overlay middleware installed.
    */
   async listen(
-    importApp: () => Promise<{ app: App<State> } | App<State>>,
+    importHowl: () => Promise<{ app: Howl<State> } | Howl<State>>,
     options: ListenOptions = {},
   ): Promise<void> {
     this.config.mode = "development";
 
     await this.#crawlFsItems();
 
-    let app = await importApp();
-    if (!(app instanceof App) && "app" in app) {
+    let app = await importHowl();
+    if (!(app instanceof Howl) && "app" in app) {
       app = app.app;
     }
 
@@ -220,7 +220,7 @@ export class Builder<State = any> {
 
     const appHandler = app.handler();
 
-    const devApp = new App<State>(app.config)
+    const devHowl = new Howl<State>(app.config)
       .use(liveReload())
       .use(devErrorOverlay())
       .use(automaticWorkspaceFolders(this.config.root))
@@ -230,12 +230,12 @@ export class Builder<State = any> {
       })
       .all("*", (ctx: any) => appHandler(ctx.req, ctx.info));
 
-    devApp.config.root = this.config.root;
-    devApp.config.mode = "development";
-    setBuildCache(devApp, buildCache, "development");
+    devHowl.config.root = this.config.root;
+    devHowl.config.mode = "development";
+    setBuildCache(devHowl, buildCache, "development");
 
     await Promise.all([
-      devApp.listen(options),
+      devHowl.listen(options),
       this.#build(buildCache, true),
     ]);
   }
@@ -244,7 +244,7 @@ export class Builder<State = any> {
    * Run a one-shot production build.
    *
    * Returns a callback that attaches the resulting build cache to a
-   * {@linkcode App} instance.
+   * {@linkcode Howl} instance.
    */
   async build(
     options?: {
@@ -252,7 +252,7 @@ export class Builder<State = any> {
       snapshot?: "disk" | "memory";
       apiEntries?: ApiEntry[];
     },
-  ): Promise<(app: App<State>) => void> {
+  ): Promise<(app: Howl<State>) => void> {
     this.config.mode = options?.mode ?? "production";
 
     await this.#crawlFsItems();

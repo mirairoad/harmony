@@ -63,5 +63,19 @@ export function tryCache(
       ]);
       if (results[0].status === "rejected") warn("delete", results[0].reason);
     },
+
+    incr: primary.incr || fallback.incr
+      ? async (key, ttl) => {
+        if (primary.incr) {
+          try {
+            return await withTimeout(primary.incr(key, ttl));
+          } catch (err) {
+            warn("incr", err);
+          }
+        }
+        if (fallback.incr) return fallback.incr(key, ttl);
+        throw new Error("tryCache.incr: neither adapter supports atomic incr");
+      }
+      : undefined,
   };
 }

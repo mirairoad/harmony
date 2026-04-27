@@ -1,4 +1,4 @@
-import type { App } from "../core/app.ts";
+import type { Howl } from "../core/app.ts";
 import { launch, type Page } from "@astral/astral";
 import * as colors from "@std/fmt/colors";
 import { DOMParser, HTMLElement } from "linkedom";
@@ -53,14 +53,14 @@ export const ISLAND_GROUP_DIR = path.join(
 
 export async function buildProd(
   options: Omit<BuildOptions, "outDir">,
-): Promise<<T>(app: App<T>) => void> {
+): Promise<<T>(app: Howl<T>) => void> {
   const outDir = await Deno.makeTempDir();
   const builder = new Builder({ outDir, ...options });
   return await builder.build({ mode: "production", snapshot: "memory" });
 }
 
 export async function withBrowserApp(
-  app: App<unknown>,
+  app: Howl<unknown>,
   fn: (page: Page, address: string) => void | Promise<void>,
 ) {
   const aborter = new AbortController();

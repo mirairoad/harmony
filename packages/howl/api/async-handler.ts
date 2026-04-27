@@ -1,84 +1,127 @@
-// deno-lint-ignore-file no-explicit-any
 import type { Context } from "../core/context.ts";
 import type { Howl } from "../core/app.ts";
 import type { AnyApiDefinition, CacheAdapter, HowlApiConfig, RateLimitConfig } from "./types.ts";
 import { HttpError } from "./errors.ts";
 import { getApiRequestState } from "./_request_state.ts";
 
-function getClientIp(ctx: Context<any>): string {
+// Helpers below operate on `Context<any>` because they read/inspect generic
+// state slots that any user app might define. The `any` is contained — the
+// outer pipeline preserves typed `Context<State>`.
+// deno-lint-ignore no-explicit-any
+type AnyCtx = Context<any>;
+// deno-lint-ignore no-explicit-any
+type AnyApiConfig = HowlApiConfig<any, any> | null;
+
+function getClientIp(ctx: AnyCtx): string {
   return ctx.req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     ctx.req.headers.get("x-real-ip") ??
     (ctx.info.remoteAddr as Deno.NetAddr).hostname ??
     "unknown";
 }
 
+function resolveIdentifier(ctx: AnyCtx, howlConfig: AnyApiConfig): string | undefined {
+  return howlConfig?.getRateLimitIdentifier?.(ctx);
+}
+
+async function nonAtomicIncr(
+  cache: CacheAdapter,
+  key: string,
+  ttlSeconds: number,
+): Promise<number> {
+  const raw = await cache.get(key);
+  const next = (raw ? Number(raw) : 0) + 1;
+  await cache.set(key, String(next), ttlSeconds);
+  return next;
+}
+
 async function checkRateLimit(
-  ctx: Context<any>,
+  ctx: AnyCtx,
   cache: CacheAdapter,
   rl: RateLimitConfig,
+  howlConfig: AnyApiConfig,
 ): Promise<Response | null> {
-  const userId = (ctx.state as any)?.userContext?.id;
-  const identifier = userId ?? getClientIp(ctx);
-  const key = `ratelimit:${identifier}:${ctx.req.method}:${ctx.url.pathname}`;
+  const identifier = resolveIdentifier(ctx, howlConfig) ?? getClientIp(ctx);
+  const baseKey = `ratelimit:${identifier}:${ctx.req.method}:${ctx.url.pathname}`;
+  const cntKey = `${baseKey}:cnt`;
+  const blkKey = `${baseKey}:blk`;
   const now = Date.now();
 
-  const raw = await cache.get(key);
-  const stored: { count: number; resetAt: number; blockedUntil?: number } | null = raw
-    ? JSON.parse(raw)
-    : null;
-  // Keep entry if window is active OR an extended block is still in effect
-  const current = stored &&
-      (stored.resetAt > now || (stored.blockedUntil && stored.blockedUntil > now))
-    ? stored
-    : null;
-
-  if (current && current.count >= rl.max) {
-    let blockedUntil = current.blockedUntil;
-    // First time hitting the limit with a configured block duration — persist the extended lockout
-    if (!blockedUntil && rl.blockDurationMs) {
-      blockedUntil = now + rl.blockDurationMs;
-      await cache.set(
-        key,
-        JSON.stringify({ ...current, blockedUntil }),
-        Math.ceil(rl.blockDurationMs / 1000),
-      );
+  const blocked = await cache.get(blkKey);
+  if (blocked) {
+    const blockedUntil = Number(blocked);
+    if (blockedUntil > now) {
+      const retryAfter = Math.max(0, Math.ceil((blockedUntil - now) / 1000));
+      ctx.headers.set("Retry-After", String(retryAfter));
+      ctx.headers.set("X-RateLimit-Limit", String(rl.max));
+      ctx.headers.set("X-RateLimit-Remaining", "0");
+      return ctx.json({ error: "Too many requests" }, { status: 429 });
     }
-    const expiresAt = blockedUntil ?? current.resetAt;
-    const retryAfter = Math.max(0, Math.ceil((expiresAt - now) / 1000));
-    ctx.headers.set("Retry-After", String(retryAfter));
+  }
+
+  const incr = cache.incr ?? nonAtomicIncr.bind(null, cache);
+  const ttlSeconds = Math.ceil(rl.windowMs / 1000);
+  const count = await incr(cntKey, ttlSeconds);
+
+  if (count > rl.max) {
+    if (rl.blockDurationMs) {
+      const blockedUntil = now + rl.blockDurationMs;
+      await cache.set(blkKey, String(blockedUntil), Math.ceil(rl.blockDurationMs / 1000));
+      ctx.headers.set("Retry-After", String(Math.ceil(rl.blockDurationMs / 1000)));
+    } else {
+      ctx.headers.set("Retry-After", String(ttlSeconds));
+    }
     ctx.headers.set("X-RateLimit-Limit", String(rl.max));
     ctx.headers.set("X-RateLimit-Remaining", "0");
     return ctx.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const newCount = (current?.count ?? 0) + 1;
-  const resetAt = current?.resetAt ?? now + rl.windowMs;
-  const ttlMs = Math.max(0, resetAt - now);
-  await cache.set(key, JSON.stringify({ count: newCount, resetAt }), Math.ceil(ttlMs / 1000));
-
   ctx.headers.set("X-RateLimit-Limit", String(rl.max));
-  ctx.headers.set("X-RateLimit-Remaining", String(Math.max(0, rl.max - newCount)));
+  ctx.headers.set("X-RateLimit-Remaining", String(Math.max(0, rl.max - count)));
   return null;
 }
 
-function redactPasswords(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map(redactPasswords);
-  if (typeof obj === "object") {
-    const out: any = {};
-    for (const key in obj) {
-      out[key] = key.toLowerCase() === "password" ? "[redacted]" : redactPasswords(obj[key]);
-    }
-    return out;
-  }
-  return obj;
+function buildCacheKey(ctx: AnyCtx, perUser: boolean, howlConfig: AnyApiConfig): string {
+  const base = `${ctx.req.method}:${ctx.url.pathname}${ctx.url.search}`;
+  if (!perUser) return base;
+  const id = resolveIdentifier(ctx, howlConfig) ?? "anonymous";
+  return `${base}:${id}`;
 }
 
-function buildCacheKey(ctx: Context<any>, perUser: boolean): string {
-  const base = `${ctx.req.method}:${ctx.req.url}`;
-  if (!perUser) return base;
-  const userId = (ctx.state as any)?.userContext?.id ?? "anonymous";
-  return `${base}:${userId}`;
+interface ApiHandlerError {
+  message?: string;
+  statusCode?: number;
+  status?: number;
+}
+
+interface PaginatedResponse {
+  meta_pagination?: unknown;
+}
+
+/**
+ * Build a child context that exposes the parsed body on `ctx.req.body` and a
+ * typed `ctx.query()` reading from the WeakMap state. Uses `Object.create`
+ * (not `Proxy`) so property access stays on the fast path.
+ */
+function makeApiCtx<State>(ctx: Context<State>): Context<State> {
+  const apiState = getApiRequestState(ctx);
+  const reqWithBody: Request = Object.create(ctx.req);
+  Object.defineProperty(reqWithBody, "body", {
+    value: apiState.body ?? null,
+    enumerable: true,
+  });
+  const child: Context<State> = Object.create(ctx);
+  Object.defineProperty(child, "req", {
+    value: reqWithBody,
+    enumerable: true,
+  });
+  if (apiState.query !== undefined) {
+    const q = apiState.query as Record<string, unknown>;
+    Object.defineProperty(child, "query", {
+      value: (key?: string) => key !== undefined ? q[key] : q,
+      enumerable: true,
+    });
+  }
+  return child;
 }
 
 /**
@@ -91,14 +134,13 @@ export function asyncHandler<State, Role extends string>(
   howlConfig: HowlApiConfig<State, Role> | null,
   cache: CacheAdapter,
   rateLimitCache: CacheAdapter,
-) {
+): (ctx: Context<State>) => Promise<Response> {
   return async (ctx: Context<State>): Promise<Response> => {
     const { name, directory, handler, roles, caching } = api;
     const ttl = caching?.ttl ?? 0;
     const protectedRoute = roles.length > 0;
 
     try {
-      // --- Auth check — delegate to checkPermissionStrategy ---
       if (protectedRoute) {
         if (!howlConfig?.checkPermissionStrategy) {
           // deno-lint-ignore no-console
@@ -113,17 +155,15 @@ export function asyncHandler<State, Role extends string>(
         }
       }
 
-      // --- Rate limit ---
       if (api.rateLimit !== false) {
         const rl = api.rateLimit ?? howlConfig?.defaultRateLimit;
         if (rl) {
-          const limited = await checkRateLimit(ctx, rateLimitCache, rl);
+          const limited = await checkRateLimit(ctx, rateLimitCache, rl, howlConfig);
           if (limited) return limited;
         }
       }
 
-      // --- Cache read ---
-      const cacheKey = ttl > 0 ? buildCacheKey(ctx, protectedRoute) : null;
+      const cacheKey = ttl > 0 ? buildCacheKey(ctx, protectedRoute, howlConfig) : null;
       if (cacheKey) {
         const cached = await cache.get(cacheKey);
         if (cached) {
@@ -134,97 +174,63 @@ export function asyncHandler<State, Role extends string>(
         }
       }
 
-      // --- Proxy — exposes ctx.req.body and ctx.query() typed from Zod schemas ---
-      const ctxWithBody = new Proxy(ctx, {
-        get(target, prop) {
-          if (prop === "req") {
-            return new Proxy(target.req, {
-              get(reqTarget, reqProp) {
-                if (reqProp === "body") {
-                  return getApiRequestState(target).body ?? null;
-                }
-                return (reqTarget as any)[reqProp];
-              },
-            });
-          }
-          if (prop === "query") {
-            const q = getApiRequestState(target).query;
-            if (q !== undefined) {
-              return (key?: string) => key !== undefined ? (q as any)[key] : q;
-            }
-          }
-          const value = (target as any)[prop];
-          return typeof value === "function" ? value.bind(target) : value;
-        },
-      });
+      const handlerCtx = makeApiCtx(ctx);
 
-      // --- Execute handler ---
-      let response: any;
+      type HandlerFn = (ctx: Context<State>, app: Howl<State>) => unknown;
+      let response: unknown;
       try {
-        response = await Promise.resolve(
-          (handler as any)(ctxWithBody, app),
-        );
-      } catch (innerErr: any) {
+        response = await Promise.resolve((handler as HandlerFn)(handlerCtx, app));
+      } catch (innerErr) {
         if (innerErr instanceof HttpError) throw innerErr;
-        const msg = typeof innerErr?.message === "string"
-          ? innerErr.message
-          : String(innerErr ?? "Unknown error");
-        const err = new Error(msg);
-        const status = innerErr?.statusCode ?? innerErr?.status;
-        if (typeof status === "number") (err as any).statusCode = status;
+        const e = innerErr as ApiHandlerError | undefined;
+        const msg = typeof e?.message === "string" ? e.message : String(innerErr ?? "Unknown error");
+        const err = new Error(msg) as Error & { statusCode?: number };
+        const status = e?.statusCode ?? e?.status;
+        if (typeof status === "number") err.statusCode = status;
         throw err;
       }
 
-      // --- Raw Response passthrough ---
       if (response instanceof Response) return response;
 
-      // --- Redirect passthrough ---
-      const location = response?.headers?.get?.("location");
-      if (location) return ctx.redirect(location, response.status);
-
-      // --- Format response ---
-      const statusCode = response?.statusCode ?? 200;
-      const { statusCode: _sc, ok: _ok, ...rest } = response as any;
-      let data = rest?.data !== undefined ? rest.data : rest;
-
-      data = redactPasswords(data);
-
-      // --- Cache write ---
-      if (cacheKey) {
-        await cache.set(cacheKey, JSON.stringify(data), ttl);
+      const respObj = (response ?? {}) as Record<string, unknown> & ApiHandlerError;
+      const location = (respObj.headers as Headers | undefined)?.get?.("location");
+      if (location) {
+        return ctx.redirect(location, respObj.statusCode ?? respObj.status ?? 302);
       }
 
-      // --- Special response types ---
-      if (data?.html) {
-        return ctx.html(data.html, { status: statusCode });
+      const statusCode = respObj.statusCode ?? 200;
+      const { statusCode: _sc, ok: _ok, ...data } = respObj;
+
+      if (cacheKey) {
+        await cache.set(cacheKey, JSON.stringify(data), ttl);
       }
 
       if (statusCode === 204) {
         return new Response(null, { status: 204, headers: ctx.headers });
       }
 
+      const meta = (response as PaginatedResponse | null)?.meta_pagination;
       return ctx.json(
-        {
-          ok: true,
-          data,
-          ...(response?.meta_pagination ? { meta_pagination: response.meta_pagination } : {}),
-        },
+        meta !== undefined ? { ok: true, data, meta_pagination: meta } : { ok: true, data },
         { status: statusCode },
       );
-    } catch (err: any) {
-      const statusCode = err?.statusCode ?? err?.status ?? 500;
-      const errorMessage = typeof err?.message === "string"
-        ? err.message
+    } catch (err) {
+      const e = err as ApiHandlerError | undefined;
+      const statusCode = e?.statusCode ?? e?.status ?? 500;
+      const errorMessage = typeof e?.message === "string"
+        ? e.message
         : "Something went wrong, try again.";
 
+      const correlationId = crypto.randomUUID();
       const service =
         `DIR_${directory.toLowerCase()}_NAME_${name.toLowerCase()}_METHOD_${ctx.req.method.toLowerCase()}`;
 
       // deno-lint-ignore no-console
-      console.error(`${service}\t${errorMessage}`);
+      console.error(`[${correlationId}] ${service}\t${errorMessage}`);
 
+      ctx.headers.set("X-Howl-Correlation-Id", correlationId);
       return ctx.json(
-        { service, error: errorMessage },
+        { error: errorMessage, correlationId },
         { status: statusCode },
       );
     }

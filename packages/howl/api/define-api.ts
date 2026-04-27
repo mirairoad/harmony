@@ -53,19 +53,17 @@ export function defineConfig<
   /** Pass to app.fsApiRoutes(apiConfig) */
   config: HowlApiConfig<State, Role>;
 } {
-  const resolvedConfig: HowlApiConfig<State, Role> = {
-    cache: memoryCache(),
-    ...config,
-  };
   return {
     defineApi: (definition) => definition,
-    config: resolvedConfig,
+    config: { ...config, cache: config.cache ?? memoryCache() },
   };
 }
 
 /**
- * Define a typed API endpoint with explicit type params.
- * Prefer importing the bound defineApi from howl.config.ts instead.
+ * @internal Define a typed API endpoint with explicit type params. Always
+ * prefer the bound `defineApi` returned from {@linkcode defineConfig} — this
+ * unbound form exists only as an escape hatch for tooling that constructs
+ * definitions outside of `howl.config.ts`.
  */
 export function defineApi<
   State,

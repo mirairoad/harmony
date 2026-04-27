@@ -194,17 +194,22 @@ defineConfig({
 - `windowMs` — counting window in milliseconds
 - `blockDurationMs?` — lockout duration after hitting the limit (defaults to remaining window)
 
-Rate limit keys are `ratelimit:{userId|ip}:{method}:{pathname}`. Authenticated requests use
-`ctx.state.userContext.id`; unauthenticated requests fall back to IP from `x-forwarded-for` /
-`x-real-ip` / `remoteAddr`.
+Rate limit keys are `ratelimit:{identifier}:{method}:{pathname}`. The identifier is resolved via
+`getRateLimitIdentifier(ctx)` on `HowlApiConfig` (e.g. `ctx.state.user?.id`). When the hook is
+unset or returns `undefined`, the limiter falls back to the client IP from `x-forwarded-for` /
+`x-real-ip` / `remoteAddr`. Per-user response cache keys use the same hook (falling back to
+`"anonymous"`).
 
 ---
 
 ## Islands
 
-- Files end in `.island.tsx`
-- Skip SSR: `export const howl = { ssr: false }`
-- Client-only wrapper: `<ClientOnly>{() => <Component />}</ClientOnly>`
+- Files end in `.island.tsx` (convention enforced by warning in `dev/fs_crawl.ts`; non-matching files in the islands dir still register but log a rename hint at build time)
+- Default islands SSR via `renderToString` and **hydrate** on the client — no flash on initial mount
+- Skip SSR for the whole island: `export const howl = { ssr: false }` (empty markers, client uses `render()`)
+- Skeleton placeholder for `ssr: false` islands: `export const howl = { ssr: false, skeleton: () => <Placeholder /> }` — receives the same props as the island, replaced by the real component on first client render
+- One nested element opt-out: `<ClientOnly>{() => <Component />}</ClientOnly>` — for cases where most of the island SSRs fine but one child can't (e.g. sonner `<Toaster />`)
+- Inline env guards: `import { IS_SERVER, IS_BROWSER } from "@hushkey/howl"` for branching individual lines
 - Island CSS is automatically preloaded via `Link` response headers
 
 ---

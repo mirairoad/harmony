@@ -6,7 +6,10 @@ import { setApiRequestState } from "./_request_state.ts";
 /**
  * Pre-handler middleware — runs before every API handler.
  * Validates path params, query params, and parses/validates request body.
- * Stores parsed values on ctx.state.__body / ctx.state.__query for handler access.
+ * Parsed values are stashed on a WeakMap (see `_request_state.ts`) keyed by
+ * the {@linkcode Context}, so framework-internal state never leaks onto the
+ * user-facing `ctx.state`. The {@linkcode asyncHandler} pipeline reads them
+ * back to expose `ctx.req.body` and a typed `ctx.query()` to handlers.
  */
 export function preAsyncHandler<State>(
   params: z.ZodObject<any, any> | undefined | null,

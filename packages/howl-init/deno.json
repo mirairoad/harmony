@@ -14,6 +14,26 @@
     ".": "./mod.ts"
   },
   "tasks": {
-    "start": "deno run -A mod.ts"
+    "start": "deno run -A mod.ts",
+    "test": "deno test -A --no-check tests/"
+  },
+  "imports": {
+    "@std/cli/parse-args": "jsr:@std/cli@^1.0.0/parse-args",
+    "@std/expect": "jsr:@std/expect@^1.0.18",
+    "@std/fs": "jsr:@std/fs@^1.0.0",
+    "@std/path": "jsr:@std/path@^1.0.0"
+  },
+  "publish": {
+    "include": [
+      "mod.ts",
+      "src/",
+      "templates/",
+      "README.md",
+      "deno.json",
+      "LICENSE"
+    ],
+    "exclude": [
+      "tests/"
+    ]
   }
 }

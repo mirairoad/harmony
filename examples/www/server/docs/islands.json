@@ -38,6 +38,24 @@
         {
           "type": "tip",
           "text": "Props passed to islands must be JSON-serializable — they are embedded in the HTML as inline JSON for hydration."
+        },
+        {
+          "type": "warning",
+          "text": "Island file names must end in `.island.tsx` (or `.island.jsx` / `.island.ts` / `.island.js`). The crawler throws at build time for any other naming inside `islands/` directories or `(_islands)` route groups. Earlier releases warned and continued, which masked silent hydration bugs."
+        }
+      ]
+    },
+    {
+      "id": "hydration",
+      "heading": "Hydration model",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Default islands run renderToString on the server and emit their full HTML inline. On the client, Howl calls hydrate() — Preact walks the existing DOM and attaches event listeners without wiping or re-rendering. No flash, no double paint."
+        },
+        {
+          "type": "p",
+          "text": "When an island opts out of SSR (ssr: false), the server emits empty markers and the client uses render() to mount fresh. The hydrate-vs-render switch is automatic."
         }
       ]
     },
@@ -47,16 +65,35 @@
       "blocks": [
         {
           "type": "p",
-          "text": "By default, islands are SSR'd — they render to static HTML on the server, then hydrate on the client. To skip server rendering entirely (render nothing until the client loads), export a howl config:"
+          "text": "By default, islands are SSR'd. To skip server rendering entirely (render nothing until JS loads), export a howl config:"
         },
         {
           "type": "code",
           "lang": "tsx",
-          "text": "// islands/live-chart.island.tsx\nexport const howl = { ssr: false };\n\nexport default function LiveChart() {\n  // This component never runs on the server.\n  // It renders blank during SSR and activates after hydration.\n  const data = useLiveData();\n  return <Chart data={data} />;\n}"
+          "text": "// islands/live-chart.island.tsx\nexport const howl = { ssr: false };\n\nexport default function LiveChart() {\n  // Never runs on the server. Empty markers in the HTML;\n  // client mounts the real component after JS loads.\n  const data = useLiveData();\n  return <Chart data={data} />;\n}"
         },
         {
           "type": "tip",
-          "text": "Use ssr: false for islands that depend on browser APIs (window, document, WebGL) or that fetch their own data on the client. This removes the need to pass data as server props."
+          "text": "Use ssr: false for islands that depend on browser APIs (window, document, WebGL) or for third-party React libs that emit non-Preact vnodes during SSR (sonner, mapbox-gl, ...)."
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "heading": "Skeleton placeholder",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Pair ssr: false with a skeleton component to prevent layout shift while JS loads. The skeleton renders server-side inside the island markers; the real component replaces it on first client render."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// islands/map.island.tsx\nimport mapboxgl from \"mapbox-gl\";\n\nexport const howl = {\n  ssr: false,\n  skeleton: () => (\n    <div class=\"h-64 w-full bg-base-200 animate-pulse rounded-lg\" />\n  ),\n};\n\nexport default function MapView({ center }: { center: [number, number] }) {\n  // Real component, only runs on the client.\n  ...\n}"
+        },
+        {
+          "type": "tip",
+          "text": "Skeleton is most effective when its dimensions match the final component — that's the entire point. A mismatched skeleton causes more flicker than no skeleton at all."
         }
       ]
     },
@@ -66,12 +103,35 @@
       "blocks": [
         {
           "type": "p",
-          "text": "ClientOnly is a utility component for rendering content that must only appear on the client, even within a server-rendered page."
+          "text": "ClientOnly defers a single child element until after the island has mounted on the client. Use it when most of the island SSRs fine but one nested component cannot — e.g. sonner's <Toaster /> inside an otherwise SSR'd interactive component."
         },
         {
           "type": "code",
           "lang": "tsx",
-          "text": "import { ClientOnly } from \"@hushkey/howl\";\n\nexport default function Page() {\n  return (\n    <div>\n      <h1>Server-rendered heading</h1>\n      <ClientOnly>\n        {() => <BrowserOnlyWidget />}\n      </ClientOnly>\n    </div>\n  );\n}"
+          "text": "// islands/page.island.tsx\nimport { ClientOnly } from \"@hushkey/howl\";\nimport { Toaster } from \"sonner\";\n\nexport default function PageIsland() {\n  return (\n    <div>\n      <h1>SSR'd heading</h1>\n      <ClientOnly>{() => <Toaster />}</ClientOnly>\n    </div>\n  );\n}"
+        },
+        {
+          "type": "tip",
+          "text": "ClientOnly is for one bad child inside an otherwise-SSR'd island. If the whole component cannot SSR, prefer ssr: false on the island instead."
+        }
+      ]
+    },
+    {
+      "id": "env-guards",
+      "heading": "IS_SERVER / IS_BROWSER guards",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Two boolean exports tell you which side of the wire you are on. Use them to short-circuit code paths that would crash during SSR."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "import { IS_BROWSER, IS_SERVER } from \"@hushkey/howl\";\n\n// safe default for SSR, real value on the client\nconst stored = IS_BROWSER ? localStorage.getItem(\"prefs\") : null;\n\n// signal with a safe initial value\nconst theme = signal(\"light\");\nif (IS_BROWSER) theme.value = localStorage.getItem(\"theme\") ?? \"light\";"
+        },
+        {
+          "type": "tip",
+          "text": "IS_SERVER is the inverse of IS_BROWSER — pick whichever reads better at the call site."
         }
       ]
     },

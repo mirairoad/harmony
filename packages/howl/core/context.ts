@@ -85,13 +85,6 @@ export interface UiTree<Data, State> {
   layouts: ComponentDef<Data, State>[];
 }
 
-/**
- * Legacy alias for {@linkcode Context}.
- *
- * @deprecated Use {@linkcode Context} instead.
- */
-export type HowlContext<State = unknown> = Context<State>;
-
 /** @internal Returns the {@linkcode BuildCache} associated with a {@linkcode Context}. */
 export let getBuildCache: <T>(ctx: Context<T>) => BuildCache<T>;
 /** @internal Returns the framework-internal UI tree associated with a {@linkcode Context}. */
@@ -302,24 +295,6 @@ export class Context<State> {
     });
 
     return new Response(null, { status, headers });
-  }
-
-  /**
-   * Redirect the user. Equivalent to {@linkcode redirect} now that
-   * `redirect()` automatically preserves the partial nav param for
-   * partial requests — kept as an alias so existing callers don't break.
-   *
-   * ```ts
-   * return ctx.partialRedirect("/sign-in");
-   * // identical to:
-   * return ctx.redirect("/sign-in");
-   * ```
-   *
-   * @deprecated Use {@linkcode redirect} — it now handles partial nav
-   * preservation automatically.
-   */
-  partialRedirect(pathOrUrl: string, status = 302): Response {
-    return this.redirect(pathOrUrl, status);
   }
 
   /**
@@ -547,7 +522,7 @@ export class Context<State> {
    * Build a JSON `Response` for the given payload, automatically merging
    * `ctx.headers` (so cookies/headers set by middleware propagate).
    */
-  json(content: any, init?: ResponseInit): Response {
+  json(content: unknown, init?: ResponseInit): Response {
     return Response.json(content, this.#mergeHeaders(init));
   }
 

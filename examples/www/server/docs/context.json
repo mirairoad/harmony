@@ -29,7 +29,7 @@
         {
           "type": "code",
           "lang": "ts",
-          "text": "// JSON response\nreturn ctx.json({ ok: true, data: user });\nreturn ctx.json({ error: \"not found\" }, { status: 404 });\n\n// HTML response\nreturn ctx.html(\"<h1>Hello</h1>\");\n\n// Plain text\nreturn ctx.text(\"OK\");\n\n// SSR render — renders a JSX VNode\nreturn ctx.render(<MyPage data={data} />);\n\n// Redirect\nreturn ctx.redirect(\"/login\");\nreturn ctx.redirect(\"/dashboard\", 301);\n\n// Partial-aware redirect — preserves SPA nav state\nreturn ctx.partialRedirect(\"/login\");"
+          "text": "// JSON response\nreturn ctx.json({ ok: true, data: user });\nreturn ctx.json({ error: \"not found\" }, { status: 404 });\n\n// HTML response\nreturn ctx.html(\"<h1>Hello</h1>\");\n\n// Plain text\nreturn ctx.text(\"OK\");\n\n// SSR render — renders a JSX VNode\nreturn ctx.render(<MyPage data={data} />);\n\n// Redirect — preserves the SPA partial-nav search param automatically\n// for partial requests, so middleware guards keep the SPA navigation flow.\nreturn ctx.redirect(\"/login\");\nreturn ctx.redirect(\"/dashboard\", 301);"
         }
       ]
     },

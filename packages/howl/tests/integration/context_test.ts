@@ -36,18 +36,6 @@ Deno.test("ctx.redirect — defaults to 302 with Location header", async () => {
   expect(res.headers.get("Location")).toBe("/new");
 });
 
-Deno.test("ctx.partialRedirect — adds howl-partial when isPartial", async () => {
-  const t = makeApp();
-  t.app.get("/auth", (ctx) => ctx.partialRedirect("/sign-in"));
-
-  const direct = await t.fetch("/auth");
-  expect(direct.headers.get("Location")).toBe("/sign-in");
-
-  const partial = await t.fetch("/auth?howl-partial=true");
-  const loc = partial.headers.get("Location") ?? "";
-  expect(loc.includes("howl-partial=true")).toBe(true);
-});
-
 Deno.test("ctx.redirect — preserves partial param on partial requests", async () => {
   const t = makeApp();
   t.app.get("/auth", (ctx) => ctx.redirect("/sign-in"));

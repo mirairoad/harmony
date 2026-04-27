@@ -40,7 +40,7 @@ export interface TailwindPluginOptions extends PluginOptions {
  *
  * const builder = new howlBuilder(howl, {
  *   root: import.meta.dirname,
- *   importApp: async () => (await import("./main.ts")).app.getApp(),
+ *   importApp: async () => (await import("./main.ts")).app,
  * });
  *
  * tailwindPlugin(builder.getBuilder("default")!, { exclude: ["/vendor/**"] });

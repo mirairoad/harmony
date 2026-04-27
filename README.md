@@ -196,6 +196,12 @@ export default function ({ Component }: { Component: FunctionComponent }): JSX.E
 > server-side. `shared.ts` exports `Partial`, `IS_BROWSER`, `asset`, and `Head` safely for both
 > server and client.
 
+> **Partial-nav and non-HTML responses:** when a `f-client-nav` link points to a non-HTML resource
+> (a file download, an image, a `Content-Disposition: attachment` response, etc.), the client SPA
+> detects the non-HTML `Content-Type` and falls back to a full browser navigation instead of trying
+> to apply the response as a partial. API routes are not the intended target for `<a href>` — use
+> `fetch()` for those — but the same fallback applies if you accidentally link to one.
+
 **`client/pages/index.tsx`**
 
 ```tsx
@@ -321,11 +327,17 @@ Response caching is configured once in `howl.config.ts` and applied per-endpoint
 
 Three adapters ship out of the box:
 
-| Adapter                       | Use case                                                             |
-| ----------------------------- | -------------------------------------------------------------------- |
-| `memoryCache()`               | Default. In-process LRU, zero deps                                   |
-| `redisCache(client)`          | Shared cache across instances. Accepts any ioredis-compatible client |
-| `tryCache(primary, fallback)` | Tries primary first, falls back on miss or error                     |
+| Adapter                       | Use case                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `memoryCache()`               | Default. In-process LRU, zero deps                                        |
+| `redisCache(client)`          | Shared cache across instances. Accepts any ioredis-compatible client      |
+| `kvCache(kv)`                 | Deno KV — globally consistent on Deno Deploy, SQLite-backed locally       |
+| `tryCache(primary, fallback)` | Tries primary first, falls back on miss or error                          |
+
+All built-in adapters expose an atomic `incr(key, ttl)` op which the rate
+limiter uses to count requests safely under concurrent load on shared
+backends. Custom adapters that omit `incr` fall back to a non-atomic
+read-modify-write path — safe only when the backend isn't shared.
 
 ```typescript
 import { memoryCache, redisCache, tryCache } from "@hushkey/howl/api";
@@ -346,6 +358,38 @@ cache: tryCache(redisCache(redisSG), redisCache(redisUS));
 `redisCache` attaches an error listener automatically so ioredis reconnection events don't become
 unhandled crashes — errors are logged via `console.warn` so they remain visible. Implement
 `CacheAdapter` to plug in any other backend.
+
+### Atomic rate limiting
+
+Rate limit counters are written via `cache.incr(key, ttl)`. Redis maps this to
+`INCR` + `EXPIRE` (atomic server-side); Deno KV uses an `atomic().check().set()`
+CAS loop; the in-memory adapter is trivially atomic. Custom adapters without
+`incr` fall back to read-modify-write — don't use that on a shared backend.
+
+### Rate limit identifier
+
+Counters key on whatever `getRateLimitIdentifier(ctx)` returns on
+`HowlApiConfig` — Howl doesn't assume a `State` shape. Falls back to the
+client IP when unset or `undefined`.
+
+```ts
+defineConfig({
+  getRateLimitIdentifier: (ctx) => ctx.state.user?.id,
+});
+```
+
+### Error envelope
+
+API errors are returned as `{ error, correlationId }` plus an
+`X-Howl-Correlation-Id` response header. The full route descriptor is logged
+server-side only — it is no longer leaked on the wire.
+
+### Response redaction is your job
+
+Howl does not auto-mutate response payloads. The previous "redact any field
+named `password`" behaviour was security theatre (`apiKey`, `token`, `secret`,
+`pwd`, etc. all leaked) and has been removed. Strip sensitive fields in your
+handler before returning.
 
 ---
 
@@ -372,17 +416,16 @@ const all = ctx.query();
 React libs work transparently — no configuration needed:
 
 ```tsx
-// client/islands/ToastIsland.tsx
+// client/islands/ToastIsland.island.tsx
 import { toast, Toaster } from "sonner";
 import { useState } from "preact/hooks";
-
-export const howl = { ssr: false }; // skip SSR for hook-heavy components
+import { ClientOnly } from "@hushkey/howl";
 
 export default function ToastIsland() {
   const [count, setCount] = useState(0);
   return (
     <div>
-      <Toaster />
+      <ClientOnly>{() => <Toaster />}</ClientOnly>
       <button
         onClick={() => {
           setCount((c) => c + 1);
@@ -395,6 +438,49 @@ export default function ToastIsland() {
   );
 }
 ```
+
+Three escape hatches for browser-only code, ordered from coarse to fine:
+
+| Tool                                              | Scope                          | Use when                                                                                  |
+| ------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `export const howl = { ssr: false }`              | Whole island                   | The component itself can't SSR (Mapbox, WebGL, libs that touch `window` on import)        |
+| `<ClientOnly>{() => <X />}</ClientOnly>`          | One nested element             | Most of the island SSRs fine but one child crashes (sonner `<Toaster />`)                 |
+| `import { IS_SERVER, IS_BROWSER } from "@hushkey/howl"` | One branch in code              | Need a different value or skip a side-effect on the server                                |
+
+```tsx
+// One nested widget
+<ClientOnly>{() => <ThirdPartyWidget />}</ClientOnly>
+
+// Inline guard
+const stored = IS_BROWSER ? localStorage.getItem("prefs") : null;
+```
+
+For islands that opt out of SSR you can render a layout-matching placeholder so the page doesn't shift while the JS loads:
+
+```tsx
+export const howl = {
+  ssr: false,
+  skeleton: () => <div class="h-64 bg-base-200 animate-pulse rounded" />,
+};
+```
+
+The skeleton receives the same props as the island and is replaced by the real component on hydration.
+
+> Default islands (`ssr: true`, no directive) hydrate against their SSR output — no flash, no wipe.
+> The hydrate switch is automatic; nothing to configure.
+
+---
+
+## File-system conventions (build-time enforcement)
+
+Island files **must** be named `*.island.tsx` — both inside `islands/`
+directories and inside `(_islands)` route groups. The crawler now throws on
+mismatch instead of warning; this surfaced silent hydration bugs in prior
+releases.
+
+`Howl#handler()` is built lazily on first call and cached per listener.
+Registering routes after `handler()` has been built throws — wire everything
+up before requesting the handler.
 
 ---
 

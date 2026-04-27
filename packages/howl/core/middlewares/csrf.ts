@@ -25,7 +25,7 @@ export interface CsrfOptions<State = any> {
  *
  * @example Basic usage (with defaults)
  * ```ts
- * const app = new App<State>()
+ * const app = new Howl<State>()
  *
  * app.use(csrf())
  * ```

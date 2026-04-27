@@ -14,12 +14,6 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },
-  "publish": {
-    "exclude": [
-      "core/test_utils copy.ts",
-      "core/test_utils copy 2.ts"
-    ]
-  },
   "exports": {
     ".": "./core/mod.ts",
     "./client": "./core/client.ts",

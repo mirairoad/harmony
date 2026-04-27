@@ -74,7 +74,10 @@ export async function crawlRouteDir<State>(
       routePattern = pathToPattern(id.slice(1));
 
       const code = await fs.readTextFile(entry.path);
-      lazy = !code.includes("routeOverride");
+      // Strip comments before searching so a passing mention of "routeOverride"
+      // in a doc comment doesn't accidentally force eager loading.
+      const stripped = code.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+      lazy = !/\brouteOverride\b/.test(stripped);
 
       // TODO: We could do an AST parse here to detect the
       // kind of handler that's used to get a more accurate
@@ -134,9 +137,9 @@ export async function crawlFsItem(
       options.islandDir,
       (entry) => {
         if (!ISLAND_NAME_RE.test(entry.path)) {
-          // deno-lint-ignore no-console
-          console.warn(
-            `_ ${entry.path} is registered as an island. Rename to *.island.tsx to follow the framework convention.`,
+          throw new Error(
+            `${entry.path} is in the islands directory but is not named *.island.tsx. ` +
+              `Rename the file to follow the framework convention.`,
           );
         }
         islands.push(entry.path);
@@ -149,9 +152,9 @@ export async function crawlFsItem(
       options.ignore,
       (entry) => {
         if (!ISLAND_NAME_RE.test(entry)) {
-          // deno-lint-ignore no-console
-          console.warn(
-            `_ ${entry} is registered as an island via (_islands). Rename to *.island.tsx to follow the framework convention.`,
+          throw new Error(
+            `${entry} is registered as an island via (_islands) but is not named *.island.tsx. ` +
+              `Rename the file to follow the framework convention.`,
           );
         }
         islands.push(entry);

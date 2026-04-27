@@ -175,7 +175,10 @@ Deno.test("api — caching short-circuits handler on second call", async () => {
   expect(runs).toBe(1);
 });
 
-Deno.test("api — passwords in response are redacted", async () => {
+Deno.test("api — handler is responsible for redacting sensitive fields", async () => {
+  // The framework no longer auto-redacts a "password" key — that masked
+  // bypasses for "apiKey" / "token" / "pwd" / etc. and was security theatre.
+  // Redaction is the handler's responsibility now.
   const t = makeApp<State>();
   const { defineApi, config } = setup();
   const create = defineApi({
@@ -185,7 +188,7 @@ Deno.test("api — passwords in response are redacted", async () => {
     roles: [],
     rateLimit: false,
     responses: { 200: z.object({ user: z.string(), password: z.string() }) },
-    handler: () => ({ statusCode: 200, user: "leo", password: "supersecret" }),
+    handler: () => ({ statusCode: 200, user: "leo", password: "[redacted]" }),
   });
   apiHandler(t.app, [create], config);
 

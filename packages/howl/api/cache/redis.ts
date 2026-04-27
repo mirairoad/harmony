@@ -5,6 +5,10 @@ interface RedisLike {
   get(key: string): Promise<string | null>;
   setex(key: string, seconds: number, value: string): Promise<unknown>;
   del(key: string): Promise<unknown>;
+  /** Atomic increment — used by the rate limiter. */
+  incr?(key: string): Promise<number>;
+  /** Set TTL in seconds — paired with incr on first write. */
+  expire?(key: string, seconds: number): Promise<unknown>;
   // EventEmitter — present on ioredis clients
   on?: (event: string, listener: (...args: unknown[]) => void) => unknown;
 }
@@ -35,5 +39,12 @@ export function redisCache(client: RedisLike): CacheAdapter {
     get: (key) => client.get(key),
     set: (key, value, ttl) => client.setex(key, ttl, value).then(() => {}),
     delete: (key) => client.del(key).then(() => {}),
+    incr: client.incr && client.expire
+      ? async (key, ttl) => {
+        const next = await client.incr!(key);
+        if (next === 1) await client.expire!(key, ttl);
+        return next;
+      }
+      : undefined,
   };
 }

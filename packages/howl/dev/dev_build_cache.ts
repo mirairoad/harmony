@@ -1,6 +1,5 @@
 import { type BuildCache, IslandPreparer, type StaticFile } from "../core/build_cache.ts";
 import * as path from "@std/path";
-import * as pathWin32 from "@std/path/windows";
 import { encodeHex } from "@std/encoding/hex";
 import { fsAdapter } from "../core/fs.ts";
 import type { FileTransformer } from "./file_transformer.ts";
@@ -10,8 +9,6 @@ import { fsItemsToCommands, type FsRouteFile } from "../core/fs_routes.ts";
 import type { Command } from "../core/commands.ts";
 import type { ServerIslandRegistry } from "../core/context.ts";
 import { contentType as getStdContentType } from "@std/media-types/content-type";
-
-const WINDOWS_SEPARATOR = pathWin32.SEPARATOR;
 
 export interface MemoryFile {
   hash: string | null;
@@ -326,7 +323,7 @@ export class DiskBuildCache<State> implements DevBuildCache<State> {
 
   addUnprocessedFile(pathname: string, dir: string): void {
     this.#unprocessedFiles.set(
-      pathname.replaceAll(WINDOWS_SEPARATOR, "/"),
+      pathname.replaceAll("\\", "/"),
       path.join(dir, pathname),
     );
   }
@@ -469,12 +466,23 @@ export async function writeCompiledEntry(outDir: string) {
     path.join(outDir, "compiled-entry.js"),
     `import fetcher from "./server.js";
 
+const rawPort = Deno.env.get("DENO_PORT");
+const port = rawPort !== undefined && rawPort !== "" ? Number(rawPort) : undefined;
+if (port !== undefined && Number.isNaN(port)) {
+  throw new Error(\`DENO_PORT must be numeric, got: \${rawPort}\`);
+}
+
 Deno.serve(
-  { port: Deno.env.get("DENO_PORT"), hostname: Deno.env.get("DENO_HOSTNAME"), 
-   onListen: ({hostname, port})=>{
-   console.log('Server is running on http://'+hostname+':'+port)}},
-  fetcher.fetch
-);`,
+  {
+    port,
+    hostname: Deno.env.get("DENO_HOSTNAME"),
+    onListen: ({ hostname, port }) => {
+      console.log(\`Server is running on http://\${hostname}:\${port}\`);
+    },
+  },
+  fetcher.fetch,
+);
+`,
   );
 }
 
@@ -502,13 +510,17 @@ export async function generateSnapshotServer(
     })
     .join("\n");
 
+  // Always emit static imports for every fs route in the prod snapshot.
+  // Dynamic `() => import("../client/pages/foo.tsx")` factories break under
+  // `deno compile` — relative paths to embedded .tsx files don't resolve at
+  // runtime, so the route silently fails to register and every request
+  // falls through to DEFAULT_NOT_FOUND. Static imports get bundled by the
+  // build and are guaranteed to work in compiled binaries.
   const fsRouteImports = fsRoutesFiles
     .map((item, i) => {
-      if (item.lazy) return null;
       const spec = writeSpecifier(item.filePath);
       return `import * as fsRoute_${i} from "${spec}"`;
     })
-    .filter(Boolean)
     .join("\n");
 
   const islandMarkers = islands.map((item) => {
@@ -525,13 +537,7 @@ export async function generateSnapshotServer(
       const type = JSON.stringify(item.type);
       const routePattern = JSON.stringify(item.routePattern);
 
-      let mod = "";
-      if (item.lazy) {
-        const spec = writeSpecifier(item.filePath);
-        mod = `() => import(${JSON.stringify(spec)})`;
-      } else {
-        mod = `fsRoute_${i}`;
-      }
+      const mod = `fsRoute_${i}`;
 
       return `  { id: ${id}, mod: ${mod}, type: ${type}, pattern: ${pattern}, routePattern: ${routePattern} },`;
     })

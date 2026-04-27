@@ -213,8 +213,27 @@
           "text": "// /sign-in is reached during a partial nav. The Location header becomes\n// /dashboard?howl-partial=true so the redirect target also renders as\n// a partial.\napp.post(\"/sign-in\", (ctx) => ctx.redirect(\"/dashboard\"));\n\n// Existing query/hash are handled correctly:\nctx.redirect(\"/page?tab=home\");   // → /page?tab=home&howl-partial=true\nctx.redirect(\"/page#section\");    // → /page?howl-partial=true#section"
         },
         {
+          "type": "warning",
+          "text": "ctx.partialRedirect() has been removed. Earlier releases shipped it as a thin wrapper around ctx.redirect(); ctx.redirect() now does the partial-nav preservation natively, and the alias was deprecated for several releases before removal."
+        }
+      ]
+    },
+    {
+      "id": "non-html-links",
+      "heading": "Links to non-HTML responses",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "When a link inside f-client-nav points to a resource that returns a non-HTML Content-Type — a file download, an image, a Content-Disposition: attachment response, etc. — the SPA detects the non-HTML response and falls back to a full browser navigation. The browser lands on the raw response, just like a non-SPA page would."
+        },
+        {
+          "type": "code",
+          "lang": "tsx",
+          "text": "// Linking to a file the browser will download or render natively.\n// Howl detects the non-HTML Content-Type and does a full navigation.\n<a href=\"/static/report.pdf\">Download report</a>"
+        },
+        {
           "type": "tip",
-          "text": "ctx.partialRedirect() still exists as a backwards-compatible alias of ctx.redirect() — both behave the same now."
+          "text": "API routes are not the intended target for <a href> — use fetch() for those. The same fallback applies if you accidentally link to one, but it should not be part of your design."
         }
       ]
     },

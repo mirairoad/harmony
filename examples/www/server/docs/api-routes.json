@@ -30,7 +30,7 @@
       "blocks": [
         { "type": "p", "text": "Declare a Zod schema in requestBody. Howl validates the JSON body before your handler runs. ctx.req.body is fully typed." },
         { "type": "code", "lang": "ts", "text": "export default defineApi({\n  name: \"Create User\",\n  method: \"POST\",\n  requestBody: z.object({\n    email: z.string().email(),\n    name: z.string().min(2),\n    password: z.string().min(8),\n  }),\n  handler: (ctx) => {\n    const { email, name } = ctx.req.body; // fully typed\n    return { statusCode: 201, id: crypto.randomUUID(), email, name };\n  },\n});" },
-        { "type": "tip", "text": "Passwords are automatically redacted from response logs. Any field named password is replaced with [redacted]." }
+        { "type": "warning", "text": "Howl no longer auto-redacts response fields. Earlier releases scrubbed any field literally named `password` from the response, but that gave a false sense of safety: `apiKey`, `token`, `secret`, `pwd`, `accessToken` etc. all leaked. Strip sensitive fields from the response object yourself before returning." }
       ]
     },
     {
@@ -55,6 +55,24 @@
       "blocks": [
         { "type": "p", "text": "Add caching.ttl (seconds) to cache the response. Authenticated routes are cached per user; public routes are shared." },
         { "type": "code", "lang": "ts", "text": "export default defineApi({\n  caching: { ttl: 60 }, // cache for 60 seconds\n  handler: async (ctx) => {\n    const data = await db.query(\"SELECT ...\");\n    return { statusCode: 200, data };\n  },\n});" }
+      ]
+    },
+    {
+      "id": "response-shape",
+      "heading": "Response shape",
+      "blocks": [
+        { "type": "p", "text": "API handlers return a flat object: a `statusCode` field plus the response body fields. Howl wraps the body in `{ ok: true, data: ... }` automatically, merges middleware-set headers, and emits the response." },
+        { "type": "code", "lang": "ts", "text": "// Handler returns:\nreturn { statusCode: 200, id: \"u_1\", email: \"x@y\" };\n\n// Wire format:\n{\n  \"ok\": true,\n  \"data\": { \"id\": \"u_1\", \"email\": \"x@y\" }\n}\n\n// 204 short-circuits to an empty body:\nreturn { statusCode: 204 };\n\n// Pagination metadata is preserved verbatim when present:\nreturn {\n  statusCode: 200,\n  items: [...],\n  meta_pagination: { page: 1, total: 42 },\n};" },
+        { "type": "warning", "text": "Earlier releases also accepted a nested `{ statusCode, data: {...} }` shape and unwrapped the inner `data` automatically. That dual-shape handling was removed — handlers must return the body fields flat alongside `statusCode`. If you need the wrapped format, return `{ statusCode, ...payload }` directly." }
+      ]
+    },
+    {
+      "id": "error-envelope",
+      "heading": "Error envelope",
+      "blocks": [
+        { "type": "p", "text": "Errors thrown from a handler (or from the auth/validation pipeline) come back as `{ error, correlationId }`. The same id is set on the response as `X-Howl-Correlation-Id`, so a client report and the matching server log line line up." },
+        { "type": "code", "lang": "json", "text": "{\n  \"error\": \"Forbidden\",\n  \"correlationId\": \"5b6e1d2c-1f8d-4d9c-9f0e-7c4b1c1f3a5b\"\n}" },
+        { "type": "p", "text": "The full route descriptor (DIR/NAME/METHOD) is logged server-side only. The wire payload no longer leaks internal naming, which used to give attackers a free fingerprinting channel." }
       ]
     },
     {

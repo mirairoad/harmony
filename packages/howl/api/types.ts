@@ -13,6 +13,17 @@ export interface CacheAdapter {
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
   /** Remove the value at `key`. */
   delete(key: string): Promise<void>;
+  /**
+   * Atomically increment a counter at `key`, applying `ttlSeconds` on first
+   * write. Returns the new value. Used by the rate limiter — implementations
+   * MUST be atomic across concurrent callers when the backend is shared
+   * (Redis, Deno KV) or the rate limit can be punched through under load.
+   *
+   * Optional for backwards compatibility; if not provided the rate limiter
+   * falls back to a non-atomic read-modify-write path (safe only for
+   * single-process / in-memory backends).
+   */
+  incr?(key: string, ttlSeconds: number): Promise<number>;
 }
 
 /**
@@ -84,6 +95,17 @@ export interface HowlApiConfig<
    * Defaults to the same adapter as `cache`.
    */
   rateLimitCache?: CacheAdapter;
+  /**
+   * Returns the identifier used to key rate limit counters and per-user cache
+   * entries. Receives the request context — typically reads from
+   * `ctx.state` (e.g. an authenticated user id, session id, API key).
+   * Return `undefined` to fall back to the client IP for rate limiting and to
+   * `"anonymous"` for per-user cache keys.
+   *
+   * @example
+   * getRateLimitIdentifier: (ctx) => ctx.state.user?.id
+   */
+  getRateLimitIdentifier?: (ctx: Context<State>) => string | undefined;
 }
 
 /**
