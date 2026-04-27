@@ -136,7 +136,7 @@ export async function crawlFsItem(
         if (!ISLAND_NAME_RE.test(entry.path)) {
           // deno-lint-ignore no-console
           console.warn(
-            `[howl] ${entry.path} is registered as an island. Rename to *.island.tsx to follow the framework convention.`,
+            `_ ${entry.path} is registered as an island. Rename to *.island.tsx to follow the framework convention.`,
           );
         }
         islands.push(entry.path);
@@ -151,7 +151,7 @@ export async function crawlFsItem(
         if (!ISLAND_NAME_RE.test(entry)) {
           // deno-lint-ignore no-console
           console.warn(
-            `[howl] ${entry} is registered as an island via (_islands). Rename to *.island.tsx to follow the framework convention.`,
+            `_ ${entry} is registered as an island via (_islands). Rename to *.island.tsx to follow the framework convention.`,
           );
         }
         islands.push(entry);

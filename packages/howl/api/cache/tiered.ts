@@ -21,7 +21,7 @@ export function tryCache(
 
   function warn(op: string, err: unknown): void {
     // deno-lint-ignore no-console
-    console.warn(`[howl] tryCache: primary failed on ${op} —`, err);
+    console.warn(`_ tryCache: primary failed on ${op} —`, err);
   }
 
   function withTimeout<T>(promise: Promise<T>): Promise<T> {

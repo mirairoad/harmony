@@ -119,7 +119,7 @@ export class HowlBuilder<State = any> {
 
     if (this.#apis.length > 0) {
       // deno-lint-ignore no-console
-      console.debug(`[howl] Found ${this.#apis.length} API definitions in apis/`);
+      console.debug(`_ Found ${this.#apis.length} API definitions in apis/`);
     }
   }
 
@@ -156,7 +156,7 @@ export class HowlBuilder<State = any> {
           }
         } catch (err) {
           // deno-lint-ignore no-console
-          console.error(`[howl] Failed to load API: ${fullPath}`, err);
+          console.error(`_ Failed to load API: ${fullPath}`, err);
         }
       }
     }
@@ -272,7 +272,7 @@ export class HowlBuilder<State = any> {
         });
         applySnapshot(app);
         // deno-lint-ignore no-console
-        console.log(`[howl] Built client: ${name}`);
+        console.log(`_ Built client: ${name}`);
       }),
     );
 
