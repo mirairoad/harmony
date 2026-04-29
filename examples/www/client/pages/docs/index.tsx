@@ -30,7 +30,7 @@ export default function DocsIndex(
       </Head>
 
       {/* Mobile: px-0 full-bleed. Desktop: centered with padding. */}
-      <div class="sm:max-w-3xl sm:mx-auto sm:px-6 py-6 sm:py-12">
+      <div class="sm:max-w-3xl sm:mx-auto sm:px-6">
         {/* Hero */}
         <div class="mb-8 sm:mb-10 px-0">
           <p class="font-mono text-xs uppercase tracking-widest text-base-content/50 mb-2">

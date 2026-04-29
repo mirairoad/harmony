@@ -43,66 +43,6 @@ Deno.test("mapName leaves regular files untouched", () => {
   expect(mapName("main.ts")).toEqual({ destRel: "main.ts", isTemplate: false });
 });
 
-Deno.test("scaffold copies the basic template into an empty target", async () => {
-  await withTempDir(async (dir) => {
-    const target = join(dir, "my-app");
-    await scaffold({
-      templateId: "basic",
-      targetDir: target,
-      projectName: "my-app",
-    });
-
-    expect(await exists(join(target, "deno.json"))).toBe(true);
-    expect(await exists(join(target, "main.ts"))).toBe(true);
-    expect(await exists(join(target, "howl.config.ts"))).toBe(true);
-    expect(await exists(join(target, "dev.ts"))).toBe(true);
-    expect(await exists(join(target, "pages/index.tsx"))).toBe(true);
-    expect(await exists(join(target, "pages/_app.tsx"))).toBe(true);
-    expect(await exists(join(target, "pages/_layout.tsx"))).toBe(true);
-    expect(await exists(join(target, "apis/public/ping.api.ts"))).toBe(true);
-    expect(await exists(join(target, "static/.gitkeep"))).toBe(true);
-    expect(await exists(join(target, ".gitignore"))).toBe(true);
-    expect(await exists(join(target, "README.md"))).toBe(true);
-
-    expect(await exists(join(target, "deno.json.tpl"))).toBe(false);
-    expect(await exists(join(target, "gitignore"))).toBe(false);
-    expect(await exists(join(target, "README.md.tpl"))).toBe(false);
-  });
-});
-
-Deno.test("scaffold replaces {{PROJECT_NAME}} in .tpl files", async () => {
-  await withTempDir(async (dir) => {
-    const target = join(dir, "acme");
-    await scaffold({
-      templateId: "basic",
-      targetDir: target,
-      projectName: "acme",
-    });
-
-    const denoJson = await Deno.readTextFile(join(target, "deno.json"));
-    expect(denoJson).toContain('"name": "acme"');
-    expect(denoJson).not.toContain("{{PROJECT_NAME}}");
-
-    const readme = await Deno.readTextFile(join(target, "README.md"));
-    expect(readme).toContain("# acme");
-    expect(readme).not.toContain("{{PROJECT_NAME}}");
-  });
-});
-
-Deno.test("scaffold leaves non-template files byte-identical", async () => {
-  await withTempDir(async (dir) => {
-    const target = join(dir, "my-app");
-    await scaffold({
-      templateId: "basic",
-      targetDir: target,
-      projectName: "my-app",
-    });
-
-    const main = await Deno.readTextFile(join(target, "main.ts"));
-    expect(main).toContain('import { Howl, staticFiles } from "@hushkey/howl"');
-  });
-});
-
 Deno.test("scaffold rejects an unknown template id", async () => {
   await withTempDir(async (dir) => {
     const target = join(dir, "x");
@@ -119,7 +59,7 @@ Deno.test("scaffold refuses a non-empty target directory", async () => {
     await Deno.writeTextFile(join(target, "leftover.txt"), "hi");
 
     await expect(
-      scaffold({ templateId: "basic", targetDir: target, projectName: "occupied" }),
+      scaffold({ templateId: "docs", targetDir: target, projectName: "occupied" }),
     ).rejects.toThrow(/not empty/);
   });
 });
@@ -128,8 +68,8 @@ Deno.test("scaffold succeeds when target dir exists but is empty", async () => {
   await withTempDir(async (dir) => {
     const target = join(dir, "empty");
     await Deno.mkdir(target);
-    await scaffold({ templateId: "basic", targetDir: target, projectName: "empty" });
-    expect(await exists(join(target, "main.ts"))).toBe(true);
+    await scaffold({ templateId: "docs", targetDir: target, projectName: "empty" });
+    expect(await exists(join(target, "server/main.ts"))).toBe(true);
   });
 });
 
@@ -180,21 +120,78 @@ Deno.test("scaffold copies the docs template (sample doc + reader + static asset
   });
 });
 
-Deno.test("scaffold copies the with-store template (store + island)", async () => {
+Deno.test("scaffold copies the cv template (profile + projects + project detail)", async () => {
   await withTempDir(async (dir) => {
-    const target = join(dir, "store-app");
+    const target = join(dir, "my-cv");
     await scaffold({
-      templateId: "with-store",
+      templateId: "cv",
       targetDir: target,
-      projectName: "store-app",
+      projectName: "my-cv",
     });
 
-    expect(await exists(join(target, "state/store.ts"))).toBe(true);
-    expect(await exists(join(target, "islands/counter.island.tsx"))).toBe(true);
-    expect(await exists(join(target, "pages/index.tsx"))).toBe(true);
+    expect(await exists(join(target, "deno.json"))).toBe(true);
+    expect(await exists(join(target, "dev.ts"))).toBe(true);
+    expect(await exists(join(target, "howl.config.ts"))).toBe(true);
+    expect(await exists(join(target, "tailwind.config.ts"))).toBe(true);
+    expect(await exists(join(target, "server/main.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/ping.api.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/profile.api.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/projects.api.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/project-item.api.ts"))).toBe(true);
+    expect(await exists(join(target, "server/cv/profile.json"))).toBe(true);
+    expect(await exists(join(target, "server/cv/reader.ts"))).toBe(true);
+    expect(await exists(join(target, "server/cv/projects/manifest.json"))).toBe(true);
+    expect(await exists(join(target, "server/cv/projects/howl.json"))).toBe(true);
+    expect(await exists(join(target, "server/cv/projects/hushkey.json"))).toBe(true);
+    expect(await exists(join(target, "server/cv/projects/edge-router.json"))).toBe(true);
+    expect(await exists(join(target, "client/pages/_app.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/pages/_layout.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/pages/_error.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/pages/index.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/pages/projects/index.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/pages/projects/[slug].tsx"))).toBe(true);
+    expect(await exists(join(target, "static/style.css"))).toBe(true);
+    expect(await exists(join(target, "static/logo.svg"))).toBe(true);
+    expect(await exists(join(target, ".gitignore"))).toBe(true);
+    expect(await exists(join(target, ".env.example"))).toBe(true);
+    expect(await exists(join(target, "README.md"))).toBe(true);
 
     const denoJson = await Deno.readTextFile(join(target, "deno.json"));
-    expect(denoJson).toContain('"@preact/signals"');
-    expect(denoJson).toContain('"name": "store-app"');
+    expect(denoJson).toContain('"name": "my-cv"');
+    expect(denoJson).toContain("daisyui");
+
+    const compileTask = JSON.parse(denoJson).tasks.compile as string;
+    expect(compileTask).toContain("./dist/bin/my-cv");
+
+    const profile = JSON.parse(
+      await Deno.readTextFile(join(target, "server/cv/profile.json")),
+    );
+    expect(profile.skills).toBeInstanceOf(Array);
+    expect(profile.experience).toBeInstanceOf(Array);
+
+    const projects = JSON.parse(
+      await Deno.readTextFile(join(target, "server/cv/projects/manifest.json")),
+    );
+    expect(projects).toBeInstanceOf(Array);
+    expect(projects.length).toBeGreaterThan(0);
+  });
+});
+
+Deno.test("scaffold replaces {{PROJECT_NAME}} in .tpl files", async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, "acme");
+    await scaffold({
+      templateId: "docs",
+      targetDir: target,
+      projectName: "acme",
+    });
+
+    const denoJson = await Deno.readTextFile(join(target, "deno.json"));
+    expect(denoJson).toContain('"name": "acme"');
+    expect(denoJson).not.toContain("{{PROJECT_NAME}}");
+
+    const readme = await Deno.readTextFile(join(target, "README.md"));
+    expect(readme).toContain("# acme");
+    expect(readme).not.toContain("{{PROJECT_NAME}}");
   });
 });

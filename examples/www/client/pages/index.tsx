@@ -30,6 +30,24 @@ const FEATURES = [
   },
 ];
 
+const CORE: string[] = [
+  "defineApi",
+  "OpenAPI specs",
+  "Unified Context",
+  "Cookie handler",
+  "SSR + Islands",
+  "FS routing",
+  "Zod validation",
+  "RBAC",
+  "Rate limiting",
+  "Cache adapters",
+  "WebSockets",
+  "SSE",
+  "CSRF · CORS · CSP",
+  "Compression",
+  "Request coalescing",
+];
+
 export default function Index(_ctx: Context<State>): JSX.Element {
   const title = _ctx.state.client.title;
   const version = _ctx.state.client.version;
@@ -60,7 +78,7 @@ export default function Index(_ctx: Context<State>): JSX.Element {
       </Head>
 
       {/* ─────────────── MOBILE ─────────────── */}
-      <div class="sm:hidden relative min-h-screen bg-base-100 bg-dot-grid bg-size-[28px_28px] flex flex-col overflow-hidden pt-20 pb-6">
+      <div class="sm:hidden relative bg-base-100 bg-dot-grid bg-size-[28px_28px] flex flex-col overflow-hidden pt-20 pb-6">
         <div class="pointer-events-none absolute inset-0 overflow-hidden">
           <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-primary opacity-[0.06] blur-3xl" />
         </div>
@@ -88,8 +106,13 @@ export default function Index(_ctx: Context<State>): JSX.Element {
         </div>
 
         <p class="animate-fade-up-3 text-base-content/70 text-center text-base leading-relaxed mb-6 px-6">
-          Backend-first full-stack framework for Deno. Typed endpoints, SSR islands, built-in RBAC,
-          and middleware that propagates to every response.
+          <span class="font-mono font-bold text-yellow-300 bg-primary px-1.5 py-0.5 rounded">
+            Fresh
+          </span>{" "}
+          at the core with batteries included — ready to{" "}
+          <span class="font-mono font-black text-primary">HOWL</span>. Backend-first full-stack
+          framework for Deno. Typed endpoints, SSR islands, built-in RBAC, and middleware that
+          propagates to every response.
         </p>
 
         {/* CTAs */}
@@ -150,9 +173,8 @@ export default function Index(_ctx: Context<State>): JSX.Element {
       </div>
 
       {/* ─────────────── DESKTOP ─────────────── */}
-      <div class="hidden sm:block relative min-h-screen bg-base-100 bg-dot-grid bg-size-[28px_28px] overflow-hidden">
-
-        <div class="flex flex-col items-center px-6 pt-16 pb-20">
+      <div class="hidden sm:block relative bg-base-100 bg-dot-grid bg-size-[28px_28px] overflow-hidden">
+        <div class="flex flex-col items-center px-6 ">
           {/* HTTP Traffic */}
           <div class="animate-fade-up-1 relative flex items-center justify-center mb-3 mt-2 h-96 w-full max-w-5xl overflow-hidden">
             <div
@@ -288,6 +310,7 @@ export default function Index(_ctx: Context<State>): JSX.Element {
           <div class="animate-fade-up-2 text-center mb-2">
             <h1 class="text-5xl lg:text-6xl font-bold tracking-tight leading-none inline-flex items-start gap-2 justify-center">
               {title.toUpperCase()}
+              {/* <span class="text-primary">.</span> */}
               <span class="font-mono text-xs font-bold text-primary/70 mt-1.5 tracking-wider">
                 v{version}
               </span>
@@ -298,12 +321,17 @@ export default function Index(_ctx: Context<State>): JSX.Element {
           </div>
 
           <p class="animate-fade-up-3 text-base-content/60 text-center max-w-lg text-base leading-relaxed mb-5">
-            Backend-first full-stack framework for Deno. Typed endpoints, SSR islands, built-in
-            RBAC, and middleware that propagates to every response.
+            <span class="font-mono font-bold text-yellow-300 bg-primary px-1.5 py-0.5 rounded">
+              Fresh
+            </span>{" "}
+            at the core with batteries included — ready to{" "}
+            <span class="font-mono font-black text-primary">HOWL</span>. Backend-first full-stack
+            framework for Deno. Typed endpoints, SSR islands, built-in RBAC, and middleware that
+            propagates to every response.
           </p>
 
           {/* Scaffold one-liner */}
-          <div class="animate-fade-up-3 w-full max-w-3xl mb-12">
+          <div class="animate-fade-up-3 w-full max-w-3xl">
             <p class="text-center font-black text-xs uppercase tracking-[0.3em] text-base-content/40 mb-5">
               Scaffold a new project in 30 seconds
             </p>
@@ -334,29 +362,27 @@ export default function Index(_ctx: Context<State>): JSX.Element {
             </p>
           </div>
 
-          {/* What Howl adds */}
-          <div class="animate-fade-up-5 w-full max-w-4xl mt-20">
-            <div class="text-center mb-8">
-              <p class="font-mono text-xs uppercase tracking-[0.3em] text-base-content/40 mb-3">
-                What {title} adds on top of Fresh
-              </p>
-            </div>
-            <div class="grid grid-cols-3 divide-x divide-zinc-800 rounded-xl border border-zinc-800 bg-zinc-950 shadow-xl shadow-primary/10 overflow-hidden">
-              {FEATURES.map(({ label, desc }, i) => (
-                <div
-                  key={label}
-                  class={`px-5 py-6 font-mono text-[13px] ${
-                    i < 3 ? "border-b border-zinc-800" : ""
-                  }`}
-                >
-                  <p class="text-[11px] uppercase tracking-[0.2em] mb-3 font-bold text-primary">
-                    {label}
-                  </p>
-                  <p class="text-zinc-400 text-[12px] leading-relaxed font-sans">{desc}</p>
-                </div>
-              ))}
+          {/* Core — marquee */}
+          {
+            /* <div class="animate-fade-up-5 w-full mt-10">
+            <div class="relative overflow-hidden mask-[linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+              <div class="flex gap-3 w-max animate-marquee">
+                {[...CORE, ...CORE].map((item, i) => (
+                  <span
+                    key={`${item}-${i}`}
+                    class="font-mono text-[12px] px-3 py-1.5 rounded-md border border-base-300 bg-base-200/70 text-base-content/70 whitespace-nowrap"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
+          <style>
+            {`@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+            .animate-marquee { animation: marquee 40s linear infinite; }`}
+          </style> */
+          }
         </div>
       </div>
     </>

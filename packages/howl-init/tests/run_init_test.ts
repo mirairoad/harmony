@@ -41,18 +41,18 @@ Deno.test("runInit with explicit name + template skips prompts", async () => {
     const { prompts, asked, picked } = recordingPrompts({});
     const result = await runInit({
       name: "my-app",
-      template: "basic",
+      template: "docs",
       cwd: dir,
       prompt: prompts,
     });
 
     expect(result.name).toBe("my-app");
-    expect(result.template).toBe("basic");
+    expect(result.template).toBe("docs");
     expect(result.path).toBe(join(dir, "my-app"));
     expect(asked).toEqual([]);
     expect(picked).toEqual([]);
 
-    const stat = await Deno.stat(join(dir, "my-app", "main.ts"));
+    const stat = await Deno.stat(join(dir, "my-app", "server/main.ts"));
     expect(stat.isFile).toBe(true);
   });
 });
@@ -61,14 +61,14 @@ Deno.test("runInit prompts for name when missing", async () => {
   await withTempDir(async (dir) => {
     const { prompts, asked } = recordingPrompts({ ask: ["from-prompt"] });
     const result = await runInit({
-      template: "basic",
+      template: "docs",
       cwd: dir,
       prompt: prompts,
     });
 
     expect(result.name).toBe("from-prompt");
     expect(asked.length).toBe(1);
-    expect(await Deno.stat(join(dir, "from-prompt", "main.ts"))).toBeDefined();
+    expect(await Deno.stat(join(dir, "from-prompt", "server/main.ts"))).toBeDefined();
   });
 });
 
@@ -82,39 +82,22 @@ Deno.test("runInit always prompts for template when not given", async () => {
     });
 
     expect(picked.length).toBe(1);
-    expect(result.template).toBe("basic");
+    expect(result.template).toBe("docs");
   });
 });
 
-Deno.test("runInit honours pick choice (with-store)", async () => {
+Deno.test("runInit honours pick choice (cv)", async () => {
   await withTempDir(async (dir) => {
     const { prompts } = recordingPrompts({ pick: [1] });
     const result = await runInit({
-      name: "store-app",
+      name: "my-cv",
       cwd: dir,
       prompt: prompts,
     });
 
-    expect(result.template).toBe("with-store");
-    expect(await Deno.stat(join(dir, "store-app", "state/store.ts"))).toBeDefined();
-    expect(await Deno.stat(join(dir, "store-app", "islands/counter.island.tsx")))
-      .toBeDefined();
-  });
-});
-
-Deno.test("runInit honours pick choice (docs)", async () => {
-  await withTempDir(async (dir) => {
-    const { prompts } = recordingPrompts({ pick: [2] });
-    const result = await runInit({
-      name: "doc-site",
-      cwd: dir,
-      prompt: prompts,
-    });
-
-    expect(result.template).toBe("docs");
-    expect(await Deno.stat(join(dir, "doc-site", "server/docs/getting-started.json")))
-      .toBeDefined();
-    expect(await Deno.stat(join(dir, "doc-site", "client/pages/docs/[slug].tsx")))
+    expect(result.template).toBe("cv");
+    expect(await Deno.stat(join(dir, "my-cv", "server/cv/profile.json"))).toBeDefined();
+    expect(await Deno.stat(join(dir, "my-cv", "client/pages/projects/[slug].tsx")))
       .toBeDefined();
   });
 });

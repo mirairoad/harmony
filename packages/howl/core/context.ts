@@ -410,13 +410,20 @@ export class Context<State> {
       try {
         setRenderState(state);
 
-        // Single-pass: render the full tree (app + layouts + page) in one call.
-        // appVNode captures appChild by closure reference; since appChild = vnode
-        // and is never reassigned, Preact walks the entire tree once and island
-        // detection runs correctly before HowlScripts renders at end of <body>.
-        let html = renderToString(
-          hasApp ? appVNode : (vnode ?? h(Fragment, null)),
-        );
+        // Two-pass render: first pass populates state.headComponents with
+        // <Head> children encountered inside <body>; second pass emits them
+        // via <RemainingHead> when <head> is processed (depth-first <head>
+        // runs before <body>, so a single pass leaves head components
+        // collected too late to render).
+        const rootVNode = hasApp ? appVNode : (vnode ?? h(Fragment, null));
+        renderToString(rootVNode);
+        state.resetForSecondPass();
+        if (this.#additionalStyles !== null) {
+          for (let i = 0; i < this.#additionalStyles.length; i++) {
+            state.islandAssets.add(this.#additionalStyles[i]);
+          }
+        }
+        let html = renderToString(rootVNode);
 
         if (
           !state.renderedHtmlBody || !state.renderedHtmlHead ||

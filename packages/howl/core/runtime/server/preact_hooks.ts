@@ -106,6 +106,23 @@ export class RenderState {
     this.islandProps = [];
     this.ownerStack = [];
   }
+
+  resetForSecondPass() {
+    this.islands.clear();
+    this.islandAssets.clear();
+    this.encounteredPartials.clear();
+    this.owners.clear();
+    this.slots = [];
+    this.islandProps = [];
+    this.ownerStack = [];
+    this.renderedHtmlTag = false;
+    this.renderedHtmlBody = false;
+    this.renderedHtmlHead = false;
+    this.hasRuntimeScript = false;
+    this.partialDepth = 0;
+    this.partialCount = 0;
+    this.needsClientRuntime = false;
+  }
 }
 
 let RENDER_STATE: RenderState | null = null;

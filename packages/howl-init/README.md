@@ -13,7 +13,7 @@ deno run -Ar jsr:@hushkey/howl-init
 With a name and template:
 
 ```sh
-deno run -Ar jsr:@hushkey/howl-init my-app --template basic
+deno run -Ar jsr:@hushkey/howl-init my-app --template docs
 ```
 
 Show all options:
@@ -24,11 +24,10 @@ deno run -Ar jsr:@hushkey/howl-init --help
 
 ## Templates
 
-| ID           | Description                                                |
-| ------------ | ---------------------------------------------------------- |
-| `basic`      | Minimal Howl app — single page, JSON API                   |
-| `with-store` | Basic + Preact island wired to a `@preact/signals` store   |
-| `docs`       | Tailwind + daisyUI docs site with JSON-driven content      |
+| ID     | Description                                                       |
+| ------ | ----------------------------------------------------------------- |
+| `docs` | Tailwind + daisyUI docs site with JSON-driven content             |
+| `cv`   | Tailwind + daisyUI developer CV / portfolio with project cards    |
 
 Run `--help` to see the live list from the installed version.
 
@@ -57,7 +56,7 @@ import { runInit } from "@hushkey/howl-init";
 
 const result = await runInit({
   name: "my-app",
-  template: "basic",
+  template: "docs",
   cwd: Deno.cwd(),
 });
 

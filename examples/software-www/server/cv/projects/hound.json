@@ -1,0 +1,90 @@
+{
+  "slug": "hound",
+  "title": "Hound",
+  "tagline": "Deno-native Redis job queue",
+  "year": 2025,
+  "role": "Open source · MIT",
+  "stack": ["Deno", "TypeScript", "Redis", "ioredis", "Lua", "Deno KV"],
+  "links": [
+    { "label": "Live site", "url": "https://hound.hushkey.dev" },
+    { "label": "JSR", "url": "https://jsr.io/@hushkey/hound" },
+    { "label": "Repo", "url": "https://github.com/mirairoad/hound" }
+  ],
+  "sections": [
+    {
+      "id": "overview",
+      "heading": "Overview",
+      "blocks": [
+        { "type": "p", "text": "Hound is a Deno-native job queue. Sorted-set delivery, crash recovery via the Reaper, cron, and a management API — all in one package backed by a single Redis connection." },
+        { "type": "p", "text": "It solves background jobs in Deno without the BullMQ / Sidekiq baggage: at-least-once delivery, crash recovery, cron, type-safe emit, and an HTTP / WebSocket gateway, shipped as a single import." }
+      ]
+    },
+    {
+      "id": "install",
+      "heading": "Install",
+      "blocks": [
+        { "type": "code", "lang": "ts", "text": "import { Hound } from \"jsr:@hushkey/hound@^0.50.0\";" },
+        { "type": "p", "text": "Latest published: v0.50.2 on JSR." }
+      ]
+    },
+    {
+      "id": "capabilities",
+      "heading": "Capabilities",
+      "blocks": [
+        { "type": "h3", "text": "Storage" },
+        { "type": "list", "items": [
+          "Redis backend (ioredis)",
+          "InMemoryStorage for tests and single-process apps",
+          "DenoKvStorage for serverless / edge"
+        ] },
+        { "type": "h3", "text": "Defining and emitting jobs" },
+        { "type": "list", "items": [
+          "hound.on() inline or defineJob() typed",
+          "Auto-discovery of *.job.ts via jobDirs",
+          "emit (fire-and-forget), emitAsync, emitAndWait",
+          "delay, attempts, retryDelayMs, retryBackoff (fixed / exponential), priority, explicit id",
+          "Cron via repeat.pattern — self-rescheduling, survives restart"
+        ] },
+        { "type": "h3", "text": "Reliability" },
+        { "type": "list", "items": [
+          "Exponential retry backoff capped at 1 hour, DLQ via processor.dlq.streamKey",
+          "Queue priority map (processor.queuePriority) prevents starvation",
+          "Reaper sweeps stalled jobs every visibilityTimeoutMs/2 (min 5s)",
+          "Lua-script claim is atomic — N workers safely consume the same queue"
+        ] },
+        { "type": "h3", "text": "Operations" },
+        { "type": "list", "items": [
+          "HTTP gateway via hound.listen() — /emit, /emit/batch, /health, /management/*",
+          "WebSocket progress: ctx.socket.update({ progress })",
+          "Management API: jobs find/get/delete/pause/resume/promote/retry; queues stats/pause/resume/reset",
+          "Event subscriptions: job.completed, job.failed, job.finished",
+          "Codegen: generateTypes + generateClient → typed HoundJobMap + portable HoundClient (Node / Bun / browser)",
+          "Lifecycle: start, stop, drain, listen"
+        ] }
+      ]
+    },
+    {
+      "id": "performance",
+      "heading": "Performance",
+      "blocks": [
+        { "type": "p", "text": "All Redis on bare metal. MacBook Pro 16\" M1 Pro, no simulated work." },
+        { "type": "table", "headers": ["Metric", "1c (100 jobs)", "10c (100 jobs)", "max c=10,000 (100k jobs)"], "rows": [
+          ["Throughput", "2,474 jobs/s", "7,966 jobs/s", "34,371 jobs/s"],
+          ["Latency p50", "31 ms", "12 ms", "2,500 ms"],
+          ["Latency p95", "41 ms", "14 ms", "3,386 ms"],
+          ["Latency p99", "42 ms", "14 ms", "3,462 ms"],
+          ["Latency avg", "28 ms", "12 ms", "2,473 ms"]
+        ] },
+        { "type": "p", "text": "Ceiling is ~34k jobs/s on a single local Redis. Horizontal scale comes from running multiple Hound workers against one Redis — the Lua-script claim is atomic, so N workers safely consume the same queue." },
+        { "type": "tip", "text": "Latency at max concurrency reflects queue depth, not per-job overhead — at 10c steady state, p99 sits at 14ms. Tune claimCount (default 200/poll) up if your jobs are short and Redis RTT is non-trivial." }
+      ]
+    },
+    {
+      "id": "status",
+      "heading": "Status",
+      "blocks": [
+        { "type": "p", "text": "Hound is open source under MIT, published to JSR, and used internally to power background work behind every Hushkey + Howl deployment." }
+      ]
+    }
+  ]
+}

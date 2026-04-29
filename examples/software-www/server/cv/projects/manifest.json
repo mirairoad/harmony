@@ -1,0 +1,40 @@
+[
+  {
+    "slug": "hushkey",
+    "title": "Hushkey",
+    "tagline": "Property and jobs in Japan, surfaced in English",
+    "description": "Japan-focused — property and job listings opened up to foreigners, with built-in Japanese ↔ English translation (no third-party APIs), operators running the market side, payments via Dodo Payments.",
+    "tags": ["Deno", "Howl", "MongoDB", "Cloudflare"],
+    "year": 2025,
+    "url": "https://hushkey.dev",
+    "accent": "secondary",
+    "status": "development",
+    "order": 1
+  },
+  {
+    "slug": "howl",
+    "title": "Howl",
+    "tagline": "Deno-native full-stack framework",
+    "description": "A Fresh-derived framework with file-system routing, file-system APIs, single-pass SSR, and a typed islands runtime.",
+    "tags": ["TypeScript", "Deno", "Preact", "Tailwind"],
+    "year": 2025,
+    "url": "https://jsr.io/@hushkey/howl",
+    "repo": "https://github.com/mirairoad/howl",
+    "accent": "primary",
+    "status": "shipped",
+    "order": 2
+  },
+  {
+    "slug": "hound",
+    "title": "Hound",
+    "tagline": "Deno-native Redis job queue",
+    "description": "Sorted-set delivery, crash recovery, cron, type-safe emit, and an HTTP/WS gateway — a single package on a single Redis connection. Benchmarks at ~34k jobs/s peak on a single local Redis.",
+    "tags": ["Deno", "TypeScript", "Redis", "Job Queue"],
+    "year": 2025,
+    "url": "https://jsr.io/@hushkey/hound",
+    "repo": "https://github.com/mirairoad/hound",
+    "accent": "accent",
+    "status": "shipped",
+    "order": 3
+  }
+]

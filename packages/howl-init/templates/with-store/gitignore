@@ -1,6 +1,0 @@
-node_modules/
-_howl/
-dist/
-.env
-.env.*
-.DS_Store

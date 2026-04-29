@@ -1,0 +1,147 @@
+{
+  "slug": "hushkey",
+  "title": "Hushkey",
+  "tagline": "Property and jobs in Japan, surfaced in English",
+  "year": 2025,
+  "role": "Founder · Engineering",
+  "stack": [
+    "Deno",
+    "Howl",
+    "Hound",
+    "MongoDB",
+    "Upstash Redis",
+    "fly.io",
+    "Cloudflare R2",
+    "Mapbox",
+    "Dodo Payments"
+  ],
+  "links": [
+    { "label": "Dev preview", "url": "https://hushkey.dev" }
+  ],
+  "sections": [
+    {
+      "id": "overview",
+      "heading": "Overview",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Japan has over 32 million foreign residents, visitors, and workers navigating a property and job market that was never built for them. Listings hidden behind language, agencies operating as gatekeepers, processes opaque by default. Hushkey surfaces it in English."
+        },
+        {
+          "type": "p",
+          "text": "Two verticals, one market: rental and purchase property, and jobs — both sourced, translated, and made actionable for foreigners in Japan. Instant Japanese ↔ English translation built in-house, no third-party APIs. Free to browse, subscription-gated to apply."
+        },
+        {
+          "type": "tip",
+          "text": "Currently in active development. Dev preview at hushkey.dev — production domain hushkey.app held offline until V1."
+        }
+      ]
+    },
+    {
+      "id": "capabilities",
+      "heading": "Capabilities",
+      "blocks": [
+        { "type": "h3", "text": "Product" },
+        {
+          "type": "list",
+          "items": [
+            "Verticals: Japan property listings (rental / buy) and Japan jobs",
+            "Free browse · Dodo Payments subscription gates the apply flow",
+            "Operators are first class — local partners manage market content via the Organisations service",
+            "Branded mascot asset system, multi-pose, used through onboarding"
+          ]
+        },
+        { "type": "h3", "text": "Platform" },
+        {
+          "type": "list",
+          "items": [
+            "Auth: Hushkey's internal auth class — same lineage as Hound and Howl. Hardened session model, MFA elevation for sensitive ops, no third-party identity provider",
+            "Translation: instant Japanese ↔ English engine built in-house — no Google Translate, no Claude API. Cached at write time, served alongside the listing",
+            "Search: prebuilt flat-JSON snapshot (~42KB) on R2, rebuilt via Hound cron",
+            "Maps: Mapbox autocomplete + geocoding + custom pastel style; nightly POI fan-out per property",
+            "Frontend: daisyUI page shells with Preact islands; React-ecosystem libs confined to ssr: false islands"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stack",
+      "heading": "Tech stack",
+      "blocks": [
+        {
+          "type": "table",
+          "headers": ["Layer", "Choice"],
+          "rows": [
+            ["Runtime", "Deno (workspace monorepo)"],
+            ["Framework", "Howl (@hushkey/howl) — Fresh 2.2 fork, Deno-native fullstack"],
+            ["Compute", "fly.io — Anycast routing onto designated regions per market"],
+            [
+              "DB",
+              "MongoDB Atlas (multi-region replica sets), no ORM — Zod + MongoService<T> (ObjectId/string id, optimistic lock, soft delete, ClientSession txns, LRU cache with versioned invalidation)"
+            ],
+            ["Cache", "Memory → Upstash Redis (multi-region) → R2"],
+            [
+              "Queue",
+              "Hound (@hushkey/hound) on Upstash Redis — sorted-set delivery, cron, concurrency, WS streaming"
+            ],
+            ["Auth", "Internal Hushkey auth class — same family as Hound and Howl"],
+            ["Translation", "In-house Japanese ↔ English engine, no third-party APIs"],
+            ["Payments", "Dodo Payments (subscriptions)"],
+            ["Storage", "Cloudflare R2"],
+            ["Edge / DDoS", "Cloudflare"],
+            [
+              "APIs",
+              "*.api.ts files, Zod-validated, grouped admin / public / private / authentication / docs"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "infra",
+      "heading": "Infra",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Compute: fly.io — Anycast routes traffic onto regions chosen per market (Japan-first for V1)",
+            "DB: MongoDB Atlas with multi-region replica sets — failover and reads pinned regionally",
+            "Cache + queues: Upstash Redis with multi-region replication — Hound and the response cache share one tier",
+            "Split: API layer and Hound workers run as separate fly.io processes against shared Mongo + Upstash"
+          ]
+        },
+        {
+          "type": "tip",
+          "text": "OSS spinouts ship as Software — software.hushkey.dev (Hound and future tooling). The site you're reading is exactly that surface."
+        }
+      ]
+    },
+    {
+      "id": "constraints",
+      "heading": "Constraints",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            "Solo founder — smallest viable slice; anything > 1 sprint gets decomposed",
+            "GDPR by default",
+            "No Prisma",
+            "No AU short-stay (non-compete)",
+            "No third-party identity providers, no third-party translation APIs — both are internal",
+            "Bursty work always goes through Hound — handlers stay synchronous and predictable"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "status",
+      "heading": "Status",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Hushkey is in active development — entity Hushkey Pty Ltd (AU), dev preview at hushkey.dev, production domain hushkey.app held offline pending V1, contact leotermine@hushkey.app. License is proprietary; the OSS pieces extracted from it (Hound, Howl) live under software.hushkey.dev."
+        }
+      ]
+    }
+  ]
+}

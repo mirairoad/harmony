@@ -30,7 +30,7 @@ export default async function Layout(
   const isDocs = url.pathname.startsWith("/docs");
 
   return (
-    <main>
+    <main class="flex flex-col min-h-screen">
       {/* Top brand bar */}
       <div class="fixed top-0 left-0 right-0 z-40 pointer-events-none h-20 sm:h-24 bg-linear-to-b from-base-100/95 via-base-100/70 to-transparent backdrop-blur-md mask-[linear-gradient(to_bottom,black_55%,transparent)]" />
 
@@ -77,9 +77,21 @@ export default async function Layout(
       </nav>
 
       {/* Page content */}
-      <div class="pb-(--nav-h) sm:pb-0">
+      <div class="flex-1 pb-(--nav-h) sm:pb-0">
         <Component />
       </div>
+
+      {/* Footer — entity */}
+      <footer class="bg-base-100/80 backdrop-blur pb-(--nav-h) sm:pb-0">
+        <div class="max-w-5xl mx-auto px-5 sm:px-8 py-3 flex items-center justify-between gap-1 text-left">
+          <p class="font-mono text-xs text-base-content/60">
+            &copy; {new Date().getFullYear()} Hushkey Pty Ltd<span class="text-primary font-bold">.</span>
+          </p>
+          <p class="font-mono text-xs text-base-content/60">
+            howl<span class="text-primary font-bold">.</span> by hushkey
+          </p>
+        </div>
+      </footer>
 
       {/* Bottom tab bar — mobile only */}
       <nav class="fixed bottom-0 left-0 right-0 z-50 sm:hidden flex items-stretch bg-base-100/98 backdrop-blur-md border-t border-base-300 safe-area-bottom">

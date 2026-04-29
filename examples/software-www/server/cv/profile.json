@@ -1,0 +1,29 @@
+{
+  "name": "Software",
+  "studio": "by Hushkey",
+  "kicker": "Software Studio · Perth · AU",
+  "tagline": "We design, build and ship the tools we want to use ourselves.",
+  "location": "Remote · Perth, AU",
+  "email": "hello@hushkey.app",
+  "social": [
+    { "label": "GitHub", "handle": "mirairoad", "url": "https://github.com/mirairoad" },
+    { "label": "Email", "handle": "hello@hushkey.app", "url": "mailto:hello@hushkey.app" }
+  ],
+  "about": [
+    "Software is the open-source surface of Hushkey. Everything we publish here started as something we needed to ship our own products — frameworks, queues, tools. Once a piece earns its keep internally, we extract it, polish the seams, and give it back.",
+    "Why give it back? Because we didn't build any of this from scratch. Deno, Fresh, Preact, Redis, the entire web stack we sit on — every line of it was someone else's gift. Software is the receipt.",
+    "Our rule is simple: nothing ships here until it has paid its way inside Hushkey first. That keeps the surface honest. No vapourware, no abandoned scaffolds, no library written in anticipation of a use case that never arrived. If it's on this page, it's running in production today.",
+    "Hushkey itself is proprietary — it's the platform that pays for the open-source work. The two halves are intentional: a single commercial bet funds the public toolkit, and the public toolkit forces the commercial product to be honest about its dependencies."
+  ],
+  "team": [
+    {
+      "name": "Leo Termine",
+      "role": "Founder · Engineering · Design",
+      "handle": "@mirairoad",
+      "url": "https://github.com/mirairoad",
+      "initials": "LT",
+      "accent": "primary",
+      "bio": "Solo founder for now — designing, building and shipping every product on this page. Background across web, mobile and infra. Based in Perth."
+    }
+  ]
+}

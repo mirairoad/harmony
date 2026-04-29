@@ -15,7 +15,7 @@ export default function DocsIndex(ctx: PageProps<unknown, State>): JSX.Element {
         <meta name="description" content={`Guides and reference for ${title}.`} />
       </Head>
 
-      <div class="sm:max-w-3xl sm:mx-auto sm:px-6 py-6 sm:py-12">
+      <div class="sm:max-w-3xl sm:mx-auto sm:px-6">
         <div class="mb-8 sm:mb-10 px-0">
           <p class="font-mono text-xs uppercase tracking-widest text-base-content/50 mb-2">
             Documentation

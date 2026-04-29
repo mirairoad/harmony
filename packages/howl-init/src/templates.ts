@@ -13,19 +13,14 @@ export interface TemplateMeta {
 /** Templates currently shipped. Add an entry plus a `templates/<id>/` folder to expose a new one. */
 export const templates: readonly TemplateMeta[] = [
   {
-    id: "basic",
-    label: "basic",
-    description: "Minimal Howl app — single page, JSON API",
-  },
-  {
-    id: "with-store",
-    label: "with-store",
-    description: "Basic + Preact island wired to a @preact/signals store",
-  },
-  {
     id: "docs",
     label: "docs",
     description: "Tailwind + daisyUI docs site with JSON-driven content",
+  },
+  {
+    id: "cv",
+    label: "cv",
+    description: "Tailwind + daisyUI developer CV / portfolio with project cards",
   },
 ] as const;
 
