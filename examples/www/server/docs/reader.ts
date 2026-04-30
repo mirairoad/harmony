@@ -11,6 +11,7 @@ import rateLimiting from "./rate-limiting.json" with { type: "json" };
 import configuration from "./configuration.json" with { type: "json" };
 import websockets from "./websockets.json" with { type: "json" };
 import performance from "./performance.json" with { type: "json" };
+import plugins from "./plugins.json" with { type: "json" };
 
 export type BlockType =
   | { type: "p"; text: string }
@@ -54,6 +55,7 @@ const DOC_REGISTRY: Record<string, DocPage> = {
   "rate-limiting": rateLimiting as unknown as DocPage,
   "websockets": websockets as unknown as DocPage,
   "performance": performance as unknown as DocPage,
+  "plugins": plugins as unknown as DocPage,
 };
 
 export function readManifest(): ManifestItem[] {

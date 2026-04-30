@@ -97,7 +97,7 @@ export default function DocsIndex(
             JSR ↗
           </a>
           <a
-            href="https://github.com/mirairoad/howl"
+            href="https://github.com/hushkey-app/howl"
             class="hover:text-base-content transition-colors"
             target="_blank"
           >

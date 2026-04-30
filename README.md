@@ -30,7 +30,7 @@ Howl solves all of these natively.
 | ----------------------- | ------------------------------------------------------- |
 | `@hushkey/howl`         | Core runtime — routing, context, islands, SSR           |
 | `@hushkey/howl/dev`     | Build pipeline — esbuild, HMR                           |
-| `@hushkey/howl/plugins` | Official plugins — Tailwind v4, CSS Modules             |
+| `@hushkey/howl/plugins` | Official plugins — Tailwind v4, typed http client gen   |
 | `@hushkey/howl/api`     | Endpoint contracts — defineApi, Zod validation, OpenAPI |
 
 ---

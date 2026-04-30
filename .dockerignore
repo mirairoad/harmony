@@ -1,0 +1,16 @@
+# Fallback ignore (used when no Dockerfile.dockerignore exists alongside the
+# selected Dockerfile). Excludes generic build artifacts and caches.
+
+**/node_modules
+**/dist
+**/_howl
+**/.DS_Store
+**/.env
+**/.env.*
+.git
+.github
+.woodpecker.yml
+
+# Heavy/non-runtime parts of the repo
+packages/howl-init/templates
+packages/howl/tests

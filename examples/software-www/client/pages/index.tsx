@@ -41,7 +41,7 @@ const STATUS_LABEL: Record<ProjectStatus, string> = {
 function StatusBadge({ status }: { status: ProjectStatus }): JSX.Element {
   if (status === "production") {
     return (
-      <span class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">
+      <span class="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/25 border border-primary/40 px-2 py-0.5 rounded">
         <span class="relative flex h-1.5 w-1.5">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/70 opacity-75" />
           <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: ProjectStatus }): JSX.Element {
   }
   if (status === "development") {
     return (
-      <span class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-info bg-info/10 px-2 py-0.5 rounded">
+      <span class="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-info bg-info/25 border border-info/40 px-2 py-0.5 rounded">
         <span class="relative flex h-1.5 w-1.5">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-info/70 opacity-75" />
           <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-info" />
@@ -69,7 +69,7 @@ function StatusBadge({ status }: { status: ProjectStatus }): JSX.Element {
     );
   }
   return (
-    <span class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-success bg-success/10 px-2 py-0.5 rounded">
+    <span class="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-success bg-success/25 border border-success/40 px-2 py-0.5 rounded">
       <svg
         class="w-2.5 h-2.5"
         viewBox="0 0 20 20"

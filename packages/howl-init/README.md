@@ -24,10 +24,12 @@ deno run -Ar jsr:@hushkey/howl-init --help
 
 ## Templates
 
-| ID     | Description                                                       |
-| ------ | ----------------------------------------------------------------- |
-| `docs` | Tailwind + daisyUI docs site with JSON-driven content             |
-| `cv`   | Tailwind + daisyUI developer CV / portfolio with project cards    |
+| ID             | Description                                                          |
+| -------------- | -------------------------------------------------------------------- |
+| `backend-only` | Minimal API-only project with sample ping (GET) + pong (POST)        |
+| `fullstack`    | Minimal fullstack — 1 API, 1 page, 1 island, 1 signal component, Tailwind |
+| `docs`         | Tailwind + daisyUI docs site with JSON-driven content                |
+| `cv`           | Tailwind + daisyUI developer CV / portfolio with project cards       |
 
 Run `--help` to see the live list from the installed version.
 

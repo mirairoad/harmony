@@ -1,6 +1,17 @@
 {
-  "howlVersion": "0.5.0",
+  "howlVersion": "0.5.1",
   "templates": {
+    "backend-only": [
+      "README.md.tpl",
+      "deno.json.tpl",
+      "dev.ts.tpl",
+      "env.example",
+      "gitignore",
+      "howl.config.ts.tpl",
+      "server/apis/public/ping.api.ts.tpl",
+      "server/apis/public/pong.api.ts.tpl",
+      "server/main.ts.tpl"
+    ],
     "cv": [
       "README.md.tpl",
       "client/pages/_app.tsx.tpl",
@@ -51,6 +62,22 @@
       "server/docs/reader.ts.tpl",
       "server/main.ts.tpl",
       "static/logo.svg",
+      "static/style.css",
+      "tailwind.config.ts.tpl"
+    ],
+    "fullstack": [
+      "README.md.tpl",
+      "client/components/Counter.tsx.tpl",
+      "client/islands/Counter.island.tsx.tpl",
+      "client/pages/_app.tsx.tpl",
+      "client/pages/index.tsx.tpl",
+      "deno.json.tpl",
+      "dev.ts.tpl",
+      "env.example",
+      "gitignore",
+      "howl.config.ts.tpl",
+      "server/apis/public/ping.api.ts.tpl",
+      "server/main.ts.tpl",
       "static/style.css",
       "tailwind.config.ts.tpl"
     ]

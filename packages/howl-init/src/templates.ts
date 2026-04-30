@@ -13,6 +13,16 @@ export interface TemplateMeta {
 /** Templates currently shipped. Add an entry plus a `templates/<id>/` folder to expose a new one. */
 export const templates: readonly TemplateMeta[] = [
   {
+    id: "backend-only",
+    label: "backend-only",
+    description: "Minimal API-only project with sample ping (GET) + pong (POST) routes",
+  },
+  {
+    id: "fullstack",
+    label: "fullstack",
+    description: "Minimal fullstack starter — 1 API, 1 page, 1 island, 1 signal-based component, Tailwind",
+  },
+  {
     id: "docs",
     label: "docs",
     description: "Tailwind + daisyUI docs site with JSON-driven content",

@@ -7,7 +7,7 @@
     "tags": ["TypeScript", "Deno", "Preact", "Tailwind"],
     "year": 2025,
     "url": "https://hushkey.app",
-    "repo": "https://github.com/mirairoad/howl",
+    "repo": "https://github.com/hushkey-app/howl",
     "accent": "primary",
     "featured": true,
     "order": 1

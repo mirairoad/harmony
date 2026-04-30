@@ -121,7 +121,7 @@ export default function Index(_ctx: Context<State>): JSX.Element {
             Read the docs →
           </a>
           <a
-            href="https://github.com/mirairoad/howl"
+            href="https://github.com/hushkey-app/howl"
             target="_blank"
             class="btn btn-outline btn-md w-full rounded-xl text-base"
           >

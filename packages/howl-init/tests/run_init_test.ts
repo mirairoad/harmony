@@ -82,13 +82,13 @@ Deno.test("runInit always prompts for template when not given", async () => {
     });
 
     expect(picked.length).toBe(1);
-    expect(result.template).toBe("docs");
+    expect(result.template).toBe("backend-only");
   });
 });
 
 Deno.test("runInit honours pick choice (cv)", async () => {
   await withTempDir(async (dir) => {
-    const { prompts } = recordingPrompts({ pick: [1] });
+    const { prompts } = recordingPrompts({ pick: [3] });
     const result = await runInit({
       name: "my-cv",
       cwd: dir,

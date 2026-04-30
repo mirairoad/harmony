@@ -70,5 +70,11 @@
     "title": "WebSockets",
     "description": "Managed WebSocket endpoints with shared middleware and optional port isolation",
     "order": 12
+  },
+  {
+    "slug": "plugins",
+    "title": "Plugins",
+    "description": "Tailwind v4 and typed HTTP client generation via @hushkey/howl/plugins",
+    "order": 13
   }
 ]

@@ -14,8 +14,8 @@ export default function Index(ctx: Context<State>): JSX.Element {
         <meta name="description" content={`${title} — documentation site built with Howl.`} />
       </Head>
 
-      <div class="relative min-h-screen bg-base-100 bg-dot-grid bg-size-[28px_28px] flex items-center justify-center overflow-hidden">
-        <div class="relative z-10 px-6 py-20 max-w-2xl text-center">
+      <div class="relative h-full bg-base-100 bg-dot-grid bg-size-[28px_28px] flex items-center justify-center overflow-hidden pt-20 sm:pt-24">
+        <div class="relative z-10 px-6 py-10 max-w-2xl text-center">
           <img
             src="/logo.svg"
             alt={title}

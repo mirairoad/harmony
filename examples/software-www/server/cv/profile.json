@@ -6,7 +6,7 @@
   "location": "Remote · Perth, AU",
   "email": "hello@hushkey.app",
   "social": [
-    { "label": "GitHub", "handle": "mirairoad", "url": "https://github.com/mirairoad" },
+    { "label": "GitHub", "handle": "hushkey-app", "url": "https://github.com/hushkey-app" },
     { "label": "Email", "handle": "hello@hushkey.app", "url": "mailto:hello@hushkey.app" }
   ],
   "about": [
@@ -19,8 +19,8 @@
     {
       "name": "Leo Termine",
       "role": "Founder · Engineering · Design",
-      "handle": "@mirairoad",
-      "url": "https://github.com/mirairoad",
+      "handle": "@hushkey-app",
+      "url": "https://github.com/hushkey-app",
       "initials": "LT",
       "accent": "primary",
       "bio": "Solo founder for now — designing, building and shipping every product on this page. Background across web, mobile and infra. Based in Perth."

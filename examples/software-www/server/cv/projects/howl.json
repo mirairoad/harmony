@@ -8,7 +8,7 @@
   "links": [
     { "label": "Live site", "url": "https://howl.hushkey.dev" },
     { "label": "JSR", "url": "https://jsr.io/@hushkey/howl" },
-    { "label": "Repo", "url": "https://github.com/mirairoad/howl" }
+    { "label": "Repo", "url": "https://github.com/hushkey-app/howl" }
   ],
   "sections": [
     {

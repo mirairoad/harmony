@@ -177,6 +177,80 @@ Deno.test("scaffold copies the cv template (profile + projects + project detail)
   });
 });
 
+Deno.test("scaffold copies the backend-only template (api-only with ping + pong)", async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, "my-backend");
+    await scaffold({
+      templateId: "backend-only",
+      targetDir: target,
+      projectName: "my-backend",
+    });
+
+    expect(await exists(join(target, "deno.json"))).toBe(true);
+    expect(await exists(join(target, "dev.ts"))).toBe(true);
+    expect(await exists(join(target, "howl.config.ts"))).toBe(true);
+    expect(await exists(join(target, "server/main.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/ping.api.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/pong.api.ts"))).toBe(true);
+    expect(await exists(join(target, ".gitignore"))).toBe(true);
+    expect(await exists(join(target, ".env.example"))).toBe(true);
+    expect(await exists(join(target, "README.md"))).toBe(true);
+
+    expect(await exists(join(target, "client"))).toBe(false);
+    expect(await exists(join(target, "static"))).toBe(false);
+    expect(await exists(join(target, "tailwind.config.ts"))).toBe(false);
+
+    const denoJson = await Deno.readTextFile(join(target, "deno.json"));
+    expect(denoJson).toContain('"name": "my-backend"');
+    expect(denoJson).not.toContain("daisyui");
+    expect(denoJson).not.toContain("tailwindcss");
+    expect(denoJson).not.toContain("preact");
+    expect(denoJson).not.toContain("jsxPrecompileSkipElements");
+
+    const compileTask = JSON.parse(denoJson).tasks.compile as string;
+    expect(compileTask).toContain("./dist/bin/my-backend");
+
+    const pong = await Deno.readTextFile(join(target, "server/apis/public/pong.api.ts"));
+    expect(pong).toContain('method: "POST"');
+    expect(pong).toContain("requestBody:");
+  });
+});
+
+Deno.test("scaffold copies the fullstack template (api + page + island + component)", async () => {
+  await withTempDir(async (dir) => {
+    const target = join(dir, "my-fs");
+    await scaffold({
+      templateId: "fullstack",
+      targetDir: target,
+      projectName: "my-fs",
+    });
+
+    expect(await exists(join(target, "deno.json"))).toBe(true);
+    expect(await exists(join(target, "dev.ts"))).toBe(true);
+    expect(await exists(join(target, "howl.config.ts"))).toBe(true);
+    expect(await exists(join(target, "tailwind.config.ts"))).toBe(true);
+    expect(await exists(join(target, "static/style.css"))).toBe(true);
+    expect(await exists(join(target, "server/main.ts"))).toBe(true);
+    expect(await exists(join(target, "server/apis/public/ping.api.ts"))).toBe(true);
+    expect(await exists(join(target, "client/pages/_app.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/pages/index.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/islands/Counter.island.tsx"))).toBe(true);
+    expect(await exists(join(target, "client/components/Counter.tsx"))).toBe(true);
+
+    const denoJson = await Deno.readTextFile(join(target, "deno.json"));
+    expect(denoJson).toContain('"name": "my-fs"');
+    expect(denoJson).toContain("@preact/signals");
+    expect(denoJson).toContain("daisyui");
+    expect(denoJson).toContain("jsxPrecompileSkipElements");
+
+    const counter = await Deno.readTextFile(join(target, "client/components/Counter.tsx"));
+    expect(counter).toContain("useSignal");
+
+    const island = await Deno.readTextFile(join(target, "client/islands/Counter.island.tsx"));
+    expect(island).toContain("Counter");
+  });
+});
+
 Deno.test("scaffold replaces {{PROJECT_NAME}} in .tpl files", async () => {
   await withTempDir(async (dir) => {
     const target = join(dir, "acme");

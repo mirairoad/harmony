@@ -16,7 +16,7 @@ export default function DocsIndex(ctx: PageProps<unknown, State>): JSX.Element {
       </Head>
 
       <div class="sm:max-w-3xl sm:mx-auto sm:px-6">
-        <div class="mb-8 sm:mb-10 px-0">
+        <div class="mb-6 px-0">
           <p class="font-mono text-xs uppercase tracking-widest text-base-content/50 mb-2">
             Documentation
           </p>

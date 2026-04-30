@@ -7,7 +7,7 @@
   "stack": ["Deno", "TypeScript", "Preact", "Fresh 2.x", "Tailwind v4", "Zod"],
   "links": [
     { "label": "JSR", "url": "https://jsr.io/@hushkey/howl" },
-    { "label": "Repo", "url": "https://github.com/mirairoad/howl" },
+    { "label": "Repo", "url": "https://github.com/hushkey-app/howl" },
     { "label": "Live site", "url": "https://hushkey.app" }
   ],
   "sections": [

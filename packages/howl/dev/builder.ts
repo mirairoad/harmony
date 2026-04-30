@@ -291,74 +291,81 @@ export class Builder<State = any> {
     const { target, outDir, root } = this.config;
     const staticOutDir = path.join(outDir, "static");
 
-    const { denoJson, jsxImportSource } = await checkDenoCompilerOptions(root);
+    const hasClientArtifacts = this.#islandSpecifiers.size > 0 ||
+      this.#fsRoutes.files.length > 0;
 
-    if (!this.#addedInternalTransforms) {
-      this.#addedInternalTransforms = true;
-      cssAssetHash(this.#transformer);
-    }
+    await Deno.mkdir(outDir, { recursive: true });
 
-    try {
-      await Deno.remove(staticOutDir, { recursive: true });
-    } catch {
-      // Ignore
-    }
+    if (hasClientArtifacts) {
+      const { denoJson, jsxImportSource } = await checkDenoCompilerOptions(root);
 
-    const runtimeUrl = new URL(
-      dev ? "../core/runtime/client/dev.ts" : "../core/runtime/client/mod.ts",
-      import.meta.url,
-    ).href;
-
-    const entryPoints: Record<string, string> = {
-      "howl-runtime": runtimeUrl,
-    };
-
-    const namer = new UniqueNamer();
-    for (const spec of this.#islandSpecifiers) {
-      const specName = specToName(spec);
-      const name = namer.getUniqueName(specName);
-
-      entryPoints[name] = spec;
-
-      buildCache.islandModNameToChunk.set(name, {
-        name,
-        server: spec,
-        browser: null,
-        css: [],
-      });
-    }
-
-    const output = await bundleJs({
-      cwd: root,
-      outDir: staticOutDir,
-      dev: dev ?? false,
-      target,
-      buildId: BUILD_ID,
-      entryPoints,
-      jsxImportSource,
-      denoJsonPath: denoJson,
-      sourceMap: this.config.sourceMap,
-      alias: this.config.alias,
-      plugins: this.config.plugins,
-    });
-
-    const prefix = `/_howl/js/${BUILD_ID}/`;
-
-    for (const name of buildCache.islandModNameToChunk.keys()) {
-      const chunkName = output.entryToChunk.get(name);
-      if (chunkName === undefined) {
-        throw new Error(`Could not find chunk for island: ${name}`);
+      if (!this.#addedInternalTransforms) {
+        this.#addedInternalTransforms = true;
+        cssAssetHash(this.#transformer);
       }
-      buildCache.islandModNameToChunk.get(name)!.browser = `${prefix}${chunkName}`;
-    }
 
-    for (let i = 0; i < output.files.length; i++) {
-      const file = output.files[i];
-      await buildCache.addProcessedFile(
-        `${prefix}${file.path}`,
-        file.contents,
-        file.hash,
-      );
+      try {
+        await Deno.remove(staticOutDir, { recursive: true });
+      } catch {
+        // Ignore
+      }
+
+      const runtimeUrl = new URL(
+        dev ? "../core/runtime/client/dev.ts" : "../core/runtime/client/mod.ts",
+        import.meta.url,
+      ).href;
+
+      const entryPoints: Record<string, string> = {
+        "howl-runtime": runtimeUrl,
+      };
+
+      const namer = new UniqueNamer();
+      for (const spec of this.#islandSpecifiers) {
+        const specName = specToName(spec);
+        const name = namer.getUniqueName(specName);
+
+        entryPoints[name] = spec;
+
+        buildCache.islandModNameToChunk.set(name, {
+          name,
+          server: spec,
+          browser: null,
+          css: [],
+        });
+      }
+
+      const output = await bundleJs({
+        cwd: root,
+        outDir: staticOutDir,
+        dev: dev ?? false,
+        target,
+        buildId: BUILD_ID,
+        entryPoints,
+        jsxImportSource,
+        denoJsonPath: denoJson,
+        sourceMap: this.config.sourceMap,
+        alias: this.config.alias,
+        plugins: this.config.plugins,
+      });
+
+      const prefix = `/_howl/js/${BUILD_ID}/`;
+
+      for (const name of buildCache.islandModNameToChunk.keys()) {
+        const chunkName = output.entryToChunk.get(name);
+        if (chunkName === undefined) {
+          throw new Error(`Could not find chunk for island: ${name}`);
+        }
+        buildCache.islandModNameToChunk.get(name)!.browser = `${prefix}${chunkName}`;
+      }
+
+      for (let i = 0; i < output.files.length; i++) {
+        const file = output.files[i];
+        await buildCache.addProcessedFile(
+          `${prefix}${file.path}`,
+          file.contents,
+          file.hash,
+        );
+      }
     }
 
     await buildCache.flush();

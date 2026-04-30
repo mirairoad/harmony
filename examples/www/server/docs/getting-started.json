@@ -22,6 +22,8 @@
           "type": "table",
           "headers": ["Template", "What you get"],
           "rows": [
+            ["backend-only", "Minimal API-only project — no client, no styling. Ships ping (GET) + pong (POST with requestBody) as starter routes"],
+            ["fullstack", "Minimal fullstack starter — 1 API, 1 page, 1 island, 1 signal-based component, Tailwind v4 + daisyUI"],
             ["docs", "Tailwind v4 + daisyUI docs site driven by JSON manifests (this site is built from this template)"],
             ["cv", "Tailwind v4 + daisyUI developer CV / portfolio with project cards and per-project detail pages"]
           ]

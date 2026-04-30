@@ -2,30 +2,21 @@ import type { PageProps } from "@hushkey/howl";
 import type { State } from "../../howl.config.ts";
 import type { JSX } from "preact/jsx-runtime";
 
-let starsCache: { value: number; at: number } | null = null;
-const STARS_TTL = 5 * 60 * 1000;
-
-async function getGithubStars(): Promise<number | null> {
-  if (starsCache && Date.now() - starsCache.at < STARS_TTL) {
-    return starsCache.value;
-  }
+async function getGithubStars(origin: string): Promise<number | null> {
   try {
-    const res = await fetch("https://api.github.com/repos/hushkey/howl", {
-      headers: { Accept: "application/vnd.github.v3+json" },
-    });
-    if (!res.ok) return starsCache?.value ?? null;
-    const data = await res.json();
-    starsCache = { value: data.stargazers_count, at: Date.now() };
-    return starsCache.value;
+    const res = await fetch(`${origin}/api/public/stars`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.data?.stars ?? null;
   } catch {
-    return starsCache?.value ?? null;
+    return null;
   }
 }
 
 export default async function Layout(
   { Component, url, state }: PageProps<unknown, State>,
 ): Promise<JSX.Element> {
-  const stars = await getGithubStars();
+  const stars = await getGithubStars(url.origin);
   const isHome = url.pathname === "/";
   const isDocs = url.pathname.startsWith("/docs");
 
@@ -56,7 +47,7 @@ export default async function Layout(
           {isHome ? "Docs" : "Home"}
         </a>
         <a
-          href="https://github.com/mirairoad/howl"
+          href="https://github.com/hushkey-app/howl"
           target="_blank"
           class="btn btn-ghost btn-md rounded-xl text-base text-base-content/50 hover:text-base-content hover:bg-primary/30 gap-2"
         >
@@ -85,7 +76,8 @@ export default async function Layout(
       <footer class="bg-base-100/80 backdrop-blur pb-(--nav-h) sm:pb-0">
         <div class="max-w-5xl mx-auto px-5 sm:px-8 py-3 flex items-center justify-between gap-1 text-left">
           <p class="font-mono text-xs text-base-content/60">
-            &copy; {new Date().getFullYear()} Hushkey Pty Ltd<span class="text-primary font-bold">.</span>
+            &copy; {new Date().getFullYear()}{" "}
+            Hushkey Pty Ltd<span class="text-primary font-bold">.</span>
           </p>
           <p class="font-mono text-xs text-base-content/60">
             howl<span class="text-primary font-bold">.</span> by hushkey
@@ -138,7 +130,7 @@ export default async function Layout(
           <span class="font-mono text-[11px] font-bold">Docs</span>
         </a>
         <a
-          href="https://github.com/mirairoad/howl"
+          href="https://github.com/hushkey-app/howl"
           target="_blank"
           class="flex flex-col items-center justify-center gap-1 flex-1 py-2 text-base-content/50 transition-colors"
         >

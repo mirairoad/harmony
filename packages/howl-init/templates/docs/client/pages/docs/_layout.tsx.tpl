@@ -13,7 +13,7 @@ export default function DocsLayout(
     : segments[segments.length - 1];
 
   return (
-    <div class="relative min-h-screen bg-base-100 bg-dot-grid bg-size-[28px_28px]">
+    <div class="relative bg-base-100 bg-dot-grid bg-size-[28px_28px]">
       <div class="flex pt-20 sm:pt-24">
         <aside class="hidden lg:flex w-64 shrink-0 flex-col border-r border-base-300 fixed top-24 bottom-0 overflow-y-auto bg-base-100/60 backdrop-blur">
           <div class="p-4">
@@ -42,29 +42,10 @@ export default function DocsLayout(
           </div>
         </aside>
 
-        <div class="flex-1 lg:ml-64 min-w-0 px-4 sm:px-6 lg:px-8 pb-32 sm:pb-20 lg:pb-0">
+        <div class="flex-1 lg:ml-64 min-w-0 px-4 sm:px-6 lg:px-8 pb-32 sm:pb-20 lg:pb-8">
           <Component />
         </div>
       </div>
-
-      <footer class="fixed bottom-0 left-0 right-0 z-30 bg-base-100/80 backdrop-blur border-t border-base-300 py-2 text-center hidden lg:block">
-        <p class="font-mono text-xs text-base-content/40">
-          Built with{" "}
-          <a
-            href="https://jsr.io/@hushkey/howl"
-            class="text-primary hover:underline"
-          >
-            Howl
-          </a>{" "}
-          by{" "}
-          <a
-            href="https://hushkey.app"
-            class="text-primary hover:underline"
-          >
-            Hushkey
-          </a>
-        </p>
-      </footer>
 
       <div class="lg:hidden fixed bottom-(--nav-h) sm:bottom-0 left-0 right-0 z-40 bg-base-100/95 backdrop-blur border-t border-base-300 px-3 py-2 overflow-x-auto scrollbar-hide">
         <ul class="flex gap-2 min-w-max">
