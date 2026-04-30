@@ -8,9 +8,10 @@
 !deno.lock
 !LICENSE
 
-# The framework source — examples/software-www imports @hushkey/howl from here via workspace
-!packages/howl
-!packages/howl/**
+# Framework source + every workspace member (deno workspace resolver walks all
+# members listed in the root deno.json, even ones the app doesn't import).
+!packages
+!packages/**
 
 # This app
 !examples/software-www
@@ -24,3 +25,9 @@
 **/.env
 **/.env.*
 .git
+
+# Heavy/non-runtime trees that the build doesn't need
+packages/howl/tests
+packages/howl-init/templates
+packages/howl-init/tests
+packages/howl-init/scripts
