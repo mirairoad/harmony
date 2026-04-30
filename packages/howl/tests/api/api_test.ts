@@ -216,30 +216,29 @@ Deno.test("api — caching short-circuits handler on second call", async () => {
   expect(runs).toBe(1);
 });
 
-Deno.test("api — handler is responsible for redacting sensitive fields", async () => {
-  // The framework no longer auto-redacts a "password" key — that masked
-  // bypasses for "apiKey" / "token" / "pwd" / etc. and was security theatre.
-  // Redaction is the handler's responsibility now.
+Deno.test("api — handler can call ctx methods (cookies/json) without TypeError on private fields", async () => {
+  // Regression: a previous makeApiCtx used `Object.create(ctx)`, which broke
+  // `#`-private field access when handlers invoked ctx methods on the child —
+  // V8 threw `Receiver must be an instance of class Context`.
   const t = makeApp<State>();
   const { defineApi, config } = setup();
-  const create = defineApi({
-    name: "Echo",
+  const route = defineApi({
+    name: "Set Cookie",
     directory: "auth",
-    method: "POST",
+    method: "GET",
     roles: [],
     rateLimit: false,
-    responses: { 200: z.object({ user: z.string(), password: z.string() }) },
-    handler: () => ({ statusCode: 200, user: "leo", password: "[redacted]" }),
+    responses: { 200: z.object({ token: z.string() }) },
+    handler: (ctx) => {
+      ctx.cookies.set("session", "abc", { httpOnly: true });
+      return ctx.json({ ok: true, token: "abc" });
+    },
   });
-  apiHandler(t.app, [create], config);
+  apiHandler(t.app, [route], config);
 
-  const res = await t.fetch("/api/auth/echo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-  });
-  const body = await json<{ password: string }>(res);
-  expect(body.password).toBe("[redacted]");
+  const res = await t.fetch("/api/auth/set-cookie");
+  expect(res.status).toBe(200);
+  expect(res.headers.get("set-cookie")).toContain("session=abc");
 });
 
 Deno.test("api — errors.notFound() yields 404 with structured body", async () => {

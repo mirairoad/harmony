@@ -94,29 +94,41 @@ interface ApiHandlerError {
 
 /**
  * Build a child context that exposes the parsed body on `ctx.req.body` and a
- * typed `ctx.query()` reading from the WeakMap state. Uses `Object.create`
- * (not `Proxy`) so property access stays on the fast path.
+ * typed `ctx.query()` reading from the WeakMap state.
+ *
+ * Implemented via `Proxy` rather than `Object.create` because `Context` uses
+ * `#`-private fields. With `Object.create`, inherited methods would run with
+ * `this` bound to the child object, and any private-field access from inside
+ * those methods throws `Receiver must be an instance of class Context`. The
+ * Proxy binds every function it returns to the real ctx, so private-field
+ * access keeps working.
  */
 function makeApiCtx<State>(ctx: Context<State>): Context<State> {
-  const apiState = getApiRequestState(ctx);
-  const reqWithBody: Request = Object.create(ctx.req);
-  Object.defineProperty(reqWithBody, "body", {
-    value: apiState.body ?? null,
-    enumerable: true,
-  });
-  const child: Context<State> = Object.create(ctx);
-  Object.defineProperty(child, "req", {
-    value: reqWithBody,
-    enumerable: true,
-  });
-  if (apiState.query !== undefined) {
-    const q = apiState.query as Record<string, unknown>;
-    Object.defineProperty(child, "query", {
-      value: (key?: string) => key !== undefined ? q[key] : q,
-      enumerable: true,
-    });
-  }
-  return child;
+  return new Proxy(ctx, {
+    get(target, prop, receiver) {
+      if (prop === "req") {
+        const realReq = target.req;
+        return new Proxy(realReq, {
+          get(reqTarget, reqProp) {
+            if (reqProp === "body") {
+              return getApiRequestState(target).body ?? null;
+            }
+            const value = Reflect.get(reqTarget, reqProp, reqTarget);
+            return typeof value === "function" ? value.bind(reqTarget) : value;
+          },
+        });
+      }
+      if (prop === "query") {
+        const q = getApiRequestState(target).query;
+        if (q !== undefined) {
+          const qq = q as Record<string, unknown>;
+          return (key?: string) => key !== undefined ? qq[key] : qq;
+        }
+      }
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as Context<State>;
 }
 
 /**
