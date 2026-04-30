@@ -17,6 +17,10 @@
 !examples/software-www
 !examples/software-www/**
 
+# Other workspace members under examples/ — only the deno.json is needed so the
+# workspace resolver can register them (their source code isn't imported here).
+!examples/*/deno.json
+
 # Build artifacts and caches inside the included paths — re-exclude
 **/node_modules
 **/dist
