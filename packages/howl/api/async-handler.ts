@@ -1,7 +1,7 @@
 import type { Context } from "../core/context.ts";
 import type { Howl } from "../core/app.ts";
 import type { AnyApiDefinition, CacheAdapter, HowlApiConfig, RateLimitConfig } from "./types.ts";
-import { HttpError, isHttpError } from "../core/error.ts";
+import { isHttpError } from "../core/error.ts";
 import { getApiRequestState } from "./_request_state.ts";
 
 // Helpers below operate on `Context<any>` because they read/inspect generic
@@ -92,10 +92,6 @@ interface ApiHandlerError {
   status?: number;
 }
 
-interface PaginatedResponse {
-  meta_pagination?: unknown;
-}
-
 /**
  * Build a child context that exposes the parsed body on `ctx.req.body` and a
  * typed `ctx.query()` reading from the WeakMap state. Uses `Object.create`
@@ -167,7 +163,7 @@ export function asyncHandler<State, Role extends string>(
         const cached = await cache.get(cacheKey);
         if (cached) {
           return ctx.json(
-            { ok: true, data: JSON.parse(cached) },
+            { ok: true, ...JSON.parse(cached) },
             { status: 200 },
           );
         }
@@ -205,28 +201,24 @@ export function asyncHandler<State, Role extends string>(
 
       const respObj = (response ?? {}) as
         & Record<string, unknown>
-        & { statusCode?: number };
+        & { statusCode?: number; status?: number };
       const location = (respObj.headers as Headers | undefined)?.get?.("location");
       if (location) {
-        return ctx.redirect(location, respObj.statusCode ?? 302);
+        return ctx.redirect(location, respObj.statusCode ?? respObj.status ?? 302);
       }
 
-      const statusCode = respObj.statusCode ?? 200;
-      const { statusCode: _sc, ok: _ok, ...data } = respObj;
+      const statusCode = respObj.statusCode ?? respObj.status ?? 200;
+      const { statusCode: _sc, status: _st, ok: _ok, ...rest } = respObj;
 
       if (cacheKey) {
-        await cache.set(cacheKey, JSON.stringify(data), ttl);
+        await cache.set(cacheKey, JSON.stringify(rest), ttl);
       }
 
       if (statusCode === 204) {
         return new Response(null, { status: 204, headers: ctx.headers });
       }
 
-      const meta = (response as PaginatedResponse | null)?.meta_pagination;
-      return ctx.json(
-        meta !== undefined ? { ok: true, data, meta_pagination: meta } : { ok: true, data },
-        { status: statusCode },
-      );
+      return ctx.json({ ok: true, ...rest }, { status: statusCode });
     } catch (err) {
       const e = err as ApiHandlerError | undefined;
       const statusCode = typeof e?.status === "number" ? e.status : 500;

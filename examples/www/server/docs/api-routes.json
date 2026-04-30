@@ -61,9 +61,9 @@
       "id": "response-shape",
       "heading": "Response shape",
       "blocks": [
-        { "type": "p", "text": "API handlers return a flat object: a `statusCode` field plus the response body fields. Howl wraps the body in `{ ok: true, data: ... }` automatically, merges middleware-set headers, and emits the response." },
-        { "type": "code", "lang": "ts", "text": "// Handler returns:\nreturn { statusCode: 200, id: \"u_1\", email: \"x@y\" };\n\n// Wire format:\n{\n  \"ok\": true,\n  \"data\": { \"id\": \"u_1\", \"email\": \"x@y\" }\n}\n\n// 204 short-circuits to an empty body:\nreturn { statusCode: 204 };\n\n// Pagination metadata is preserved verbatim when present:\nreturn {\n  statusCode: 200,\n  items: [...],\n  meta_pagination: { page: 1, total: 42 },\n};" },
-        { "type": "warning", "text": "Earlier releases also accepted a nested `{ statusCode, data: {...} }` shape and unwrapped the inner `data` automatically. That dual-shape handling was removed — handlers must return the body fields flat alongside `statusCode`. If you need the wrapped format, return `{ statusCode, ...payload }` directly." }
+        { "type": "p", "text": "Handler return == response body. Howl pulls `status`/`statusCode` out as the HTTP status, strips `ok`, and emits the rest of the object verbatim with `ok: true` injected. Middleware-set headers are merged in." },
+        { "type": "code", "lang": "ts", "text": "// Flat handler:\nreturn { statusCode: 200, id: \"u_1\", email: \"x@y\" };\n// Wire: { \"ok\": true, \"id\": \"u_1\", \"email\": \"x@y\" }\n\n// Wrapped handler — `data` is preserved as a body field, not nested:\nreturn { status: 200, data: [{ id: 1 }, { id: 2 }] };\n// Wire: { \"ok\": true, \"data\": [{ \"id\": 1 }, { \"id\": 2 }] }\n\n// 204 short-circuits to an empty body:\nreturn { statusCode: 204 };\n\n// Pagination metadata flows through verbatim:\nreturn { statusCode: 200, items: [...], meta_pagination: { page: 1, total: 42 } };" },
+        { "type": "warning", "text": "If a handler's response schema declares a `data` field, return `{ status, data: ... }` — Howl will not double-wrap it. The `responses[xxx]` zod schema describes the wire body and must match the shape the handler returns (minus `status`/`statusCode`/`ok`)." }
       ]
     },
     {

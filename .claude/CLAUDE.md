@@ -138,7 +138,10 @@ Validates path params, query params, and JSON body via Zod. Stores results via
 ### `asyncHandler` — `packages/api/async-handler.ts`
 
 Auth (via `checkPermissionStrategy`), rate limiting, cache read/write, handler execution, response
-formatting (`{ ok: true, data: {...} }`), password redaction.
+formatting. Response contract is **pass-through**: handler return == body. Howl lifts
+`statusCode`/`status` out as the HTTP status, strips `ok`, and emits the rest verbatim with
+`ok: true` injected. Handlers that want a `data` field on the wire must return one explicitly
+(`{ status: 200, data: [...] }` → `{ ok: true, data: [...] }`); Howl does not auto-nest.
 
 Rate limit counters use `rateLimitCache` (separate from the response `cache`) so they can be shared
 across instances via Redis/KV while response caching stays per-instance in memory.
@@ -301,7 +304,7 @@ throw new HttpError(401);
 ```
 
 Caught by `DEFAULT_ERROR_HANDLER` in `app.ts` (plain text) or by `asyncHandler` for API routes (JSON
-`{ error, service }`).
+`{ error, correlationId }` + `X-Howl-Correlation-Id` response header).
 
 ---
 

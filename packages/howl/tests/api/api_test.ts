@@ -21,7 +21,7 @@ function setup(opts: Partial<Parameters<typeof defineConfig<State, Role>>[0]> = 
   });
 }
 
-Deno.test("api — public route returns wrapped { ok, data } payload", async () => {
+Deno.test("api — handler return is body verbatim, ok injected, status lifted out", async () => {
   const t = makeApp<State>();
   const { defineApi, config } = setup();
   const ping = defineApi({
@@ -37,7 +37,48 @@ Deno.test("api — public route returns wrapped { ok, data } payload", async () 
 
   const res = await t.fetch("/api/public/ping");
   expect(res.status).toBe(200);
-  expect(await json(res)).toEqual({ ok: true, data: { message: "pong" } });
+  expect(await json(res)).toEqual({ ok: true, message: "pong" });
+});
+
+Deno.test("api — handler returning { data, status } is not double-wrapped", async () => {
+  const t = makeApp<State>();
+  const { defineApi, config } = setup();
+  const list = defineApi({
+    name: "List",
+    directory: "items",
+    method: "GET",
+    roles: [],
+    rateLimit: false,
+    responses: { 200: z.object({ data: z.array(z.number()) }) },
+    handler: () => ({ data: [1, 2, 3], status: 200 }),
+  });
+  apiHandler(t.app, [list], config);
+
+  const res = await t.fetch("/api/items/list");
+  expect(res.status).toBe(200);
+  expect(await json(res)).toEqual({ ok: true, data: [1, 2, 3] });
+});
+
+Deno.test("api — `status` and `statusCode` are both stripped from the body", async () => {
+  const t = makeApp<State>();
+  const { defineApi, config } = setup();
+  const both = defineApi({
+    name: "Both",
+    directory: "items",
+    method: "GET",
+    roles: [],
+    rateLimit: false,
+    responses: { 201: z.object({ id: z.string() }) },
+    handler: () => ({ statusCode: 201, status: 999, id: "x" }),
+  });
+  apiHandler(t.app, [both], config);
+
+  const res = await t.fetch("/api/items/both");
+  expect(res.status).toBe(201);
+  const body = await json<Record<string, unknown>>(res);
+  expect(body).toEqual({ ok: true, id: "x" });
+  expect(body.status).toBeUndefined();
+  expect(body.statusCode).toBeUndefined();
 });
 
 Deno.test("api — protected route blocked when checkPermissionStrategy denies", async () => {
@@ -87,7 +128,7 @@ Deno.test("api — Zod requestBody validation rejects malformed JSON", async () 
     body: JSON.stringify({ name: "thing" }),
   });
   expect(ok.status).toBe(200);
-  expect(await json(ok)).toEqual({ ok: true, data: { id: "id-thing" } });
+  expect(await json(ok)).toEqual({ ok: true, id: "id-thing" });
 
   const bad = await t.fetch("/api/items/create", {
     method: "POST",
@@ -120,7 +161,7 @@ Deno.test("api — query schema parses values onto ctx.query()", async () => {
   apiHandler(t.app, [search], config);
 
   const res = await t.fetch("/api/items/search?q=howl&page=3");
-  expect(await json(res)).toEqual({ ok: true, data: { q: "howl", page: 3 } });
+  expect(await json(res)).toEqual({ ok: true, q: "howl", page: 3 });
 });
 
 Deno.test("api — rate limit returns 429 once max exceeded", async () => {
@@ -170,8 +211,8 @@ Deno.test("api — caching short-circuits handler on second call", async () => {
   const first = await t.fetch("/api/items/cached");
   const second = await t.fetch("/api/items/cached");
 
-  expect(await json(first)).toEqual({ ok: true, data: { runs: 1 } });
-  expect(await json(second)).toEqual({ ok: true, data: { runs: 1 } });
+  expect(await json(first)).toEqual({ ok: true, runs: 1 });
+  expect(await json(second)).toEqual({ ok: true, runs: 1 });
   expect(runs).toBe(1);
 });
 
@@ -197,8 +238,8 @@ Deno.test("api — handler is responsible for redacting sensitive fields", async
     headers: { "Content-Type": "application/json" },
     body: "{}",
   });
-  const body = await json<{ data: { password: string } }>(res);
-  expect(body.data.password).toBe("[redacted]");
+  const body = await json<{ password: string }>(res);
+  expect(body.password).toBe("[redacted]");
 });
 
 Deno.test("api — errors.notFound() yields 404 with structured body", async () => {
