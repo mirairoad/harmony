@@ -12,5 +12,8 @@
     "@hushkey/howl": "jsr:@hushkey/howl@^{{HOWL_VERSION}}",
     "@std/path": "jsr:@std/path@^1.0.0",
     "zod": "npm:zod@4.3.6"
+  },
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "deno.ns", "deno.unstable"]
   }
 }

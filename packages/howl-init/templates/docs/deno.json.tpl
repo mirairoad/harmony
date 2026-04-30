@@ -24,7 +24,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "lib": ["dom", "dom.iterable", "deno.ns"],
+    "lib": ["dom", "dom.iterable", "deno.ns", "deno.unstable"],
     "jsxPrecompileSkipElements": [
       "a",
       "img",
