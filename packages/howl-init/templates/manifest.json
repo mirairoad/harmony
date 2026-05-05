@@ -1,5 +1,5 @@
 {
-  "howlVersion": "0.5.1",
+  "howlVersion": "0.5.4",
   "templates": {
     "backend-only": [
       "README.md.tpl",

@@ -133,6 +133,10 @@ app.fsClientRoutes(); // crawls client/pages/, mounts all routes
 export default { app };
 ```
 
+> `app.configure(fn)` returns `this` synchronously when `fn` is sync, and
+> `Promise<this>` when `fn` is async — so you can `await app.configure(async (a) => { await db(); })`
+> for boot-time async work and keep chaining sync calls below it.
+
 **`server/middleware/_index.middleware.ts`**
 
 ```typescript

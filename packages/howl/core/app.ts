@@ -361,16 +361,29 @@ export class Howl<State = any> {
 
   /**
    * Configure the app with a callback.
-   * Useful for modular setup.
+   * Useful for modular setup. If the callback returns a Promise the
+   * call returns `Promise<this>` so it can be awaited; otherwise it
+   * returns `this` synchronously.
    *
    * @example
    * app.configure((app) => {
    *   app.use(staticFiles());
    *   app.use(authMiddleware);
    * });
+   *
+   * @example
+   * await app.configure(async (app) => {
+   *   await db.connect();
+   *   app.use(authMiddleware);
+   * });
    */
-  configure(fn: (app: this) => void): this {
-    fn(this);
+  configure(fn: (app: this) => void): this;
+  configure(fn: (app: this) => Promise<void>): Promise<this>;
+  configure(
+    fn: (app: this) => void | Promise<void>,
+  ): this | Promise<this> {
+    const result = fn(this);
+    if (result instanceof Promise) return result.then(() => this);
     return this;
   }
 

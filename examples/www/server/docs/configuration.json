@@ -11,6 +11,14 @@
       ]
     },
     {
+      "id": "configure",
+      "heading": "app.configure()",
+      "blocks": [
+        { "type": "p", "text": "app.configure(fn) runs a callback against the app for modular setup. If the callback returns a Promise the call returns Promise<this> so it can be awaited; otherwise it returns this synchronously and stays chainable." },
+        { "type": "code", "lang": "ts", "text": "// Sync — chainable\napp.configure(middleware).configure(routes);\n\n// Async — awaitable\nawait app.configure(async (app) => {\n  await db.connect();\n  app.use(authMiddleware);\n});" }
+      ]
+    },
+    {
       "id": "define-config",
       "heading": "defineConfig",
       "blocks": [
