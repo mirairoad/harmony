@@ -110,6 +110,22 @@ export const enum PartialMode {
 }
 
 /**
+ * Returns `true` when the given element sits inside an `f-client-nav`
+ * boundary that hasn't been explicitly disabled. Used by both the SSR partial
+ * navigator and the AOT navigator to gate interception of `<a>` clicks and
+ * `popstate` events — when the attribute is absent (or set to `"false"`),
+ * both navigators must defer to the browser instead of taking over.
+ *
+ * Pure DOM read, no side effects; safe to import from server-side bundles
+ * (it just won't be called there).
+ */
+export function isClientNavOptedIn(el: Element): boolean {
+  const setting = el.closest(`[${CLIENT_NAV_ATTR}]`);
+  if (setting === null) return false;
+  return setting.getAttribute(CLIENT_NAV_ATTR) !== "false";
+}
+
+/**
  * Create a "locked" asset path. This differs from a plain path in that it is
  * specific to the current version of the application, and as such can be safely
  * served with a very long cache lifetime (1 year).

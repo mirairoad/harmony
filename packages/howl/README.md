@@ -653,10 +653,31 @@ only changes how subsequent in-app navigation works.
 | `__page.tsx`   | AOT  | Renderer runs per request                | Dynamic-imports a client chunk, no server |
 | `___page.tsx`  | SSG  | Prerendered HTML served from snapshot    | Dynamic-imports a client chunk, no server |
 
-AOT (double underscore) emits an ESM chunk per route, bundled with that
-route's ancestor `_layout.tsx` chain. The chunk is `import()`-ed on first
-click and rendered into the active `<Partial>` outlet — no full document
-fetch, no re-execution of the SSR shell.
+AOT (double underscore) emits an ESM chunk per route. The chunk contains
+exactly what would appear **inside** the active `<Partial>` markers on an
+SSR partial response: inner layouts (those rendered below the partial) plus
+the page. Files above the partial — the `_app.tsx` shell and any
+outer `_layout.tsx` — are not bundled. They're already in the DOM on first
+paint and stay across AOT navs, so layout-level islands (navbar, sidebar)
+keep their state when the user clicks an AOT link. The chunk is `import()`-ed
+on first click and rendered into the active `<Partial>` outlet — no full
+document fetch, no re-execution of the SSR shell.
+
+`<Partial>` placement is detected at build time by a static scan of each
+app/layout file's source. JSX form (`<Partial …>`, `<Partial />`) and
+`h`/`jsx`-call form (`h(Partial, …)`) are both recognized; aliased imports
+(`{ Partial as P }`) are not — use the literal `Partial` identifier in
+app/layout files. When no `<Partial>` is found in an AOT page's chain the
+build silently skips chunk emission for that route: the page still SSRs
+(or serves prerendered HTML for SSG), and client navigation falls back to a
+full document load. Apps that intentionally drop `f-client-nav` keep AOT/SSG
+prefixes working without forcing a `<Partial>` they don't need.
+
+AOT navigation respects `f-client-nav`. Without an `f-client-nav` ancestor on
+the clicked element (or with the attribute explicitly set to `"false"`), the
+AOT navigator stands down and the browser performs a regular document-level
+navigation — matching how SSR partial nav already behaved, so removing
+`f-client-nav` cleanly disables SPA mode for the whole app.
 
 SSG (triple underscore) implies AOT and additionally runs the handler **once
 at build time** with an empty `ctx`, capturing the HTML into the production

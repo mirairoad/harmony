@@ -1,6 +1,7 @@
 import { type ComponentType, h } from "preact";
 import { ACTIVE_PARTIALS } from "./reviver.ts";
 import { type HowlHistoryState, updateLinks } from "./partials.ts";
+import { isClientNavOptedIn } from "../shared_internal.ts";
 
 interface AotChunk {
   Component: ComponentType<
@@ -90,12 +91,38 @@ export async function tryAotNavigate(nextUrl: URL): Promise<boolean> {
     state: (globalThis as unknown as { __HOWL_USER_STATE__?: unknown })
       .__HOWL_USER_STATE__ ?? {},
   });
-  partial.props.children = tree;
-  // setState is async (preact commits on a microtask). Re-stamp data-current
-  // / data-ancestor in the commit callback so we run after the chunk's new
-  // <a> vnodes — which carry no data attributes — have replaced the old DOM.
-  // Running before commit would let preact overwrite our stamps.
-  partial.setState({}, () => updateLinks(nextUrl));
+
+  // Matches the SSR partial path: when the app opts in via `f-view-transition`
+  // on <body>, wrap the DOM swap in `document.startViewTransition` so the
+  // browser captures before/after snapshots and animates between them.
+  // Resolves after the transition finishes; the click handler's post-nav
+  // scroll then runs once animation is complete instead of mid-fade.
+  const wantsTransition = typeof document !== "undefined" &&
+    document.body?.hasAttribute("f-view-transition");
+  // deno-lint-ignore no-explicit-any
+  const startViewTransition = (document as any).startViewTransition?.bind(
+    document,
+  );
+
+  const commit = () => {
+    partial.props.children = tree;
+    // setState is async (preact commits on a microtask). Re-stamp data-current
+    // / data-ancestor in the commit callback so we run after the chunk's new
+    // <a> vnodes — which carry no data attributes — have replaced the old DOM.
+    // Running before commit would let preact overwrite our stamps.
+    return new Promise<void>((resolve) => {
+      partial.setState({}, () => {
+        updateLinks(nextUrl);
+        resolve();
+      });
+    });
+  };
+
+  if (wantsTransition && typeof startViewTransition === "function") {
+    await startViewTransition(commit).finished;
+  } else {
+    await commit();
+  }
   return true;
 }
 
@@ -112,6 +139,13 @@ if (typeof document !== "undefined" && Object.keys(manifest).length > 0) {
       e.button !== 0 ||
       e.ctrlKey || e.metaKey || e.altKey || e.shiftKey
     ) return;
+
+    // `f-client-nav` gates AOT the same way it gates the SSR partial nav.
+    // When the user removes the attribute (or sets it to "false") the AOT
+    // navigator must stand down and let the browser perform a regular
+    // document-level navigation, otherwise removing `f-client-nav` would
+    // half-work — SSR routes reload, AOT routes stay SPA.
+    if (!isClientNavOptedIn(el)) return;
 
     const nextUrl = new URL(el.href);
     const matched = matchRoute(nextUrl.pathname);
@@ -141,6 +175,10 @@ if (typeof document !== "undefined" && Object.keys(manifest).length > 0) {
 
   addEventListener("popstate", (e) => {
     if (e.state === null) return;
+    // Same gating rule as the click path: when `f-client-nav` is missing or
+    // explicitly disabled at the body level, defer to the browser instead of
+    // intercepting back/forward.
+    if (!document.body || !isClientNavOptedIn(document.body)) return;
     const url = new URL(location.href);
     const matched = matchRoute(url.pathname);
     if (!matched) return; // partials.ts handles popstate for SSR routes

@@ -3,6 +3,7 @@ import {
   CLIENT_NAV_ATTR,
   DATA_ANCESTOR,
   DATA_CURRENT,
+  isClientNavOptedIn,
   matchesUrl,
   PartialMode,
   UrlMatchKind,
@@ -37,11 +38,7 @@ export interface HowlHistoryState {
   scrollY: number;
 }
 
-function checkClientNavEnabled(el: HTMLElement) {
-  const setting = el.closest(`[${CLIENT_NAV_ATTR}]`);
-  if (setting === null) return false;
-  return setting.getAttribute(CLIENT_NAV_ATTR) !== "false";
-}
+const checkClientNavEnabled = isClientNavOptedIn;
 
 // Keep track of history state to apply forward or backward animations
 let index = typeof history !== "undefined" ? history.state?.index || 0 : 0;

@@ -235,10 +235,21 @@ How it's wired:
 - **Detection** — `dev/fs_crawl.ts` reads the basename prefix and sets `aot` / `ssg` flags on
   `FsRouteFileNoMod` (`dev/dev_build_cache.ts`).
 - **AOT chunk emission** — `dev/plugins/aot.ts` is a virtual esbuild plugin that synthesises an
-  entry file per AOT route: imports the page module + its ancestor `_layout.tsx` chain, exports
-  `Component(props)` that wraps the page with the layout chain via `h()`. `dev/builder.ts`
-  registers these entries alongside islands during `bundleJs()`. Chunk URL pattern is
-  `/_howl/js/{BUILD_ID}/aot_{slug}.js`.
+  entry file per AOT route. The chunk contains only what would appear **inside** the active
+  `<Partial>` markers on an SSR response: inner layouts (those rendered below the partial) plus
+  the page. Files above the partial — the `_app.tsx` shell and any outer `_layout.tsx` — are
+  intentionally not bundled; they stay in the DOM across AOT navs so layout-level islands keep
+  their state. The boundary is found by `dev/partial_boundary.ts`, which scans each file's source
+  for the literal `Partial` identifier in JSX (`<Partial …>`) or `h`/`jsx`-call form. Aliased
+  imports (`{ Partial as P }`) are not detected — use the literal `Partial` name. When no
+  `<Partial>` is found in an AOT page's chain, chunk emission is silently skipped for that route:
+  the page still SSRs (or serves prerendered HTML for SSG-prefixed routes) and client navigation
+  falls through to a full document load — same fallback path as a regular SSR route. Inner-layout wrappers in the generated chunk
+  use **module-scoped functions** (`PageOutlet`, `Inner1`, …) with a shared `_props` slot rather
+  than inline `Component: () => child` arrows — that way Preact sees stable vnode `type`s for
+  each layout's `<Component />` outlet and can preserve component instances across same-chunk
+  re-renders (e.g. same-route param changes). `dev/builder.ts` registers AOT entries alongside
+  islands during `bundleJs()`. Chunk URL pattern is `/_howl/js/{BUILD_ID}/aot_{slug}.js`.
 - **Manifest** — `BuildCache.aotRoutes: Map<routePattern, chunkUrl>` is populated by the builder
   and emitted into the SSR response as `window.__HOWL_AOT__ = { ... }` (inline `<script>` injected
   by `HowlRuntimeScript` in `runtime/server/preact_hooks.ts`). Also emits

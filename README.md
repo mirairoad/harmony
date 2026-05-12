@@ -500,11 +500,32 @@ and first-paint); the prefix changes how *subsequent* navigation works.
 | `__page.tsx`    | AOT  | Renderer runs per request                      | Dynamic-imports a client chunk, no server hit  |
 | `___page.tsx`   | SSG  | Prerendered HTML served from snapshot (no JS run) | Dynamic-imports a client chunk, no server hit |
 
-`__` builds an ESM chunk per page that includes the page's ancestor
-`_layout.tsx` chain. On click, the chunk is `import()`-ed and rendered into
-the active `<Partial>` outlet. `___` additionally runs the handler at build
-time, captures the HTML, and bakes it into the production snapshot so
-request-time renders are skipped entirely.
+`__` builds an ESM chunk per page that contains everything that would appear
+**inside** the active `<Partial>` markers on an SSR response — inner layouts
+(if any) plus the page. Files above the partial in the chain (the `_app.tsx`
+shell and any outer `_layout.tsx`) are not bundled: they're already in the
+DOM on first paint and stay there across AOT navs, so layout-level islands
+(navbars, sidebars) keep their state across page changes. On click, the
+chunk is `import()`-ed and rendered into the active `<Partial>` outlet. `___`
+additionally runs the handler at build time, captures the HTML, and bakes it
+into the production snapshot so request-time renders are skipped entirely.
+
+AOT chunks need a `<Partial>` in `_app.tsx` or the layout chain to mount
+into. The boundary is detected by a static scan of each file's source for
+the literal `Partial` identifier in JSX (`<Partial …>`) or `h`/`jsx`-call
+form (`h(Partial, …)`). Aliased imports (`{ Partial as P }`) are not
+detected — use the literal `Partial` name. When no `<Partial>` is found in
+an AOT page's chain, chunk emission is silently skipped: the route still
+SSRs (or serves prerendered HTML for `___`-prefixed SSG pages), and
+in-app navigation to it falls through to a full document load. This makes
+it safe to keep `__`/`___` prefixes when you intentionally don't use
+`f-client-nav` / `<Partial>`.
+
+AOT navigation honours `f-client-nav` the same way SSR partial nav does. Drop
+the attribute from `<body>` (or set it to `"false"`) and clicks on AOT links
+fall through to full document navigation — same behaviour as SSR routes. Use
+`f-client-nav="false"` on a nested element to opt out a single subtree (e.g.
+external dashboards) while leaving the rest of the app on SPA-style routing.
 
 ```tsx
 // pages/__dashboard.tsx — dynamic SSR, client-navigable

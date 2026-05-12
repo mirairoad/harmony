@@ -32,6 +32,7 @@ import { automaticWorkspaceFolders } from "./middlewares/automatic_workspace_fol
 import { checkDenoCompilerOptions } from "./check.ts";
 import { crawlFsItem } from "./fs_crawl.ts";
 import { type AotEntry, aotPlugin } from "./plugins/aot.ts";
+import { findPartialBoundary } from "./partial_boundary.ts";
 import { CommandType } from "../core/commands.ts";
 
 /**
@@ -285,7 +286,7 @@ export class Builder<State = any> {
       .map((f) => f.routePattern);
   }
 
-  #collectAotEntries(namer: UniqueNamer): Map<string, AotEntry> {
+  async #collectAotEntries(namer: UniqueNamer): Promise<Map<string, AotEntry>> {
     const entries = new Map<string, AotEntry>();
 
     const aotFiles = this.#fsRoutes.files.filter((f) =>
@@ -314,6 +315,29 @@ export class Builder<State = any> {
         dir = parent;
       }
 
+      // Find the topmost file in the render chain that places `<Partial>`.
+      // Files at or above it sit outside the partial in DOM (kept across AOT
+      // navs) and must NOT be bundled into the chunk; files below it sit
+      // inside the partial and must be bundled so AOT swaps reproduce what an
+      // SSR partial response would carry.
+      //
+      // No partial → no client-side mount target. Skip chunk emission for
+      // this route. The page still renders normally (SSR for `__`, prebuilt
+      // HTML for `___`); client navigation to it falls through to a full
+      // document load, same as a regular SSR route. We only warn at build
+      // time so apps that intentionally drop `f-client-nav` (and therefore
+      // don't need chunks) stay quiet — those won't have a Partial either.
+      const chain: string[] = [];
+      if (appFile) chain.push(appFile.filePath);
+      chain.push(...layouts);
+      const boundary = await findPartialBoundary(fsAdapter, chain);
+      if (boundary === null) continue;
+
+      const appOffset = appFile ? 1 : 0;
+      const trimmedLayouts = boundary.index < appOffset
+        ? layouts
+        : layouts.slice(boundary.index - appOffset + 1);
+
       const slug = page.routePattern.replace(/[^a-zA-Z0-9]+/g, "_") || "root";
       const name = namer.getUniqueName(`aot_${slug}`);
 
@@ -321,7 +345,7 @@ export class Builder<State = any> {
         name,
         routePattern: page.routePattern,
         pagePath: page.filePath,
-        layouts,
+        layouts: trimmedLayouts,
         appPath: appFile?.filePath ?? null,
       });
     }
@@ -390,7 +414,7 @@ export class Builder<State = any> {
         });
       }
 
-      const aotEntries = this.#collectAotEntries(namer);
+      const aotEntries = await this.#collectAotEntries(namer);
       for (const entry of aotEntries.values()) {
         entryPoints[entry.name] = `aot:${entry.name}`;
       }

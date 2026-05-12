@@ -688,7 +688,7 @@
     "members": {
       "examples/hybrid-spa": {
         "dependencies": [
-          "jsr:@hushkey/howl@0.6",
+          "jsr:@hushkey/howl@~0.6.2",
           "jsr:@std/path@1",
           "npm:@tailwindcss/typography@~0.5.19",
           "npm:daisyui@5.5.18",

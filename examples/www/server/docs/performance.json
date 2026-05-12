@@ -81,7 +81,7 @@
       "blocks": [
         {
           "type": "p",
-          "text": "Add f-view-transition to your <body> and partial swaps will be wrapped in document.startViewTransition() — animate between DOM states with regular CSS. The runtime falls back to a direct DOM swap on browsers that don't implement the API."
+          "text": "Add f-view-transition to your <body> and partial swaps will be wrapped in document.startViewTransition() — animate between DOM states with regular CSS. The runtime falls back to a direct DOM swap on browsers that don't implement the API. Both SSR partial navs and AOT chunk swaps honor the flag; the post-nav scroll is also deferred until the transition finishes so animations don't fight a mid-flight scroll-to-top."
         },
         {
           "type": "code",
